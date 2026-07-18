@@ -70,6 +70,7 @@ required_files=(
   "$ROOT/scripts/runtime-policy-smoke.sh"
   "$ROOT/scripts/pi-session-stats.sh"
   "$ROOT/scripts/pi-model-catalog.sh"
+  "$ROOT/scripts/configure-model-scope.sh"
 )
 
 for file in "${required_files[@]}"; do
@@ -150,6 +151,8 @@ grep -R "anthropic/claude" "$ROOT/README.md" "$ROOT/docs/model-options.md" "$ROO
 grep -R "gpt-5.6" "$ROOT/README.md" "$ROOT/docs/model-options.md" "$ROOT/packages/pi-company-core/prompts/model-options.md" >/dev/null
 grep -R "claude-fable-5" "$ROOT/README.md" "$ROOT/docs/model-options.md" "$ROOT/packages/pi-company-core/prompts/model-options.md" >/dev/null
 grep -R "pi-company-models" "$ROOT/README.md" "$ROOT/docs/model-options.md" >/dev/null
+grep -R "enabledModels" "$ROOT/templates/global/settings.json" "$ROOT/docs/model-options.md" "$ROOT/scripts/configure-model-scope.sh" >/dev/null
+grep -R "Ctrl+L" "$ROOT/README.md" "$ROOT/docs/model-options.md" "$ROOT/docs/team-onboarding.md" "$ROOT/docs/quickstart-vietnamese.md" >/dev/null
 grep -R "/platform-migration" "$ROOT/packages/pi-company-core/prompts" "$ROOT/docs" >/dev/null
 grep -R "/be-to-fe" "$ROOT/packages/pi-company-core/prompts" "$ROOT/docs" >/dev/null
 grep -R "Codex CLI" "$ROOT/docs/codex-migration-reference.md" >/dev/null
@@ -166,7 +169,9 @@ bash -n "$ROOT/scripts/parity-benchmark.sh"
 bash -n "$ROOT/scripts/runtime-policy-smoke.sh"
 bash -n "$ROOT/scripts/pi-session-stats.sh"
 bash -n "$ROOT/scripts/pi-model-catalog.sh"
+bash -n "$ROOT/scripts/configure-model-scope.sh"
 bash "$ROOT/scripts/pi-model-catalog.sh" --json >/dev/null
+bash "$ROOT/scripts/configure-model-scope.sh" --dry-run --preset full --default-model openai-codex/gpt-5.5:xhigh >/dev/null
 bash "$ROOT/scripts/runtime-policy-smoke.sh" >/dev/null
 
 bash "$ROOT/scripts/profile-doctor.sh" "$ROOT" "$ROOT/.pi/company-profile.json" >/dev/null

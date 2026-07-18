@@ -15,7 +15,7 @@ Phần còn lại — OAuth, package, context, harness, MCP, tool-call guard —
 
 ```bash
 npm install -g @earendil-works/pi-coding-agent
-pi install git:github.com/Vt-mmm/pi_agent@v0.3.4
+pi install git:github.com/Vt-mmm/pi_agent@v0.3.5
 ```
 
 Sau bước này, project mới không cần chạy bash init profile. Chỉ cần:
@@ -39,23 +39,21 @@ Chọn provider OpenAI/Codex/ChatGPT hoặc Anthropic/Claude trong danh sách Pi
 Sau khi login và chọn model intended cho project understanding:
 
 ```text
-/model-options
+/model          # hoặc Ctrl+L để chọn model bằng selector của Pi
+/scoped-models  # optional, chỉnh danh sách Ctrl+P cycle
 /onboard-project
 /memory-policy
 ```
 
-Ví dụ model option:
+Global setup đã config sẵn `enabledModels` cho Codex + Claude. Anh đổi model bằng selector/hotkey:
 
-```bash
-pi --model openai-codex/gpt-5.5:xhigh
-pi --model openai-codex/gpt-5.6-sol:xhigh
-pi --model openai-codex/gpt-5.6-terra:xhigh
-pi --model anthropic/claude-sonnet-5:xhigh
-pi --model anthropic/claude-opus-4-7:max
-pi --model anthropic/claude-fable-5:max
-pi --model anthropic/claude-haiku-4-5:low
-pi-company-models
+```text
+Ctrl+L       # model selector
+Ctrl+P       # đổi model trong scope
+Shift+Tab    # đổi thinking
 ```
+
+Nếu muốn xem/re-apply model scope từ terminal: `pi-company-models` và `pi-company-model-scope --preset full`.
 
 Lệnh này yêu cầu model đọc qua project theo phạm vi có kiểm soát, rồi ghi:
 
@@ -78,7 +76,7 @@ File này là snapshot context cho task sau. Nếu file còn `Generated: not yet
 bash /path/to/pi_agent/scripts/setup.sh /path/to/project \
   --project-only \
   --profile auto \
-  --package-source git:github.com/Vt-mmm/pi_agent@v0.3.4
+  --package-source git:github.com/Vt-mmm/pi_agent@v0.3.5
 ```
 
 Đổi profile sau này trong Pi:
@@ -97,7 +95,7 @@ Script bash chỉ dùng khi muốn preseed config vào repo:
 ```bash
 bash /path/to/pi_agent/scripts/setup.sh /path/to/project \
   --profile be-readonly-fe \
-  --package-source git:github.com/Vt-mmm/pi_agent@v0.3.4
+  --package-source git:github.com/Vt-mmm/pi_agent@v0.3.5
 ```
 
 ## Bước 6 — chạy hằng ngày

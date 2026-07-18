@@ -4,19 +4,20 @@ set -euo pipefail
 usage() {
   cat <<'USAGE'
 Usage:
-  scripts/install-global.sh [--package-source <source>] [--with-mcp] [--with-herdr] [--with-codex-herdr]
+  scripts/install-global.sh [--package-source <source>] [--with-mcp] [--with-herdr] [--with-codex-herdr] [--model-scope <preset>]
 
 Purpose:
   Install the company Pi package into the current user's global Pi settings.
 
 Package source examples:
-  git:github.com/Vt-mmm/pi_agent@v0.3.4
+  git:github.com/Vt-mmm/pi_agent@v0.3.5
   https://github.com/Vt-mmm/pi_agent
-  npm:@company/pi_agent@0.3.4
+  npm:@company/pi_agent@0.3.5
   /absolute/path/to/pi_agent
 
 Notes:
   - OAuth is intentionally not automated. Run `pi` then `/login`.
+  - Model scope is configured with Pi's native `enabledModels` so users choose via `/model`, Ctrl+L, `/scoped-models`, and Ctrl+P.
   - Herdr integration is optional and modifies user-level Herdr/Pi config.
 USAGE
 }
@@ -26,6 +27,9 @@ PACKAGE_SOURCE="${PI_COMPANY_PACKAGE_SOURCE:-}"
 WITH_MCP=false
 WITH_HERDR=false
 WITH_CODEX_HERDR=false
+CONFIGURE_MODEL_SCOPE=true
+MODEL_SCOPE_PRESET="full"
+DEFAULT_MODEL="openai-codex/gpt-5.5:xhigh"
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -48,6 +52,18 @@ while [[ $# -gt 0 ]]; do
     --with-codex-herdr)
       WITH_HERDR=true
       WITH_CODEX_HERDR=true
+      shift
+      ;;
+    --model-scope)
+      MODEL_SCOPE_PRESET="${2:-}"
+      shift 2
+      ;;
+    --default-model)
+      DEFAULT_MODEL="${2:-}"
+      shift 2
+      ;;
+    --no-model-scope)
+      CONFIGURE_MODEL_SCOPE=false
       shift
       ;;
     -h|--help)
@@ -96,6 +112,11 @@ if [[ "$WITH_MCP" == true ]]; then
   fi
 fi
 
+if [[ "$CONFIGURE_MODEL_SCOPE" == true ]]; then
+  echo "Configuring Pi model selector scope:"
+  bash "$PLATFORM_ROOT/scripts/configure-model-scope.sh" --preset "$MODEL_SCOPE_PRESET" --default-model "$DEFAULT_MODEL"
+fi
+
 if [[ "$WITH_HERDR" == true ]]; then
   if ! command -v herdr >/dev/null 2>&1; then
     echo "WARN: herdr is not on PATH. Skipping Herdr integration." >&2
@@ -117,3 +138,5 @@ echo
 echo "Next:"
 echo "  pi"
 echo "  /login"
+echo "  /model          # or Ctrl+L: select Codex/Claude model from Pi selector"
+echo "  /scoped-models  # optional: edit Ctrl+P model cycle scope"

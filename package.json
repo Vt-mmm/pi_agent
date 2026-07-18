@@ -1,6 +1,6 @@
 {
   "name": "pi-agent-platform",
-  "version": "0.3.4",
+  "version": "0.3.5",
   "private": true,
   "license": "MIT",
   "type": "module",
@@ -19,7 +19,8 @@
     "pi-company-doctor": "scripts/team-doctor.sh",
     "pi-company-benchmark": "scripts/parity-benchmark.sh",
     "pi-company-usage": "scripts/pi-session-stats.sh",
-    "pi-company-models": "scripts/pi-model-catalog.sh"
+    "pi-company-models": "scripts/pi-model-catalog.sh",
+    "pi-company-model-scope": "scripts/configure-model-scope.sh"
   },
   "pi": {
     "extensions": [
@@ -50,7 +51,8 @@
     "benchmark": "bash scripts/parity-benchmark.sh",
     "smoke": "bash scripts/runtime-policy-smoke.sh",
     "usage": "bash scripts/pi-session-stats.sh",
-    "models": "bash scripts/pi-model-catalog.sh"
+    "models": "bash scripts/pi-model-catalog.sh",
+    "model-scope": "bash scripts/configure-model-scope.sh"
   },
   "engines": {
     "node": ">=20"

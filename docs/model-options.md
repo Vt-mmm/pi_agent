@@ -1,6 +1,29 @@
-# Model options: Codex + Claude
+# Model selector and scope: Codex + Claude
 
-Pi Company Platform không khóa vào một provider. OpenAI Codex và Claude/Anthropic đều là first-class option; chọn model theo loại task, budget và yêu cầu reasoning.
+Pi Company Platform không khóa vào một provider. OpenAI Codex và Claude/Anthropic đều là first-class option.
+
+Quan trọng: flow chính là user chọn model bằng native Pi selector, không phải hỏi agent recommend.
+
+## Flow chuẩn sau OAuth
+
+Trong Pi:
+
+```text
+/login
+/model          # hoặc Ctrl+L
+/scoped-models  # optional, edit danh sách Ctrl+P cycle
+```
+
+Hotkeys:
+
+```text
+Ctrl+L          # mở model selector
+Ctrl+P          # cycle model trong enabledModels
+Shift+Ctrl+P    # cycle ngược
+Shift+Tab       # cycle thinking level
+```
+
+Global setup của repo sẽ seed `enabledModels` vào `~/.pi/agent/settings.json`, nên sau OAuth anh chọn/đổi model bằng option selector của Pi.
 
 ## Kiểm tra model hiện có
 
@@ -43,17 +66,9 @@ pi --model anthropic/claude-sonnet-5:xhigh
 pi --thinking medium
 ```
 
-Trong TUI:
-
-```text
-Shift+Tab   # cycle thinking level
-Ctrl+L      # model selector
-Ctrl+P      # cycle scoped models
-```
-
 ## Current latest-family catalog
 
-Đừng giới hạn vào vài ví dụ. Sau `pi update --models`, kiểm tra catalog local bằng `pi-company-models`. Tại thời điểm `v0.3.4`, các family/presets chính cần nhớ:
+Đừng giới hạn vào vài ví dụ. Sau `pi update --models`, kiểm tra catalog local bằng `pi-company-models`. Tại thời điểm `v0.3.5`, các family/presets chính cần nhớ:
 
 ### OpenAI Codex
 
@@ -85,6 +100,8 @@ Pi catalog có thể có thêm dated variants như `*-2025xxxx`. Dùng alias lat
 
 ## Recommended presets
 
+Preset dưới đây là cách mình seed `enabledModels`, không phải giới hạn hard. User vẫn có thể mở `/model` để chọn bất kỳ model available nào trong provider catalog.
+
 | Preset | OpenAI Codex example | Claude/Anthropic example | Khi dùng |
 |---|---|---|---|
 | Fast scout | `openai-codex/gpt-5.4-mini:low` | `anthropic/claude-haiku-4-5:low` | đọc nhanh, hỏi đáp, grep/scout nhẹ |
@@ -97,35 +114,32 @@ Tên model có thể đổi theo Pi model catalog. Khi không chắc, ưu tiên 
 
 ## Practical routing
 
-Solo/internal default nên bắt đầu:
+Global setup mặc định:
 
 ```bash
-pi --model openai-codex/gpt-5.5:xhigh
-pi --model openai-codex/gpt-5.6-sol:xhigh
+pi-company-model-scope --preset full --default-model openai-codex/gpt-5.5:xhigh
 ```
 
-Khi muốn so sánh Claude:
+Scope này ghi vào settings:
 
 ```bash
-pi --model anthropic/claude-sonnet-5:xhigh
-pi --model anthropic/claude-opus-4-7:max
-pi --model anthropic/claude-fable-5:max
+~/.pi/agent/settings.json
 ```
 
-Khi muốn tiết kiệm token/cost:
+Sau đó dùng selector:
 
-```bash
-pi --model openai-codex/gpt-5.4-mini:low
-pi --model anthropic/claude-haiku-4-5:low
+```text
+/model
+/scoped-models
+Ctrl+P
+Shift+Tab
 ```
 
-Khi task bị fail do reasoning/architecture:
+Nếu muốn đặt default khác:
 
 ```bash
-pi --model openai-codex/gpt-5.6-luna:xhigh
-pi --model openai-codex/gpt-5.6-sol:xhigh
-pi --model anthropic/claude-opus-4-7:max
-pi --model anthropic/claude-opus-4-8:max
+pi-company-model-scope --preset full --default-model openai-codex/gpt-5.6-sol:xhigh
+pi-company-model-scope --preset full --default-model anthropic/claude-sonnet-5:xhigh
 ```
 
 ## Benchmark rule

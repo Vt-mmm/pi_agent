@@ -1,9 +1,9 @@
 ---
-description: Recommend provider/model/thinking options for the current task
+description: Explain native Pi model selector/scope options for Codex and Claude
 argument-hint: "[task type, budget, or provider preference]"
 ---
 
-Recommend Pi provider/model/thinking options for:
+Explain Pi provider/model/thinking selector options for:
 
 ```text
 $ARGUMENTS
@@ -13,11 +13,16 @@ Mandatory flow:
 
 1. Call `company_context`.
 2. Call `company_usage_snapshot` if the user asks about current model/context/cost.
-3. If the user needs available model versions, recommend `/model` in TUI, `pi --list-models`, or `pi-company-models` from terminal.
+3. Make clear that model switching is done by Pi native UI, not by agent deciding for the user:
+   - `/model` or Ctrl+L for selector;
+   - `/scoped-models` for cycle scope;
+   - Ctrl+P / Shift+Ctrl+P for model cycling;
+   - Shift+Tab for thinking level.
 4. Include both OpenAI Codex and Claude/Anthropic options unless the user explicitly restricts provider.
 5. Do not limit the answer to one or two legacy examples. Include the current latest-family options for Codex 5.5/5.6 and Claude Sonnet/Opus/Fable where relevant.
-6. Explain thinking levels as task effort, not as quality guarantee.
-7. Do not claim token/cost savings without benchmark evidence.
+6. If the user needs available model versions, recommend `pi-company-models`, `/model`, or `pi --list-models`.
+7. Explain thinking levels as task effort, not as quality guarantee.
+8. Do not claim token/cost savings without benchmark evidence.
 
 Current latest-family catalog to consider:
 
@@ -43,7 +48,7 @@ Claude/Anthropic:
 - `anthropic/claude-opus-4-8`
 - `anthropic/claude-fable-5`
 
-Recommended option matrix:
+Default selector scope seeded by setup:
 
 | Preset | OpenAI Codex | Claude/Anthropic | Use when |
 |---|---|---|---|
@@ -56,9 +61,8 @@ Recommended option matrix:
 Output:
 
 - Current model/context if available.
-- Recommended primary option.
-- Claude alternative.
-- Codex alternative.
-- Fast/cheap option.
-- Deep/high-risk option.
-- Exact command examples.
+- How to open/select/change model in Pi UI.
+- What `enabledModels`/scope contains.
+- Codex family options.
+- Claude family options.
+- How to inspect/re-apply model scope from terminal.

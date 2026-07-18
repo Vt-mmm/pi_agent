@@ -24,6 +24,11 @@ Options:
   --with-mcp / --no-mcp          Install/skip Pi MCP adapter during global install (default: install)
   --with-herdr / --no-herdr      Install/skip Herdr Pi integration if herdr exists (default: install)
   --with-codex-herdr             Also install Herdr Codex integration if codex exists
+  --model-scope <full|codex|claude>
+                                  Configure Pi enabledModels for selector/cycling (default: full)
+  --default-model <provider/model[:thinking]>
+                                  Configure default provider/model/thinking (default: openai-codex/gpt-5.5:xhigh)
+  --no-model-scope               Skip global model-scope configuration
   --install-pi / --no-install-pi Install/skip Pi CLI with npm if `pi` is missing (default: install)
   --force-profile                Replace existing project .pi/company-profile.json
   --force-settings               Replace existing project .pi/settings.json
@@ -34,13 +39,13 @@ Options:
   -h, --help
 
 Package source examples:
-  git:github.com/Vt-mmm/pi_agent@v0.3.4
+  git:github.com/Vt-mmm/pi_agent@v0.3.5
   https://github.com/Vt-mmm/pi_agent
-  npm:@company/pi_agent@0.3.4
+  npm:@company/pi_agent@0.3.5
   /absolute/path/to/pi_agent
 
 One-command team setup example:
-  bash /path/to/pi_agent/scripts/setup.sh . --profile auto --package-source git:github.com/Vt-mmm/pi_agent@v0.3.4
+  bash /path/to/pi_agent/scripts/setup.sh . --profile auto --package-source git:github.com/Vt-mmm/pi_agent@v0.3.5
 USAGE
 }
 
@@ -53,6 +58,9 @@ DO_PROJECT=true
 WITH_MCP=true
 WITH_HERDR=true
 WITH_CODEX_HERDR=false
+CONFIGURE_MODEL_SCOPE=true
+MODEL_SCOPE_PRESET="full"
+DEFAULT_MODEL="openai-codex/gpt-5.5:xhigh"
 AUTO_INSTALL_PI=true
 FORCE_PROFILE=false
 FORCE_SETTINGS=false
@@ -109,6 +117,18 @@ while [[ $# -gt 0 ]]; do
     --with-codex-herdr)
       WITH_HERDR=true
       WITH_CODEX_HERDR=true
+      shift
+      ;;
+    --model-scope)
+      MODEL_SCOPE_PRESET="${2:-}"
+      shift 2
+      ;;
+    --default-model)
+      DEFAULT_MODEL="${2:-}"
+      shift 2
+      ;;
+    --no-model-scope)
+      CONFIGURE_MODEL_SCOPE=false
       shift
       ;;
     --install-pi)
@@ -265,6 +285,11 @@ if [[ "$DO_GLOBAL" == true ]]; then
   elif [[ "$WITH_HERDR" == true ]]; then
     install_args+=("--with-herdr")
   fi
+  if [[ "$CONFIGURE_MODEL_SCOPE" == true ]]; then
+    install_args+=("--model-scope" "$MODEL_SCOPE_PRESET" "--default-model" "$DEFAULT_MODEL")
+  else
+    install_args+=("--no-model-scope")
+  fi
   run_cmd bash "${install_args[@]}"
 fi
 
@@ -294,7 +319,8 @@ fi
 echo "  pi"
 echo "  /login             # first time only"
 if [[ "$DO_PROJECT" == true ]]; then
-  echo "  <select provider/model for project understanding>"
+  echo "  /model             # or Ctrl+L: select provider/model from Pi selector"
+  echo "  /scoped-models     # optional: edit Ctrl+P model cycle scope"
   echo "  /onboard-project   # first project-read snapshot before implementation"
   echo "  /memory-policy     # inspect project memory policy when needed"
 fi

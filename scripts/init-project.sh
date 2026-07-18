@@ -16,9 +16,9 @@ Options:
   -h, --help
 
 Package source examples:
-  git:github.com/Vt-mmm/pi_agent@v0.3.4
+  git:github.com/Vt-mmm/pi_agent@v0.3.5
   https://github.com/Vt-mmm/pi_agent
-  npm:@company/pi_agent@0.3.4
+  npm:@company/pi_agent@0.3.5
 
 Default package source:
   1. --package-source

@@ -33,7 +33,7 @@ This repository is designed for teams that want a `cd project && pi` workflow wi
 
 ```bash
 npm install -g @earendil-works/pi-coding-agent
-pi install git:github.com/Vt-mmm/pi_agent@v0.3.4
+pi install git:github.com/Vt-mmm/pi_agent@v0.3.5
 ```
 
 Optional Herdr integration:
@@ -53,8 +53,8 @@ First run inside a project:
 
 ```text
 /login
-<select provider/model: OpenAI Codex or Claude>
-/model-options
+/model          # or Ctrl+L: select OpenAI Codex / Claude from Pi's native selector
+/scoped-models  # optional: edit Ctrl+P cycle list
 /onboard-project
 /memory-policy
 ```
@@ -131,23 +131,21 @@ Remember: this repo uses pnpm, never npm.
 
 ### Model options
 
-Use when choosing between OpenAI Codex and Claude/Anthropic for a task.
+Model selection is native Pi UI, not an agent recommendation flow.
 
 ```text
-/model-options Recommend fast/balanced/deep options for this project.
+/model          # selector
+Ctrl+L          # selector hotkey
+/scoped-models  # edit cycle scope
+Ctrl+P          # cycle scoped models
+Shift+Tab       # cycle thinking level
 ```
 
-Examples:
+Global setup configures `enabledModels` for Codex + Claude. To inspect or re-apply:
 
 ```bash
-pi --model openai-codex/gpt-5.5:xhigh
-pi --model openai-codex/gpt-5.6-sol:xhigh
-pi --model openai-codex/gpt-5.6-terra:xhigh
-pi --model anthropic/claude-sonnet-5:xhigh
-pi --model anthropic/claude-opus-4-7:max
-pi --model anthropic/claude-fable-5:max
-pi --model anthropic/claude-haiku-4-5:low
 pi-company-models
+pi-company-model-scope --preset full
 ```
 
 ### Planning and clarification
@@ -164,7 +162,7 @@ Most projects do not need shell init. Use this only when you want to pre-create 
 ```bash
 bash /path/to/pi_agent/scripts/setup.sh /path/to/project \
   --profile be-readonly-fe \
-  --package-source git:github.com/Vt-mmm/pi_agent@v0.3.4
+  --package-source git:github.com/Vt-mmm/pi_agent@v0.3.5
 ```
 
 ## Repository layout
