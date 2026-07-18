@@ -16,9 +16,9 @@ Options:
   -h, --help
 
 Package source examples:
-  git:github.com/Vt-mmm/pi_agent@v0.1.1
+  git:github.com/Vt-mmm/pi_agent@v0.2.0
   https://github.com/Vt-mmm/pi_agent
-  npm:@company/pi_agent@0.1.1
+  npm:@company/pi_agent@0.2.0
 
 Default package source:
   1. --package-source
@@ -272,6 +272,14 @@ if [[ ! -f "$PROJECT_PATH/.pi/project-context.md" ]]; then
   cp "$PLATFORM_ROOT/templates/project/.pi/project-context.md" "$PROJECT_PATH/.pi/project-context.md"
 fi
 
+mkdir -p "$PROJECT_PATH/.pi/memory"
+if [[ ! -f "$PROJECT_PATH/.pi/memory/memory_summary.md" ]]; then
+  cp "$PLATFORM_ROOT/templates/project/.pi/memory/memory_summary.md" "$PROJECT_PATH/.pi/memory/memory_summary.md"
+fi
+if [[ ! -f "$PROJECT_PATH/.pi/memory/MEMORY.md" ]]; then
+  cp "$PLATFORM_ROOT/templates/project/.pi/memory/MEMORY.md" "$PROJECT_PATH/.pi/memory/MEMORY.md"
+fi
+
 if [[ "$SKIP_AGENTS" == false && ! -f "$PROJECT_PATH/AGENTS.md" ]]; then
   cp "$PLATFORM_ROOT/templates/project/AGENTS.md" "$PROJECT_PATH/AGENTS.md"
 fi
@@ -293,3 +301,4 @@ echo "  cd \"$PROJECT_PATH\""
 echo "  pi"
 echo "  /login              # first time only"
 echo "  /onboard-project    # first project-read after model selection"
+echo "  /memory-policy      # inspect project memory policy when needed"

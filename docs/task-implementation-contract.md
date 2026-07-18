@@ -18,6 +18,7 @@
 | `protectedPaths` | yes | Vùng cấm từ profile/policy. |
 | `requiredContext` | yes | Context bắt buộc đọc. |
 | `contextManifest` | yes | Bằng chứng context đã dùng. |
+| `memoryCitations` | no | Memory file dùng làm advisory context, nếu có. |
 | `mcpCapabilities` | no | Tool/MCP được phép. |
 | `verifyCommands` | yes | Command phải chạy trước DONE. |
 | `verifyEvidence` | yes before done | Output/result command. |
@@ -58,6 +59,7 @@
       "reason": "root rules"
     }
   ],
+  "memoryCitations": [],
   "mcpCapabilities": [
     "filesystem-readonly",
     "browser"
@@ -79,6 +81,7 @@ Pi task prompt phải bắt buộc:
 
 ```text
 Use company_context first.
+Use company_memory_status and search memory when relevant; memory is advisory only.
 Read .pi/project-context.md; if it is pending, stop and request /onboard-project.
 Create/mentally hold a Task Implementation Contract.
 Do not edit before scope + verify command are known.
@@ -111,5 +114,6 @@ Chưa có “Final gate” tự động chặn assistant trả DONE nếu thiế
 
 - `/platform-migration`: dùng cho task migrate Pi docs/Codex CLI/repo pattern vào platform.
 - `/be-to-fe`: dùng cho task scout BE contract read-only rồi implement FE.
+- `/memory-policy`: dùng cho task kiểm tra/ghi nhớ explicit project memory.
 
 Hai recipe này vẫn phải tạo/giữ Task Implementation Contract khi có source writes.

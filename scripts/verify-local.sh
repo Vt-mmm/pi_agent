@@ -10,10 +10,13 @@ required_files=(
   "$ROOT/.pi/settings.json"
   "$ROOT/.pi/company-profile.json"
   "$ROOT/.pi/project-context.md"
+  "$ROOT/.pi/memory/memory_summary.md"
+  "$ROOT/.pi/memory/MEMORY.md"
   "$ROOT/packages/pi-company-core/package.json"
   "$ROOT/packages/pi-company-core/extensions/company-guard.ts"
   "$ROOT/packages/pi-company-core/prompts/onboard-project.md"
   "$ROOT/packages/pi-company-core/prompts/profiles.md"
+  "$ROOT/packages/pi-company-core/prompts/memory-policy.md"
   "$ROOT/packages/pi-company-core/prompts/platform-migration.md"
   "$ROOT/packages/pi-company-core/prompts/be-to-fe.md"
   "$ROOT/packages/pi-company-core/prompts/task.md"
@@ -37,11 +40,14 @@ required_files=(
   "$ROOT/templates/project/.pi/settings.json"
   "$ROOT/templates/project/.pi/company-profile.json"
   "$ROOT/templates/project/.pi/project-context.md"
+  "$ROOT/templates/project/.pi/memory/memory_summary.md"
+  "$ROOT/templates/project/.pi/memory/MEMORY.md"
   "$ROOT/templates/project/.pi/.gitignore"
   "$ROOT/templates/project/REVIEW_GUIDELINES.md"
   "$ROOT/docs/quickstart-vietnamese.md"
   "$ROOT/docs/project-onboarding.md"
   "$ROOT/docs/workflow-recipes.md"
+  "$ROOT/docs/memory-policy.md"
   "$ROOT/docs/harness-migration-standard.md"
   "$ROOT/docs/task-implementation-contract.md"
   "$ROOT/docs/readiness-assessment.md"
@@ -119,7 +125,12 @@ grep -R "company_context" "$ROOT/packages/pi-company-core" >/dev/null
 grep -R "company_profile_options" "$ROOT/packages/pi-company-core" "$ROOT/docs" >/dev/null
 grep -R "company_profile_apply" "$ROOT/packages/pi-company-core" "$ROOT/docs" >/dev/null
 grep -R "company_project_onboarding_record" "$ROOT/packages/pi-company-core" "$ROOT/docs" >/dev/null
+grep -R "company_memory_status" "$ROOT/packages/pi-company-core" "$ROOT/docs" "$ROOT/templates/project/AGENTS.md" >/dev/null
+grep -R "company_memory_note" "$ROOT/packages/pi-company-core" "$ROOT/docs" >/dev/null
+grep -R "company_memory_search" "$ROOT/packages/pi-company-core" "$ROOT/docs" >/dev/null
+grep -R "company_memory_citation_record" "$ROOT/packages/pi-company-core" "$ROOT/docs" >/dev/null
 grep -R "/onboard-project" "$ROOT/README.md" "$ROOT/docs" "$ROOT/templates/project/AGENTS.md" >/dev/null
+grep -R "/memory-policy" "$ROOT/README.md" "$ROOT/docs" "$ROOT/packages/pi-company-core/prompts" >/dev/null
 grep -R "/platform-migration" "$ROOT/packages/pi-company-core/prompts" "$ROOT/docs" >/dev/null
 grep -R "/be-to-fe" "$ROOT/packages/pi-company-core/prompts" "$ROOT/docs" >/dev/null
 grep -R "Codex CLI" "$ROOT/docs/codex-migration-reference.md" >/dev/null

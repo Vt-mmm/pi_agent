@@ -14,9 +14,9 @@ Repo này phải chạy được cho nhiều project/domain khác nhau. Vì vậ
 
 | Use case | Package source |
 |---|---|
-| Team stable | `git:github.com/Vt-mmm/pi_agent@v0.1.1` |
+| Team stable | `git:github.com/Vt-mmm/pi_agent@v0.2.0` |
 | Team latest internal | `https://github.com/Vt-mmm/pi_agent` |
-| Enterprise npm | `npm:@company/pi_agent@0.1.1` |
+| Enterprise npm | `npm:@company/pi_agent@0.2.0` |
 | Local platform dev | `/path/to/pi_agent` |
 
 Pin tag/commit cho project nghiêm túc để tránh workflow đổi bất ngờ.
@@ -32,7 +32,7 @@ Root `package.json` có `pi` manifest trỏ tới:
 Do đó team có thể:
 
 ```bash
-pi install git:github.com/Vt-mmm/pi_agent@v0.1.1
+pi install git:github.com/Vt-mmm/pi_agent@v0.2.0
 ```
 
 Không cần biết internal folder `packages/pi-company-core`.
@@ -43,7 +43,7 @@ Team nên install global package một lần:
 
 ```bash
 npm install -g @earendil-works/pi-coding-agent
-pi install git:github.com/Vt-mmm/pi_agent@v0.1.1
+pi install git:github.com/Vt-mmm/pi_agent@v0.2.0
 ```
 
 Sau đó project nào cũng:
@@ -72,7 +72,7 @@ Nếu muốn commit sẵn `.pi/company-profile.json` vào repo hoặc bootstrap 
 ```bash
 bash scripts/setup.sh /path/to/project \
   --profile be-readonly-fe \
-  --package-source git:github.com/Vt-mmm/pi_agent@v0.1.1
+  --package-source git:github.com/Vt-mmm/pi_agent@v0.2.0
 ```
 
 Với project cần scout BE nhưng chỉ implement FE, có thể chọn trong Pi:
@@ -93,6 +93,9 @@ project/
    ├─ settings.json
    ├─ company-profile.json
    ├─ project-context.md
+   ├─ memory/
+   │  ├─ memory_summary.md
+   │  └─ MEMORY.md
    ├─ mcp.json
    └─ .gitignore
 ```
@@ -104,12 +107,19 @@ Files nên commit:
 - `.pi/settings.json`
 - `.pi/company-profile.json`
 - `.pi/project-context.md`
+- `.pi/memory/memory_summary.md`
+- `.pi/memory/MEMORY.md`
 - `.pi/mcp.json`
 - `.pi/.gitignore`
 
 Files không commit:
 
 - `.pi/company-state/`
+- `.pi/memory/local/`
+- `.pi/memory/state.sqlite`
+- `.pi/memory/raw_memories.md`
+- `.pi/memory/rollout_summaries/`
+- `.pi/memory/extensions/ad_hoc/`
 - `.pi/sessions/`
 - `.pi/todos/`
 - `.pi/auth.json`
@@ -123,15 +133,15 @@ Files không commit:
    ```bash
    bash scripts/verify-local.sh
    bash scripts/team-doctor.sh . --strict-share
-   bash scripts/setup.sh --global-only --package-source git:github.com/Vt-mmm/pi_agent@v0.1.1 --dry-run
+   bash scripts/setup.sh --global-only --package-source git:github.com/Vt-mmm/pi_agent@v0.2.0 --dry-run
    pi list
    ```
 
 3. Tag:
 
    ```bash
-   git tag v0.1.1
-   git push origin v0.1.1
+   git tag v0.2.0
+   git push origin v0.2.0
    ```
 
 4. Team updates:

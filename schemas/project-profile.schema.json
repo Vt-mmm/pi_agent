@@ -75,6 +75,63 @@
         "type": "string",
         "minLength": 1
       }
+    },
+    "memory": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "mode": {
+          "enum": [
+            "off",
+            "manual",
+            "assisted",
+            "external-package"
+          ]
+        },
+        "scope": {
+          "enum": [
+            "project",
+            "global",
+            "hybrid"
+          ]
+        },
+        "summaryFile": {
+          "type": "string",
+          "minLength": 1
+        },
+        "handbookFile": {
+          "type": "string",
+          "minLength": 1
+        },
+        "localDir": {
+          "type": "string",
+          "minLength": 1
+        },
+        "readBeforeTask": {
+          "type": "boolean"
+        },
+        "writePolicy": {
+          "enum": [
+            "explicit-only",
+            "task-trace",
+            "session-summary"
+          ]
+        },
+        "maxInjectedChars": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "externalPackages": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      },
+      "additionalProperties": false
     }
   },
   "additionalProperties": true

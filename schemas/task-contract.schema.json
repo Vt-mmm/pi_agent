@@ -14,6 +14,7 @@
     "protectedPaths",
     "requiredContext",
     "contextManifest",
+    "memoryCitations",
     "verifyCommands",
     "changedFiles",
     "verifyEvidence",
@@ -93,6 +94,27 @@
           }
         },
         "additionalProperties": true
+      }
+    },
+    "memoryCitations": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "path",
+          "reason"
+        ],
+        "properties": {
+          "path": {
+            "type": "string",
+            "minLength": 1
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false
       }
     },
     "mcpCapabilities": {

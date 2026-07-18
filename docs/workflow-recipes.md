@@ -37,6 +37,12 @@ bash scripts/team-doctor.sh /path/to/pi_agent --strict-share
 pi list --approve
 ```
 
+Memory note:
+
+- Nếu migration tạo decision/lesson bền vững, user có thể yêu cầu `Remember: ...`.
+- Agent dùng `company_memory_note` để ghi note explicit.
+- Không tự ghi toàn bộ transcript migration vào memory.
+
 ## Recipe 2 — Backend spec to frontend
 
 Dùng khi backend là source of truth nhưng frontend là nơi implement. Backend chỉ được scout/read-only.
@@ -83,3 +89,19 @@ Agent phải làm:
 | Project đặc thù/private | profile explicit trong chính repo project |
 
 Không dùng `auto` để suy ra `be-readonly-fe`, vì BE read-only là policy decision chứ không phải marker kỹ thuật.
+
+## Recipe 3 — Project memory
+
+Dùng khi muốn Pi nhớ durable facts/decisions/preferences giữa các session mà không phải scout lại từ đầu.
+
+```text
+/memory-policy
+Remember: this repo uses pnpm, never npm.
+```
+
+Rule:
+
+1. Memory là hint, không phải authority.
+2. Chỉ ghi explicit note khi user yêu cầu rõ.
+3. Không lưu secret/raw private data/source excerpt dài.
+4. Trước source edit, search memory nếu task liên quan rồi verify bằng repo file hiện tại.

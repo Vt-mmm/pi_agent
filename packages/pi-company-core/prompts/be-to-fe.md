@@ -21,34 +21,35 @@ Use this for tasks like:
 Mandatory flow:
 
 1. Call `company_context` with `detail=full`.
-2. Read `.pi/project-context.md`. If pending, stop and ask for `/onboard-project`.
-3. Read required context from the active profile.
-4. Classify the task:
+2. Call `company_memory_status`; search memory for prior BE/FE mapping decisions if relevant, record citations with `company_memory_citation_record`, then verify against current BE/FE files.
+3. Read `.pi/project-context.md`. If pending, stop and ask for `/onboard-project`.
+4. Read required context from the active profile.
+5. Classify the task:
    - BE scout: read-only.
    - FE implementation: source-write.
    - Auth/data migration/external provider: high-risk, ask before implementation.
-5. Scout backend contract read-only:
+6. Scout backend contract read-only:
    - controller/route/handler;
    - request/response DTO/schema;
    - validation/error model;
    - backend tests;
    - OpenAPI/spec/docs if available;
    - migration/schema only when it affects API shape or UI constraints.
-6. Produce a contract snapshot before FE writes:
+7. Produce a contract snapshot before FE writes:
 
    | Contract area | Backend evidence | FE implication |
    |---|---|---|
 
-7. If backend contract is missing/contradictory, do not guess and do not edit BE. Record the gap in the final response or a project report if requested.
-8. Map FE touchpoints:
+8. If backend contract is missing/contradictory, do not guess and do not edit BE. Record the gap in the final response or a project report if requested.
+9. Map FE touchpoints:
    - API client/query/mutation layer;
    - types/decoders;
    - state/cache invalidation;
    - route/page/component/form;
    - tests/e2e.
-9. Implement FE only.
-10. Run FE verify commands from the profile.
-11. Record task context/verify/trace when runtime tools are available.
+10. Implement FE only.
+11. Run FE verify commands from the profile.
+12. Record task context/verify/trace when runtime tools are available.
 
 For generic projects, use profile `be-readonly-fe` when the repo policy is “BE scout only, FE write allowed”.
 
@@ -58,5 +59,6 @@ Final output:
 - Contract snapshot summary.
 - FE files changed.
 - Verify command/result.
+- Memory cited, if any.
 - Backend gaps, if any.
 - Residual risk.

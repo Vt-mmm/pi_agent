@@ -6,12 +6,13 @@ Một thành viên mới không cần biết local path của maintainer. Luồn
 
 ```bash
 npm install -g @earendil-works/pi-coding-agent
-pi install git:github.com/Vt-mmm/pi_agent@v0.1.1
+pi install git:github.com/Vt-mmm/pi_agent@v0.2.0
 cd /path/to/project
 pi
 /login
 <select provider/model>
 /onboard-project
+/memory-policy
 ```
 
 ## Prerequisites
@@ -28,14 +29,14 @@ Khuyến nghị dùng tag cố định:
 
 ```bash
 npm install -g @earendil-works/pi-coding-agent
-pi install git:github.com/Vt-mmm/pi_agent@v0.1.1
+pi install git:github.com/Vt-mmm/pi_agent@v0.2.0
 ```
 
 Nếu team publish npm private:
 
 ```bash
 npm install -g @earendil-works/pi-coding-agent
-pi install npm:@company/pi_agent@0.1.1
+pi install npm:@company/pi_agent@0.2.0
 ```
 
 Không cần chạy bash để set profile cho từng project.
@@ -61,6 +62,8 @@ Sau login, chọn provider/model intended cho project understanding. Rồi chạ
 Output chính:
 
 - `.pi/project-context.md`
+- `.pi/memory/memory_summary.md`
+- `.pi/memory/MEMORY.md`
 - `.pi/company-state/project-onboarding.json`
 
 Đây là bước model đọc qua project lần đầu theo cách bounded: đọc profile, AGENTS, README, docs/config/source map/test command; không load toàn bộ source.
@@ -68,6 +71,8 @@ Output chính:
 Nếu project chưa có `.pi/company-profile.json`, `/onboard-project` sẽ gọi profile options, gợi ý profile, giải thích option, rồi hỏi user chọn. Sau khi user approve, nó mới ghi profile.
 
 Nếu `.pi/project-context.md` còn `Generated: not yet`, không nên chạy `/task` implementation.
+
+Memory mặc định là project-scoped và explicit-only. Chạy `/memory-policy` để xem files/rules. Agent chỉ ghi durable memory khi user yêu cầu rõ ràng.
 
 Đổi profile sau này:
 
@@ -84,13 +89,13 @@ Các script setup/init vẫn tồn tại cho case preseed config vào repo hoặ
 ```bash
 bash /path/to/pi_agent/scripts/setup.sh /path/to/project \
   --profile be-readonly-fe \
-  --package-source git:github.com/Vt-mmm/pi_agent@v0.1.1
+  --package-source git:github.com/Vt-mmm/pi_agent@v0.2.0
 ```
 
 Nếu cần override profile:
 
 ```bash
-bash /path/to/pi_agent/scripts/setup.sh /path/to/project --project-only --profile backend-api --package-source git:github.com/Vt-mmm/pi_agent@v0.1.1
+bash /path/to/pi_agent/scripts/setup.sh /path/to/project --project-only --profile backend-api --package-source git:github.com/Vt-mmm/pi_agent@v0.2.0
 ```
 
 Profile built-in trong Pi:
@@ -113,6 +118,8 @@ Project init tạo:
 - `.pi/settings.json`
 - `.pi/company-profile.json`
 - `.pi/mcp.json`
+- `.pi/memory/memory_summary.md`
+- `.pi/memory/MEMORY.md`
 - `.pi/.gitignore`
 - `AGENTS.md` nếu chưa có
 - `REVIEW_GUIDELINES.md` nếu chưa có
@@ -153,6 +160,13 @@ Task BE spec lên FE:
 /be-to-fe Implement FE from BE contract <endpoint/spec>. Backend is read-only.
 ```
 
+Project memory:
+
+```text
+/memory-policy
+Remember: this repo uses pnpm, never npm.
+```
+
 Repo ngoài làm reference:
 
 ```text
@@ -179,6 +193,9 @@ Nếu doctor cảnh báo `project onboarding snapshot is still pending`, mở Pi
 ## Không commit
 
 - `.pi/company-state/`
+- `.pi/memory/local/`
+- `.pi/memory/state.sqlite`
+- `.pi/memory/rollout_summaries/`
 - `.pi/todos/`
 - `.pi/sessions/`
 - `.pi/auth.json`

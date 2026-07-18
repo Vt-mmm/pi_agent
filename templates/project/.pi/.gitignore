@@ -8,3 +8,9 @@ npm/
 git/
 trust.json
 auth.json
+memory/state.sqlite
+memory/raw_memories.md
+memory/rollout_summaries/
+memory/extensions/ad_hoc/
+memory/local/
+memory/.git/

@@ -9,11 +9,13 @@ This repository is designed for teams that want a `cd project && pi` workflow wi
 - Global Pi package with prompts, skills, and guard extensions.
 - Runtime project onboarding via `/onboard-project`.
 - Runtime profile selection via `/profiles`.
+- Explicit project memory via `/memory-policy` and `company_memory_*` tools.
 - Built-in profiles for frontend, backend, fullstack, BE-readonly/FE-write, data, DevOps, mobile, docs, Python, and Node TypeScript.
 - Guardrails for protected paths, destructive shell commands, task contracts, context manifests, verification evidence, and trace records.
 - Reusable workflow prompts:
   - `/platform-migration`
   - `/be-to-fe`
+  - `/memory-policy`
   - `/task`
   - `/plan`
   - `/discuss`
@@ -23,7 +25,7 @@ This repository is designed for teams that want a `cd project && pi` workflow wi
 
 ```bash
 npm install -g @earendil-works/pi-coding-agent
-pi install git:github.com/Vt-mmm/pi_agent@v0.1.1
+pi install git:github.com/Vt-mmm/pi_agent@v0.2.0
 ```
 
 Optional Herdr integration:
@@ -45,6 +47,7 @@ First run inside a project:
 /login
 <select provider/model>
 /onboard-project
+/memory-policy
 ```
 
 `/onboard-project` will:
@@ -54,7 +57,8 @@ First run inside a project:
 - show profile options and tradeoffs;
 - apply a profile only after user approval;
 - write `.pi/company-profile.json`;
-- write `.pi/project-context.md`.
+- write `.pi/project-context.md`;
+- initialize/read `.pi/memory/` policy when needed.
 
 Switch profiles later:
 
@@ -107,6 +111,15 @@ Use when backend must be scouted read-only and the implementation target is fron
 /task Implement <bounded task>. Follow profile, required context, protected paths, verify commands, and trace.
 ```
 
+### Project memory
+
+Use when you want Pi to inspect memory policy or remember durable project facts explicitly.
+
+```text
+/memory-policy
+Remember: this repo uses pnpm, never npm.
+```
+
 ### Planning and clarification
 
 ```text
@@ -121,7 +134,7 @@ Most projects do not need shell init. Use this only when you want to pre-create 
 ```bash
 bash /path/to/pi_agent/scripts/setup.sh /path/to/project \
   --profile be-readonly-fe \
-  --package-source git:github.com/Vt-mmm/pi_agent@v0.1.1
+  --package-source git:github.com/Vt-mmm/pi_agent@v0.2.0
 ```
 
 ## Repository layout
@@ -169,6 +182,7 @@ MIT License. See [LICENSE](LICENSE).
 - [Architecture](docs/architecture.md)
 - [MCP and tools](docs/mcp-and-tools.md)
 - [Context-window policy](docs/context-window-policy.md)
+- [Memory policy](docs/memory-policy.md)
 - [Task implementation contract](docs/task-implementation-contract.md)
 - [Codex migration reference](docs/codex-migration-reference.md)
 - [Agent-stuff research](docs/agent-stuff-research.md)

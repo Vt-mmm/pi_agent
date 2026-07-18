@@ -34,13 +34,13 @@ Options:
   -h, --help
 
 Package source examples:
-  git:github.com/Vt-mmm/pi_agent@v0.1.1
+  git:github.com/Vt-mmm/pi_agent@v0.2.0
   https://github.com/Vt-mmm/pi_agent
-  npm:@company/pi_agent@0.1.1
+  npm:@company/pi_agent@0.2.0
   /absolute/path/to/pi_agent
 
 One-command team setup example:
-  bash /path/to/pi_agent/scripts/setup.sh . --profile auto --package-source git:github.com/Vt-mmm/pi_agent@v0.1.1
+  bash /path/to/pi_agent/scripts/setup.sh . --profile auto --package-source git:github.com/Vt-mmm/pi_agent@v0.2.0
 USAGE
 }
 
@@ -296,6 +296,7 @@ echo "  /login             # first time only"
 if [[ "$DO_PROJECT" == true ]]; then
   echo "  <select provider/model for project understanding>"
   echo "  /onboard-project   # first project-read snapshot before implementation"
+  echo "  /memory-policy     # inspect project memory policy when needed"
 fi
 echo
 echo "Daily flow after setup:"

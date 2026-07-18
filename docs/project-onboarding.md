@@ -19,11 +19,15 @@ Sau khi `/onboard-project` chạy xong, project có file:
 ```text
 .pi/company-profile.json
 .pi/project-context.md
+.pi/memory/memory_summary.md
+.pi/memory/MEMORY.md
 ```
 
 `/onboard-project` là nơi profile được chọn. Nếu project chưa có `.pi/company-profile.json`, model phải gợi ý profile, show option, giải thích tradeoff, rồi chỉ apply khi user approve.
 
 `.pi/project-context.md` là context snapshot để task sau không phải scout lại toàn bộ repo từ đầu.
+
+`.pi/memory/` là durable memory thủ công để giữ preference/decision/lesson ổn định giữa các session. Nó không thay thế snapshot hoặc source hiện tại.
 
 ## Vì sao không để bash làm bước này
 
@@ -56,12 +60,13 @@ Không đọc toàn bộ source. Đọc theo lớp:
 1. `.pi/company-profile.json`
 2. `AGENTS.md`
 3. `.pi/project-context.md` hiện tại
-4. `README.md`
-5. package/build/runtime config
-6. docs/architecture/spec nếu có
-7. source directory map
-8. test/verify command definitions
-9. API/schema/migration markers nếu có
+4. `.pi/memory/memory_summary.md` nếu đã có và liên quan
+5. `README.md`
+6. package/build/runtime config
+7. docs/architecture/spec nếu có
+8. source directory map
+9. test/verify command definitions
+10. API/schema/migration markers nếu có
 
 Mục tiêu là hiểu cấu trúc và policy, không nhồi full repo vào context.
 
@@ -77,6 +82,7 @@ Mục tiêu là hiểu cấu trúc và policy, không nhồi full repo vào cont
 - verification matrix;
 - protected/high-risk areas;
 - MCP/tool policy;
+- memory policy;
 - update triggers.
 
 ## Khi nào regenerate

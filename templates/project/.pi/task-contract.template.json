@@ -15,6 +15,7 @@
   "protectedPaths": [],
   "requiredContext": [],
   "contextManifest": [],
+  "memoryCitations": [],
   "mcpCapabilities": [],
   "verifyCommands": [
     "Replace with verify command."
@@ -25,4 +26,3 @@
     "outcome": "pending"
   }
 }
-

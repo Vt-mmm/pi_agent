@@ -15,7 +15,7 @@ Phần còn lại — OAuth, package, context, harness, MCP, tool-call guard —
 
 ```bash
 npm install -g @earendil-works/pi-coding-agent
-pi install git:github.com/Vt-mmm/pi_agent@v0.1.1
+pi install git:github.com/Vt-mmm/pi_agent@v0.2.0
 ```
 
 Sau bước này, project mới không cần chạy bash init profile. Chỉ cần:
@@ -40,6 +40,7 @@ Sau khi login và chọn model intended cho project understanding:
 
 ```text
 /onboard-project
+/memory-policy
 ```
 
 Lệnh này yêu cầu model đọc qua project theo phạm vi có kiểm soát, rồi ghi:
@@ -47,11 +48,15 @@ Lệnh này yêu cầu model đọc qua project theo phạm vi có kiểm soát,
 ```text
 .pi/company-profile.json
 .pi/project-context.md
+.pi/memory/memory_summary.md
+.pi/memory/MEMORY.md
 ```
 
 Nếu chưa có profile, model sẽ show profile option, gợi ý lựa chọn, giải thích khác nhau giữa `fullstack`, `be-readonly-fe`, `web-frontend`, `backend-api`, rồi mới apply sau khi user approve.
 
 File này là snapshot context cho task sau. Nếu file còn `Generated: not yet`, agent phải dừng trước khi implement và yêu cầu chạy `/onboard-project`.
+
+`/memory-policy` kiểm tra chính sách memory của project. Mặc định memory là explicit-only: chỉ ghi khi user yêu cầu rõ “remember this”, không tự học transcript nền.
 
 ## Bước 4 — init thêm project khác
 
@@ -59,7 +64,7 @@ File này là snapshot context cho task sau. Nếu file còn `Generated: not yet
 bash /path/to/pi_agent/scripts/setup.sh /path/to/project \
   --project-only \
   --profile auto \
-  --package-source git:github.com/Vt-mmm/pi_agent@v0.1.1
+  --package-source git:github.com/Vt-mmm/pi_agent@v0.2.0
 ```
 
 Đổi profile sau này trong Pi:
@@ -78,7 +83,7 @@ Script bash chỉ dùng khi muốn preseed config vào repo:
 ```bash
 bash /path/to/pi_agent/scripts/setup.sh /path/to/project \
   --profile be-readonly-fe \
-  --package-source git:github.com/Vt-mmm/pi_agent@v0.1.1
+  --package-source git:github.com/Vt-mmm/pi_agent@v0.2.0
 ```
 
 ## Bước 6 — chạy hằng ngày
@@ -106,6 +111,7 @@ Prompt mẫu cho 2 recipe hay gặp:
 ```text
 /platform-migration Migrate selected Pi docs and Codex CLI GitHub concepts into this platform.
 /be-to-fe Implement FE from BE spec <endpoint/spec>. Backend read-only.
+/memory-policy Show project memory policy and safe remember workflow.
 ```
 
 Cache repo tham chiếu để đọc targeted trong Pi:
@@ -128,6 +134,7 @@ bash "$PI_COMPANY_PLATFORM_HOME/packages/pi-company-core/skills/company-referenc
 - Login OAuth lần đầu trong browser.
 - Chọn provider/model intended cho project.
 - Chạy `/onboard-project` lần đầu để tạo `.pi/project-context.md`.
+- Chạy `/memory-policy` nếu muốn kiểm tra hoặc dùng project memory.
 - Approve project trust nếu Pi hỏi.
 - Approve khi extension guard hỏi destructive/high-risk action.
 

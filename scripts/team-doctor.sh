@@ -72,6 +72,7 @@ for (const rel of [
   "packages/pi-company-core/extensions/company-guard.ts",
   "packages/pi-company-core/prompts/onboard-project.md",
   "packages/pi-company-core/prompts/profiles.md",
+  "packages/pi-company-core/prompts/memory-policy.md",
   "packages/pi-company-core/prompts/platform-migration.md",
   "packages/pi-company-core/prompts/be-to-fe.md",
   "packages/pi-company-core/prompts/task.md",
@@ -79,6 +80,8 @@ for (const rel of [
   "templates/project/.pi/settings.json",
   "templates/project/.pi/company-profile.json",
   "templates/project/.pi/project-context.md",
+  "templates/project/.pi/memory/memory_summary.md",
+  "templates/project/.pi/memory/MEMORY.md",
   "scripts/setup.sh"
 ]) {
   if (!exists(rel)) errors.push(`missing platform file: ${rel}`);
@@ -135,6 +138,12 @@ if (fs.existsSync(projectContextPath)) {
   warnings.push("project has no .pi/project-context.md; run setup/init or /onboard-project");
 }
 
+const memorySummaryPath = path.join(projectPath, ".pi", "memory", "memory_summary.md");
+const memoryHandbookPath = path.join(projectPath, ".pi", "memory", "MEMORY.md");
+if (!fs.existsSync(memorySummaryPath) || !fs.existsSync(memoryHandbookPath)) {
+  warnings.push("project has no .pi/memory scaffold; run setup/init or use /memory-policy before relying on project memory");
+}
+
 if (strictShare) {
   const shareCriticalFiles = [
     "README.md",
@@ -142,6 +151,7 @@ if (strictShare) {
     "docs/team-onboarding.md",
     "docs/project-onboarding.md",
     "docs/workflow-recipes.md",
+    "docs/memory-policy.md",
     "docs/publishing-for-teams.md",
     "templates/project/.pi/settings.json",
     "templates/global/settings.json",

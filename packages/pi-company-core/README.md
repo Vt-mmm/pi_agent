@@ -14,6 +14,7 @@ Pi package dùng chung cho nhiều project.
 
 - `/onboard-project`: first-run project context snapshot sau login/model selection.
 - `/profiles`: show/switch profile trong Pi, không cần shell init.
+- `/memory-policy`: inspect project memory policy and explicit remember workflow.
 - `/platform-migration`: migrate selected Pi/Codex/agent-framework concepts vào platform.
 - `/be-to-fe`: scout backend contract read-only rồi implement frontend only.
 - `/task`, `/plan`, `/discuss`, `/review`: task lifecycle chuẩn.
@@ -21,7 +22,7 @@ Pi package dùng chung cho nhiều project.
 ## Cài local
 
 ```bash
-pi install git:github.com/Vt-mmm/pi_agent@v0.1.1
+pi install git:github.com/Vt-mmm/pi_agent@v0.2.0
 ```
 
 ## Project profile
@@ -39,6 +40,7 @@ Runtime task tools ghi state vào:
 
 - `.pi/company-state/tasks/*.json`
 - `.pi/project-context.md` và `.pi/company-state/project-onboarding.json`
+- `.pi/memory/MEMORY.md` khi user explicit ask to remember
 - `.pi/company-state/traces.jsonl`
 - Pi custom session entry `company-task-trace`
 

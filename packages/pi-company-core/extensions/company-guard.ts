@@ -15,6 +15,20 @@ type ProjectProfile = {
   requiredContext?: string[];
   verifyCommands?: Record<string, string[]>;
   mcpCapabilities?: string[];
+  memory?: MemorySettings;
+};
+
+type MemorySettings = {
+  enabled?: boolean;
+  mode?: "off" | "manual" | "assisted" | "external-package";
+  scope?: "project" | "global" | "hybrid";
+  summaryFile?: string;
+  handbookFile?: string;
+  localDir?: string;
+  readBeforeTask?: boolean;
+  writePolicy?: "explicit-only" | "task-trace" | "session-summary";
+  maxInjectedChars?: number;
+  externalPackages?: string[];
 };
 
 type ProfileOption = {
@@ -50,6 +64,7 @@ type TaskContract = {
   protectedPaths: string[];
   requiredContext: string[];
   contextManifest: Array<{ path: string; reason: string }>;
+  memoryCitations: Array<{ path: string; reason: string }>;
   mcpCapabilities: string[];
   verifyCommands: string[];
   changedFiles: string[];
@@ -82,6 +97,26 @@ type ReferenceRepo = {
 };
 
 const COMPANY_TRACE_STATE_TYPE = "company-task-trace";
+
+const DEFAULT_MEMORY_SETTINGS: Required<MemorySettings> = {
+  enabled: true,
+  mode: "manual",
+  scope: "project",
+  summaryFile: ".pi/memory/memory_summary.md",
+  handbookFile: ".pi/memory/MEMORY.md",
+  localDir: ".pi/memory/local",
+  readBeforeTask: true,
+  writePolicy: "explicit-only",
+  maxInjectedChars: 4000,
+  externalPackages: []
+};
+
+const SECRET_PATTERNS = [
+  /AKIA[0-9A-Z]{16}/g,
+  /\b(?:gho_|ghp_|sk-)[A-Za-z0-9_]{16,}\b/g,
+  /\b(?:api[_-]?key|token|password|secret|credential|client_secret)\s*[:=]\s*["']?[^"'\s]+/gi,
+  /-----BEGIN [A-Z ]*PRIVATE KEY-----[\s\S]*?-----END [A-Z ]*PRIVATE KEY-----/g
+];
 
 const DEFAULT_POLICY: BasePolicy = {
   protectedPaths: [".git/**", "**/auth.json", "**/.env", "**/.env.*"],
@@ -247,6 +282,150 @@ function ensureProjectContextPlaceholder(cwd: string): void {
     "Run `/onboard-project` to replace this placeholder with a concise project context snapshot.",
     ""
   ].join("\n"));
+}
+
+function resolveMemorySettings(profile: ProjectProfile): Required<MemorySettings> {
+  return {
+    ...DEFAULT_MEMORY_SETTINGS,
+    ...(profile.memory ?? {}),
+    externalPackages: profile.memory?.externalPackages ?? DEFAULT_MEMORY_SETTINGS.externalPackages
+  };
+}
+
+function projectFilePath(cwd: string, relativePath: string): string {
+  const absolute = path.resolve(cwd, relativePath);
+  const relative = path.relative(cwd, absolute);
+  if (relative.startsWith("..") || path.isAbsolute(relative)) {
+    throw new Error(`Path escapes project root: ${relativePath}`);
+  }
+  return absolute;
+}
+
+function memorySummaryPath(cwd: string, settings: Required<MemorySettings>): string {
+  return projectFilePath(cwd, settings.summaryFile);
+}
+
+function memoryHandbookPath(cwd: string, settings: Required<MemorySettings>): string {
+  return projectFilePath(cwd, settings.handbookFile);
+}
+
+function memoryLocalDir(cwd: string, settings: Required<MemorySettings>): string {
+  return projectFilePath(cwd, settings.localDir);
+}
+
+function redactMemoryText(input: string): { text: string; redacted: boolean } {
+  let text = input;
+  for (const pattern of SECRET_PATTERNS) {
+    text = text.replace(pattern, "[REDACTED_SECRET]");
+  }
+  return { text, redacted: text !== input };
+}
+
+function ensureProjectMemoryFiles(cwd: string, settings: Required<MemorySettings>): void {
+  const summaryPath = memorySummaryPath(cwd, settings);
+  const handbookPath = memoryHandbookPath(cwd, settings);
+  fs.mkdirSync(path.dirname(summaryPath), { recursive: true });
+  fs.mkdirSync(path.dirname(handbookPath), { recursive: true });
+  fs.mkdirSync(memoryLocalDir(cwd, settings), { recursive: true });
+
+  if (!fs.existsSync(summaryPath)) {
+    fs.writeFileSync(summaryPath, [
+      "v1",
+      "",
+      "# Memory Summary",
+      "",
+      "- Status: initialized",
+      "- Scope: project",
+      "- Policy: explicit durable notes only; repository files remain source of truth.",
+      "",
+      "Use this file as a compact memory index. Keep it short and update only with durable, verified context.",
+      ""
+    ].join("\n"));
+  }
+
+  if (!fs.existsSync(handbookPath)) {
+    fs.writeFileSync(handbookPath, [
+      "# Project Memory",
+      "",
+      "Durable project memory for Pi Agent Platform.",
+      "",
+      "Rules:",
+      "",
+      "- Store only stable preferences, decisions, project conventions, lessons, and open loops.",
+      "- Do not store secrets, credentials, raw customer data, or large source excerpts.",
+      "- Treat memory as hints; verify against the repository before editing.",
+      "",
+      "## Entries",
+      ""
+    ].join("\n"));
+  }
+}
+
+function appendMemoryNote(cwd: string, profile: ProjectProfile, note: {
+  category: string;
+  title: string;
+  content: string;
+  source?: string;
+}): { path: string; redacted: boolean } {
+  const settings = resolveMemorySettings(profile);
+  if (!settings.enabled || settings.mode === "off") {
+    throw new Error("Project memory is disabled by profile.");
+  }
+  ensureProjectMemoryFiles(cwd, settings);
+  const target = memoryHandbookPath(cwd, settings);
+  const redacted = redactMemoryText(note.content);
+  const title = note.title.trim().replace(/\s+/g, " ").slice(0, 120);
+  const category = note.category.trim().toLowerCase().replace(/[^a-z0-9_-]+/g, "-").slice(0, 40) || "note";
+  const entry = [
+    "",
+    `### ${title}`,
+    "",
+    `- Recorded: ${nowIso()}`,
+    `- Category: ${category}`,
+    `- Source: ${note.source?.trim() || "explicit-user-request"}`,
+    "",
+    redacted.text.trim(),
+    ""
+  ].join("\n");
+  fs.appendFileSync(target, entry);
+  return { path: settings.handbookFile, redacted: redacted.redacted };
+}
+
+function readMemoryFiles(cwd: string, settings: Required<MemorySettings>): Array<{ rel: string; text: string }> {
+  const files: Array<{ rel: string; text: string }> = [];
+  for (const rel of [settings.summaryFile, settings.handbookFile]) {
+    const absolute = projectFilePath(cwd, rel);
+    if (fs.existsSync(absolute)) files.push({ rel, text: fs.readFileSync(absolute, "utf8") });
+  }
+  const localDir = memoryLocalDir(cwd, settings);
+  if (fs.existsSync(localDir)) {
+    for (const entry of fs.readdirSync(localDir, { withFileTypes: true })) {
+      if (!entry.isFile() || !entry.name.endsWith(".md")) continue;
+      const absolute = path.join(localDir, entry.name);
+      files.push({
+        rel: path.relative(cwd, absolute).split(path.sep).join("/"),
+        text: fs.readFileSync(absolute, "utf8")
+      });
+    }
+  }
+  return files;
+}
+
+function searchMemoryFiles(cwd: string, profile: ProjectProfile, query: string, limit: number): Array<{ path: string; line: number; text: string }> {
+  const settings = resolveMemorySettings(profile);
+  if (!settings.enabled || settings.mode === "off") return [];
+  const needle = query.trim().toLowerCase();
+  if (!needle) return [];
+  const matches: Array<{ path: string; line: number; text: string }> = [];
+  for (const file of readMemoryFiles(cwd, settings)) {
+    const lines = file.text.split(/\r?\n/);
+    for (let index = 0; index < lines.length; index += 1) {
+      if (!lines[index].toLowerCase().includes(needle)) continue;
+      matches.push({ path: file.rel, line: index + 1, text: lines[index].slice(0, 240) });
+      if (matches.length >= limit) return matches;
+    }
+  }
+  return matches;
 }
 
 function writeProjectOnboarding(cwd: string, snapshot: ProjectOnboardingSnapshot, markdown: string): ProjectOnboardingSnapshot {
@@ -628,7 +807,8 @@ export default function companyGuard(pi: ExtensionAPI) {
         protectedPaths: profile.protectedPaths ?? [],
         requiredContext: Array.from(new Set(requiredContext)),
         verifyCommands: profile.verifyCommands ?? {},
-        mcpCapabilities: profile.mcpCapabilities ?? []
+        mcpCapabilities: profile.mcpCapabilities ?? [],
+        memory: resolveMemorySettings(profile)
       };
 
       const text = detail === "full"
@@ -640,13 +820,119 @@ export default function companyGuard(pi: ExtensionAPI) {
         `projectContext: ${payload.projectContext.path} (${payload.projectContext.exists ? "exists" : "missing"})`,
         `requiredContext: ${payload.requiredContext.join(", ") || "none"}`,
         `verifyCommands: ${Object.keys(payload.verifyCommands).join(", ") || "none"}`,
-        `mcpCapabilities: ${payload.mcpCapabilities.join(", ") || "none"}`
+        `mcpCapabilities: ${payload.mcpCapabilities.join(", ") || "none"}`,
+        `memory: ${payload.memory.enabled ? payload.memory.mode : "off"} (${payload.memory.summaryFile})`
       ].join("\n");
 
       return {
         content: [{ type: "text", text }],
         details: payload
       };
+    }
+  });
+
+  pi.registerTool({
+    name: "company_memory_status",
+    label: "Company Memory Status",
+    description: "Return the project memory policy, files, and safe usage rules.",
+    promptSnippet: "Inspect project memory policy before relying on remembered facts.",
+    promptGuidelines: [
+      "Use memory as hints, not source of truth.",
+      "Verify memory against repository files before making source changes.",
+      "Never store secrets or raw private data in memory."
+    ],
+    parameters: Type.Object({
+      detail: Type.Optional(StringEnum(["concise", "full"] as const))
+    }),
+    async execute(_toolCallId, params, _signal, _onUpdate, ctx) {
+      const profile = loadProfileFromContext(ctx);
+      const settings = resolveMemorySettings(profile);
+      const summaryPath = memorySummaryPath(ctx.cwd, settings);
+      const handbookPath = memoryHandbookPath(ctx.cwd, settings);
+      const payload = {
+        enabled: settings.enabled,
+        mode: settings.mode,
+        scope: settings.scope,
+        readBeforeTask: settings.readBeforeTask,
+        writePolicy: settings.writePolicy,
+        maxInjectedChars: settings.maxInjectedChars,
+        files: {
+          summary: { path: settings.summaryFile, exists: fs.existsSync(summaryPath) },
+          handbook: { path: settings.handbookFile, exists: fs.existsSync(handbookPath) },
+          localDir: { path: settings.localDir, exists: fs.existsSync(memoryLocalDir(ctx.cwd, settings)) }
+        },
+        externalPackages: settings.externalPackages,
+        rules: [
+          "Memory is advisory; repository files and current task contract are authoritative.",
+          "Only write durable memory after an explicit user remember request or an approved workflow step.",
+          "Do not save secrets, credentials, raw private data, or large source excerpts.",
+          "Prefer compact summaries, tags, and links over long transcripts."
+        ]
+      };
+      const text = params.detail === "full"
+        ? JSON.stringify(payload, null, 2)
+        : [
+          `memory: ${payload.enabled ? payload.mode : "off"}`,
+          `scope: ${payload.scope}`,
+          `summary: ${payload.files.summary.path} (${payload.files.summary.exists ? "exists" : "missing"})`,
+          `handbook: ${payload.files.handbook.path} (${payload.files.handbook.exists ? "exists" : "missing"})`,
+          `writePolicy: ${payload.writePolicy}`,
+          `externalPackages: ${payload.externalPackages.join(", ") || "none"}`
+        ].join("\n");
+      return { content: [{ type: "text", text }], details: payload };
+    }
+  });
+
+  pi.registerTool({
+    name: "company_memory_note",
+    label: "Company Memory Note",
+    description: "Append an explicit durable project memory note to .pi/memory/MEMORY.md.",
+    promptSnippet: "Use only when the user explicitly asks to remember a stable fact, decision, preference, lesson, or open loop.",
+    promptGuidelines: [
+      "Do not call this for incidental transcript content.",
+      "Keep notes compact and evidence-based.",
+      "Secrets are redacted before writing, but avoid sending secrets to the tool."
+    ],
+    parameters: Type.Object({
+      category: StringEnum(["preference", "decision", "project", "lesson", "open-loop", "reference"] as const),
+      title: Type.String({ minLength: 3 }),
+      content: Type.String({ minLength: 3 }),
+      source: Type.Optional(Type.String())
+    }),
+    async execute(_toolCallId, params, _signal, _onUpdate, ctx) {
+      const profile = loadProfileFromContext(ctx);
+      try {
+        const result = appendMemoryNote(ctx.cwd, profile, params);
+        appendTrace(ctx.cwd, { event: "memory_note", category: params.category, title: params.title, path: result.path, redacted: result.redacted });
+        appendSessionTrace(pi, { event: "memory_note", category: params.category, title: params.title, path: result.path, redacted: result.redacted });
+        return {
+          content: [{ type: "text", text: `Memory note saved: ${result.path}${result.redacted ? " (secrets redacted)" : ""}` }],
+          details: result
+        };
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        return { content: [{ type: "text", text: `Memory note failed: ${message}` }], isError: true };
+      }
+    }
+  });
+
+  pi.registerTool({
+    name: "company_memory_search",
+    label: "Company Memory Search",
+    description: "Keyword-search project memory markdown files.",
+    promptSnippet: "Search project memory for relevant durable facts before re-scouting the whole repo.",
+    parameters: Type.Object({
+      query: Type.String({ minLength: 1 }),
+      limit: Type.Optional(Type.Number())
+    }),
+    async execute(_toolCallId, params, _signal, _onUpdate, ctx) {
+      const profile = loadProfileFromContext(ctx);
+      const limit = Math.max(1, Math.min(20, Math.trunc(params.limit ?? 10)));
+      const matches = searchMemoryFiles(ctx.cwd, profile, params.query, limit);
+      const text = matches.length
+        ? matches.map((match) => `${match.path}:${match.line}: ${match.text}`).join("\n")
+        : "No memory matches.";
+      return { content: [{ type: "text", text }], details: { query: params.query, matches } };
     }
   });
 
@@ -793,6 +1079,7 @@ export default function companyGuard(pi: ExtensionAPI) {
         protectedPaths: profile.protectedPaths ?? [],
         requiredContext: profile.requiredContext ?? [],
         contextManifest: [],
+        memoryCitations: [],
         mcpCapabilities: profile.mcpCapabilities ?? [],
         verifyCommands: flattenVerifyCommands(profile),
         changedFiles: [],
@@ -918,6 +1205,40 @@ export default function companyGuard(pi: ExtensionAPI) {
   });
 
   pi.registerTool({
+    name: "company_memory_citation_record",
+    label: "Company Memory Citation Record",
+    description: "Record memory files used as advisory context for a governed task.",
+    promptSnippet: "Record memory citations when project memory materially influenced planning or implementation.",
+    parameters: Type.Object({
+      taskId: Type.String({ minLength: 1 }),
+      files: Type.Array(Type.Object({
+        path: Type.String({ minLength: 1 }),
+        reason: Type.String({ minLength: 1 })
+      }), { minItems: 1 })
+    }),
+    async execute(_toolCallId, params, _signal, _onUpdate, ctx) {
+      const task = readTask(ctx.cwd, params.taskId);
+      if (!task) {
+        return { content: [{ type: "text", text: `Task not found: ${params.taskId}` }], isError: true };
+      }
+
+      const seen = new Set(task.memoryCitations.map((item) => `${item.path}\u0000${item.reason}`));
+      for (const file of params.files) {
+        const key = `${file.path}\u0000${file.reason}`;
+        if (!seen.has(key)) task.memoryCitations.push(file);
+      }
+      writeTask(ctx.cwd, task);
+      appendTrace(ctx.cwd, { taskId: task.taskId, event: "memory_citation_record", files: params.files });
+      appendSessionTrace(pi, { taskId: task.taskId, event: "memory_citation_record", files: params.files });
+
+      return {
+        content: [{ type: "text", text: `Memory citations recorded for ${task.taskId}: ${params.files.length} file(s)` }],
+        details: task
+      };
+    }
+  });
+
+  pi.registerTool({
     name: "company_trace_record",
     label: "Company Trace Record",
     description: "Record final task trace and handoff evidence.",
@@ -973,6 +1294,18 @@ export default function companyGuard(pi: ExtensionAPI) {
       const profile = loadProfileFromContext(ctx);
       ctx.ui.notify(`Project profile: ${profile.displayName ?? profile.projectId ?? "unprofiled"}`, "info");
       pi.sendUserMessage("Use company_context with detail=full and summarize the active project guard profile.", {
+        deliverAs: "followUp"
+      });
+    }
+  });
+
+  pi.registerCommand("company-memory", {
+    description: "Show project memory policy and available memory files",
+    handler: async (_args, ctx) => {
+      const profile = loadProfileFromContext(ctx);
+      const settings = resolveMemorySettings(profile);
+      ctx.ui.notify(`Project memory: ${settings.enabled ? settings.mode : "off"}`, "info");
+      pi.sendUserMessage("Use company_memory_status with detail=full and summarize the active project memory policy.", {
         deliverAs: "followUp"
       });
     }

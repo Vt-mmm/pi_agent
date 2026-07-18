@@ -46,6 +46,19 @@
     ]
   },
   "mcpCapabilities": [
-    "filesystem-readonly"
-  ]
+    "filesystem-readonly",
+    "memory"
+  ],
+  "memory": {
+    "enabled": true,
+    "mode": "manual",
+    "scope": "project",
+    "summaryFile": ".pi/memory/memory_summary.md",
+    "handbookFile": ".pi/memory/MEMORY.md",
+    "localDir": ".pi/memory/local",
+    "readBeforeTask": true,
+    "writePolicy": "explicit-only",
+    "maxInjectedChars": 4000,
+    "externalPackages": []
+  }
 }

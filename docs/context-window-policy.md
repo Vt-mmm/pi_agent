@@ -11,10 +11,11 @@ Lần đầu gắn project vào platform, chạy `/onboard-project` sau login/mo
 1. `AGENTS.md` gần project nhất.
 2. Project profile: `.pi/company-profile.json`.
 3. Project context snapshot: `.pi/project-context.md`.
-4. Required context từ profile.
-5. Task-specific files.
-6. Related tests/docs.
-7. External docs only khi cần và ưu tiên official docs.
+4. Memory summary nếu profile bật memory và task liên quan: `.pi/memory/memory_summary.md`.
+5. Required context từ profile.
+6. Task-specific files.
+7. Related tests/docs.
+8. External docs only khi cần và ưu tiên official docs.
 
 ## Context manifest
 
@@ -24,6 +25,7 @@ Mỗi task nên có manifest ngắn:
 Context manifest
 - profile: .pi/company-profile.json
 - snapshot: .pi/project-context.md
+- memory: .pi/memory/memory_summary.md (if relevant)
 - required: AGENTS.md
 - required: docs/architecture.md
 - task files: src/...
@@ -49,6 +51,7 @@ Pi settings template dùng:
 - Nếu task là read-only, không mở write-capable prompt.
 - Nếu task là source-write, phải biết verify command trước khi sửa.
 - Nếu context vượt budget, tạo summary theo module thay vì copy full files.
+- Memory chỉ là hint. Phải verify bằng source hiện tại trước khi sửa code.
 
 ## Nguồn
 

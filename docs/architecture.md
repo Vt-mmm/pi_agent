@@ -23,6 +23,7 @@ Any project
 └─ .pi/
    ├─ settings.json              project Pi settings
    ├─ company-profile.json       project adapter
+   ├─ memory/                    project-scoped explicit memory
    └─ mcp.json                   Pi project MCP override
 ```
 
@@ -35,6 +36,7 @@ Any project
 | Company core | platform repo | Có | extension guard, prompt, skill, policy engine. |
 | Domain pack | platform repo | Có | frontend/backend/data profile chung. |
 | Project adapter | project repo hoặc platform repo | Có | paths, context, verify, MCP capabilities. |
+| Project memory | project repo | Có một phần | `.pi/memory/MEMORY.md` và summary; local/cache/catalog ignored. |
 
 ## Luồng chạy
 
@@ -43,8 +45,9 @@ Any project
 3. Pi đọc global settings và package đã cài.
 4. Nếu project trusted, Pi đọc `.pi/settings.json` và `.pi/company-profile.json`.
 5. `pi-company-core` extension intercept tool calls.
-6. Agent dùng prompts/skills, MCP registry, context policy.
-7. Trước khi DONE, agent chạy verify theo profile.
+6. Agent dùng prompts/skills, MCP registry, context policy, và memory policy.
+7. Memory được đọc/search như advisory context; source hiện tại vẫn là authority.
+8. Trước khi DONE, agent chạy verify theo profile.
 
 ## Vì sao không hard-code vào prompt
 

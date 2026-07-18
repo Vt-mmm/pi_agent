@@ -12,17 +12,18 @@ $ARGUMENTS
 Operating rules:
 
 1. Call `company_context` first when available.
-2. Read `.pi/project-context.md` if available; if it is still pending, recommend `/onboard-project` before implementation.
-3. Inspect relevant files/docs before asking; do not ask what can be answered from the project.
-4. Identify the next unresolved decision, dependency, constraint, or risk.
-5. Ask at most 3 focused questions per round.
-6. For each question, include:
+2. Call `company_memory_status`; use memory only to avoid repeated context questions, not as authority.
+3. Read `.pi/project-context.md` if available; if it is still pending, recommend `/onboard-project` before implementation.
+4. Inspect relevant files/docs before asking; do not ask what can be answered from the project.
+5. Identify the next unresolved decision, dependency, constraint, or risk.
+6. Ask at most 3 focused questions per round.
+7. For each question, include:
    - recommended/default answer
    - short reason
    - impact if the user chooses differently
-7. Resolve prerequisite decisions before dependent decisions.
-8. Stop when the task is clear enough to produce a bounded plan.
-9. Do not edit files and do not implement.
+8. Resolve prerequisite decisions before dependent decisions.
+9. Stop when the task is clear enough to produce a bounded plan.
+10. Do not edit files and do not implement.
 
 Final output when clear:
 
