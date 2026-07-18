@@ -20,10 +20,10 @@ Use this for tasks like:
 
 Mandatory flow:
 
-1. Call `company_context` with `detail=full`.
+1. Call `company_context` with `detail=full` and confirm profile/protected backend paths.
 2. Call `company_memory_status`; search memory for prior BE/FE mapping decisions if relevant, record citations with `company_memory_citation_record`, then verify against current BE/FE files.
 3. Read `.pi/project-context.md`. If pending, stop and ask for `/onboard-project`.
-4. Read required context from the active profile.
+4. Read required context from the active profile and call `company_context_budget` for BE/FE files that look large.
 5. Classify the task:
    - BE scout: read-only.
    - FE implementation: source-write.
@@ -47,9 +47,13 @@ Mandatory flow:
    - state/cache invalidation;
    - route/page/component/form;
    - tests/e2e.
-10. Implement FE only.
-11. Run FE verify commands from the profile.
-12. Record task context/verify/trace when runtime tools are available.
+10. Before source writes, create a Task Implementation Contract with `company_task_start`.
+11. Record BE/FE context files with `company_context_record`.
+12. Before shell commands beyond simple read/list/test, call `company_exec_policy_check`.
+13. Implement FE only.
+14. Run FE verify commands from the profile and record evidence with `company_verify_record`.
+15. Record handoff with `company_trace_record`.
+16. Call `company_task_gate_check`; if it fails, report blocked/partial instead of done.
 
 For generic projects, use profile `be-readonly-fe` when the repo policy is “BE scout only, FE write allowed”.
 
@@ -59,6 +63,7 @@ Final output:
 - Contract snapshot summary.
 - FE files changed.
 - Verify command/result.
+- Task gate result.
 - Memory cited, if any.
 - Backend gaps, if any.
 - Residual risk.

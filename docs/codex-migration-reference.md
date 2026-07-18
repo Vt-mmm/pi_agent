@@ -10,12 +10,17 @@ Tham khảo OpenAI Codex CLI để thiết kế Pi platform, nhưng không khóa
 |---|---|
 | `AGENTS.md` instruction layering | project `AGENTS.md` + `.pi/company-profile.json` required context |
 | config precedence | user Pi settings → installed package → project `.pi/settings.json` → CLI flags |
-| sandbox/approval | Pi extension guard + optional container/VM |
+| approval/exec policy | `company_exec_policy_check` + `tool_call` bash policy hook |
+| context hard caps | `company_context_budget` + context manifest budget |
+| tool router/exposure | `company_tool_policy_check` + profile `mcpCapabilities` |
+| final verify gate | `company_task_gate_check` + `company_trace_record` gate |
+| sandbox/env/network | Pi extension guard + optional container/VM; not full Codex parity yet |
 | MCP config | `pi-mcp-adapter` + `.mcp.json` / `.pi/mcp.json` |
 | subagents | Herdr panes/session profiles trước; Pi SDK/RPC sau |
 | non-interactive exec | Pi `--mode rpc` hoặc JSON event stream |
 | hooks | Pi extension lifecycle events |
 | model routing | Pi provider/model settings + prompt policy |
+| benchmark evidence | `scripts/parity-benchmark.sh` |
 
 ## Không nên copy nguyên
 
@@ -35,4 +40,3 @@ Khuyến nghị phase đầu: clean-room implementation theo behavior cần dùn
 - Codex config docs: https://learn.chatgpt.com/docs/config-file/config-basic
 - Codex subagents docs: https://learn.chatgpt.com/docs/agent-configuration/subagents
 - Codex non-interactive mode: https://learn.chatgpt.com/docs/non-interactive-mode
-

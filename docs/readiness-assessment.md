@@ -11,19 +11,22 @@
 - chạy read-only/guarded pilot
 - giảm noise bằng `--no-approve` + `PI_COMPANY_PROFILE`
 - chạy source task nhỏ với runtime task/context/verify/trace record
+- kiểm tra exec/context/tool/task gate bằng các runtime tools `company_*`
+- ghi benchmark parity Pi/Codex/Claude bằng script chuẩn hóa
 
-Chưa đủ để tuyên bố thay thế Codex/Claude CLI cho implementation task phức tạp hoặc high-risk.
+Chưa đủ để tuyên bố thay thế Codex/Claude CLI cho mọi high-risk task nếu chưa có benchmark project-specific và chưa xác nhận hard final hook/sandbox/network/env ở runtime Pi.
 
 ## Gap list
 
 | Gap | Mức độ | Ảnh hưởng | Fix |
 |---|---|---|---|
-| Final DONE gate chưa hard enforce | P2 | Agent vẫn có thể trả DONE nếu không tự gọi verify/trace tool | Thêm turn_end/before final checker nếu Pi API cho phép. |
-| Chưa có lock/GC cho task state | P2 | Nhiều session cùng sửa task có thể ghi đè | File lock + cleanup giống todo pattern. |
-| Chưa enforce MCP capability | P2 | Agent có thể dùng tool không đăng ký | Tool registry gate. |
-| Chưa có benchmark parity | P2 | Không chứng minh tiết kiệm token/quality parity | Pi vs Codex vs Claude benchmark. |
+| Final assistant hard stop hook chưa được chứng minh | P3 | `company_trace_record` có gate, nhưng assistant vẫn có thể nói DONE nếu không follow prompt/API chưa có stop hook | Test Pi final hook hoặc giữ `company_task_gate_check` bắt buộc. |
+| Chưa có lock/GC cho task state | P3 | Nhiều session cùng sửa task có thể ghi đè | File lock + cleanup giống todo pattern. |
+| Tool registry mặc định còn advisory | P3 | Có thể warn nhưng chưa block mọi tool lạ | Bật `toolRegistry=enforce` sau khi map tool names ổn định. |
+| Benchmark parity mới có recorder, chưa có số liệu | P3 | Chưa chứng minh tiết kiệm token/quality parity | Chạy Pi vs Codex vs Claude trên scenario thật. |
 | Chưa có package security review | P3 | Third-party package có full system access | Allowlist + source review. |
 | Chưa có subagent/worktree isolation | P3 | Task lớn dễ overlap write set | Herdr/worktree/subagent policy. |
+| Chưa có sandbox/env/network layer riêng nếu Pi không cung cấp | P3 | Guard chưa ngang Codex sandbox/env isolation | Container/VM hoặc Pi sandbox validation. |
 
 ## Maturity gates
 
@@ -34,14 +37,15 @@ Chưa đủ để tuyên bố thay thế Codex/Claude CLI cho implementation tas
 | G2 lean read-only | `pi --no-approve --tools read,grep,find,ls` completes with files-read report. |
 | G3 guarded write | protected path write is blocked in a sandbox test. |
 | G4 verify | task prompt produces command output evidence before final. |
-| G5 parity | same task compared against Codex/Claude baseline for quality/token/cost. |
+| G5 runtime policy | exec/context/tool/task gate checks pass. |
+| G6 parity | same task compared against Codex/Claude baseline for quality/token/cost. |
 
 ## Decision
 
-Trạng thái hiện tại: P2-alpha after runtime task tools + agent-stuff pattern adoption.
+Trạng thái hiện tại: P3-baseline after Codex-inspired exec/context/tool/final gate modules.
 
 Quyền dùng khuyến nghị:
 
 - Project mới: OK dùng Pi làm primary nếu task nhỏ/vừa và verify rõ.
-- Project high-risk: dùng Pi lean/read-only hoặc guarded small task; baseline ship vẫn nên giữ ở CLI/workflow đã chứng minh cho đến khi G4/G5 pass.
-- Team company: chưa publish rộng cho đến khi package security + parity benchmark pass.
+- Project high-risk: dùng Pi guarded, bật `execPolicy=enforce`, cân nhắc `finalGate=enforce`, vẫn cần human gate.
+- Team company: có thể pilot public/internal sau khi chạy `team-doctor --strict-share`; claim token/cost phải chờ benchmark G6.

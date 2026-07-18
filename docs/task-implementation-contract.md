@@ -83,9 +83,13 @@ Pi task prompt phải bắt buộc:
 Use company_context first.
 Use company_memory_status and search memory when relevant; memory is advisory only.
 Read .pi/project-context.md; if it is pending, stop and request /onboard-project.
-Create/mentally hold a Task Implementation Contract.
+Create a Task Implementation Contract with company_task_start.
+Check large context with company_context_budget.
+Check complex/high-impact shell with company_exec_policy_check.
+Check non-company tools with company_tool_policy_check.
 Do not edit before scope + verify command are known.
-Before final, provide verify evidence.
+Before final, record verify evidence and trace.
+Call company_task_gate_check before DONE.
 If verify cannot run, final outcome is blocked/partial, not done.
 ```
 
@@ -97,18 +101,23 @@ If verify cannot run, final outcome is blocked/partial, not done.
 | Profile + prompt | profile có rule, prompt đọc profile | Trung bình |
 | Extension guard | tool_call block protected/destructive | Khá |
 | Runtime task tools | task_start/context_record/verify_record/trace | Cao |
-| Final gate | extension block DONE/handoff thiếu verify | Cao nhất |
+| Runtime parity tools | exec_policy/context_budget/tool_policy/task_gate | Cao |
+| Final gate | trace completion block khi `finalGate=enforce`; hard assistant stop-hook khi Pi API hỗ trợ | Cao nhất |
 
-Hiện platform đang ở mức “Runtime task tools” P2-alpha:
+Hiện platform đang ở mức “P3-baseline runtime policy”:
 
 - `company_task_start`
+- `company_exec_policy_check`
+- `company_context_budget`
+- `company_tool_policy_check`
 - `company_context_record`
 - `company_verify_record`
 - `company_trace_record`
+- `company_task_gate_check`
 - local trace trong `.pi/company-state/`
 - session trace qua Pi custom entry `company-task-trace`
 
-Chưa có “Final gate” tự động chặn assistant trả DONE nếu thiếu verify. Vì vậy với task quan trọng vẫn cần checklist trong final và benchmark trước khi thay Codex/Claude CLI hoàn toàn.
+`company_trace_record` có thể block completion nếu profile bật `finalGate=enforce`. Nếu Pi runtime chưa expose hard final assistant stop hook, agent vẫn phải gọi `company_task_gate_check` và final phải nêu gate result.
 
 ## Named implementation recipes
 

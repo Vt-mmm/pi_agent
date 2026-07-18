@@ -50,6 +50,8 @@ required_files=(
   "$ROOT/docs/memory-policy.md"
   "$ROOT/docs/harness-migration-standard.md"
   "$ROOT/docs/task-implementation-contract.md"
+  "$ROOT/docs/codex-parity-baseline.md"
+  "$ROOT/docs/benchmark-parity.md"
   "$ROOT/docs/readiness-assessment.md"
   "$ROOT/docs/agent-stuff-research.md"
   "$ROOT/docs/codex-migration-reference.md"
@@ -62,6 +64,8 @@ required_files=(
   "$ROOT/scripts/team-doctor.sh"
   "$ROOT/scripts/link-project.sh"
   "$ROOT/scripts/profile-doctor.sh"
+  "$ROOT/scripts/parity-benchmark.sh"
+  "$ROOT/scripts/runtime-policy-smoke.sh"
 )
 
 for file in "${required_files[@]}"; do
@@ -122,6 +126,10 @@ NODE
 
 grep -R "auth.json" "$ROOT/docs" "$ROOT/packages/pi-company-core" "$ROOT/templates" >/dev/null
 grep -R "company_context" "$ROOT/packages/pi-company-core" >/dev/null
+grep -R "company_exec_policy_check" "$ROOT/packages/pi-company-core" "$ROOT/docs" "$ROOT/templates/project/AGENTS.md" >/dev/null
+grep -R "company_context_budget" "$ROOT/packages/pi-company-core" "$ROOT/docs" "$ROOT/templates/project/AGENTS.md" >/dev/null
+grep -R "company_tool_policy_check" "$ROOT/packages/pi-company-core" "$ROOT/docs" "$ROOT/templates/project/AGENTS.md" >/dev/null
+grep -R "company_task_gate_check" "$ROOT/packages/pi-company-core" "$ROOT/docs" "$ROOT/templates/project/AGENTS.md" >/dev/null
 grep -R "company_profile_options" "$ROOT/packages/pi-company-core" "$ROOT/docs" >/dev/null
 grep -R "company_profile_apply" "$ROOT/packages/pi-company-core" "$ROOT/docs" >/dev/null
 grep -R "company_project_onboarding_record" "$ROOT/packages/pi-company-core" "$ROOT/docs" >/dev/null
@@ -140,6 +148,12 @@ grep -R "mitsuhiko/agent-stuff" "$ROOT/docs/agent-stuff-research.md" "$ROOT/READ
 grep -R "company-reference-repo" "$ROOT/packages/pi-company-core/skills" "$ROOT/templates/project/AGENTS.md" >/dev/null
 grep -R "company_reference_checkout" "$ROOT/packages/pi-company-core" >/dev/null
 grep -R "scripts/setup.sh" "$ROOT/README.md" "$ROOT/docs" >/dev/null
+grep -R "parity-benchmark.sh" "$ROOT/README.md" "$ROOT/docs" >/dev/null
+
+node --check "$ROOT/packages/pi-company-core/extensions/company-guard.ts" >/dev/null
+bash -n "$ROOT/scripts/parity-benchmark.sh"
+bash -n "$ROOT/scripts/runtime-policy-smoke.sh"
+bash "$ROOT/scripts/runtime-policy-smoke.sh" >/dev/null
 
 bash "$ROOT/scripts/profile-doctor.sh" "$ROOT" "$ROOT/.pi/company-profile.json" >/dev/null
 bash "$ROOT/scripts/profile-doctor.sh" "$ROOT" "$ROOT/adapters/generic/profile.json" >/dev/null

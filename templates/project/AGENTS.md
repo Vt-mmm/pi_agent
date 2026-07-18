@@ -6,15 +6,19 @@ This project uses Pi Company Platform.
 
 Before implementation:
 
-1. Load `.pi/company-profile.json`.
+1. Load `.pi/company-profile.json` with `company_context`.
 2. If `.pi/project-context.md` still says "Generated: not yet", run `/onboard-project` after login/model selection before the first implementation task.
-3. Read `.pi/project-context.md` and required context files listed in the profile.
+3. Read `.pi/project-context.md` and required context files listed in the profile; use `company_context_budget` for large files.
 4. Check project memory with `company_memory_status` when relevant; memory is advisory, source files are authoritative.
-5. Respect protected paths.
-6. Use MCP/tools only when declared in profile.
-7. Run verify commands before DONE.
-8. For unclear tasks, use `/discuss` first; do not implement while requirements are unresolved.
-9. For external reference repos, use `company-reference-repo` and read targeted files only.
+5. Start source-changing work with `company_task_start`.
+6. Respect protected paths.
+7. Use `company_exec_policy_check` before high-impact or complex shell commands.
+8. Use `company_tool_policy_check` before non-company MCP/app tools.
+9. Use MCP/tools only when declared in profile.
+10. Record context/verify/trace with `company_context_record`, `company_verify_record`, and `company_trace_record`.
+11. Run `company_task_gate_check` before DONE.
+12. For unclear tasks, use `/discuss` first; do not implement while requirements are unresolved.
+13. For external reference repos, use `company-reference-repo` and read targeted files only.
 
 ## Review
 

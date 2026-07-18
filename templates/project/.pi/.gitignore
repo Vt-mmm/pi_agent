@@ -4,6 +4,7 @@ todos/
 sessions/
 session-control/
 cache/
+benchmarks/
 npm/
 git/
 trust.json

@@ -10,11 +10,15 @@ Use this skill for every implementation, review, planning, MCP, or tooling task 
 ## Mandatory steps
 
 1. Load active project profile with `company_context`.
-2. Read required context before planning or editing.
-3. Respect `protectedPaths`.
-4. Use MCP only when capability is declared.
-5. Prefer small diffs with explicit verification.
-6. Before DONE, run the profile verify command for the changed file class.
+2. Read required context before planning or editing; use `company_context_budget` for large files.
+3. Start source-changing work with `company_task_start`.
+4. Respect `protectedPaths`.
+5. Check complex/high-impact shell with `company_exec_policy_check`.
+6. Check non-company MCP/app tools with `company_tool_policy_check`.
+7. Use MCP only when capability is declared.
+8. Prefer small diffs with explicit verification.
+9. Record context, verify, and trace with `company_context_record`, `company_verify_record`, and `company_trace_record`.
+10. Before DONE, call `company_task_gate_check`.
 
 ## Risk gates
 
@@ -35,5 +39,5 @@ Always include:
 - what changed
 - where
 - exact verification result
+- task gate result
 - what remains manual
-

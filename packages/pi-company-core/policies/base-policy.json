@@ -31,6 +31,96 @@
   "defaultRequiredContext": [
     "AGENTS.md",
     "README.md"
-  ]
+  ],
+  "execPolicy": {
+    "defaultMode": "enforce",
+    "bannedPrefixSuggestions": [
+      ["python"],
+      ["python3"],
+      ["node"],
+      ["node", "-e"],
+      ["bash"],
+      ["bash", "-lc"],
+      ["sh"],
+      ["sh", "-c"],
+      ["zsh"],
+      ["zsh", "-lc"],
+      ["git"],
+      ["sudo"],
+      ["env"]
+    ],
+    "rules": [
+      {
+        "id": "forbid-docker-volume-prune",
+        "action": "forbid",
+        "match": "contains",
+        "value": "docker volume prune",
+        "reason": "Volume prune can delete unrecoverable local data."
+      },
+      {
+        "id": "prompt-docker-compose-down-volume",
+        "action": "prompt",
+        "match": "regex",
+        "value": "docker\\s+compose\\s+down\\s+.*-v",
+        "reason": "docker compose down -v removes volumes."
+      },
+      {
+        "id": "prompt-database-migration",
+        "action": "prompt",
+        "match": "contains",
+        "value": "migrate",
+        "reason": "Database migrations require explicit human confirmation."
+      }
+    ]
+  },
+  "contextBudget": {
+    "defaultMode": "enforce",
+    "maxContextFileChars": 50000,
+    "maxMemoryFileChars": 20000,
+    "maxManifestFiles": 80,
+    "warnFragmentChars": 4000
+  },
+  "toolRegistry": {
+    "defaultMode": "advisory",
+    "alwaysAllowedTools": [
+      "company_context",
+      "company_exec_policy_check",
+      "company_context_budget",
+      "company_tool_policy_check",
+      "company_task_gate_check",
+      "company_memory_status",
+      "company_memory_note",
+      "company_memory_search",
+      "company_memory_citation_record",
+      "company_profile_options",
+      "company_profile_apply",
+      "company_project_onboarding_record",
+      "company_task_start",
+      "company_reference_checkout",
+      "company_context_record",
+      "company_verify_record",
+      "company_trace_record"
+    ],
+    "toolCapabilities": {
+      "bash": ["shell"],
+      "shell": ["shell"],
+      "exec": ["shell"],
+      "read": ["filesystem-readonly"],
+      "grep": ["filesystem-readonly"],
+      "find": ["filesystem-readonly"],
+      "ls": ["filesystem-readonly"],
+      "write": ["filesystem-write"],
+      "edit": ["filesystem-write"],
+      "browser": ["browser"],
+      "github": ["github"]
+    }
+  },
+  "finalGate": {
+    "defaultMode": "enforce",
+    "requireTaskContract": true,
+    "requireContextManifest": true,
+    "requireVerifyEvidence": true,
+    "requireTrace": true,
+    "requirePassingVerify": true
+  }
 }
-

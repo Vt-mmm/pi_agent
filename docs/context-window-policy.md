@@ -17,6 +17,12 @@ Lần đầu gắn project vào platform, chạy `/onboard-project` sau login/mo
 7. Related tests/docs.
 8. External docs only khi cần và ưu tiên official docs.
 
+Trước khi ghi context manifest hoặc dự định đưa file lớn vào prompt, dùng:
+
+```text
+company_context_budget
+```
+
 ## Context manifest
 
 Mỗi task nên có manifest ngắn:
@@ -51,6 +57,7 @@ Pi settings template dùng:
 - Nếu task là read-only, không mở write-capable prompt.
 - Nếu task là source-write, phải biết verify command trước khi sửa.
 - Nếu context vượt budget, tạo summary theo module thay vì copy full files.
+- File context vượt hard cap phải được summarize hoặc đọc targeted slices, không inject full.
 - Memory chỉ là hint. Phải verify bằng source hiện tại trước khi sửa code.
 
 ## Nguồn

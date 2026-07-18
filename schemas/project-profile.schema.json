@@ -132,6 +132,40 @@
         }
       },
       "additionalProperties": false
+    },
+    "runtimePolicy": {
+      "type": "object",
+      "properties": {
+        "execPolicy": {
+          "enum": [
+            "off",
+            "advisory",
+            "enforce"
+          ]
+        },
+        "contextBudget": {
+          "enum": [
+            "off",
+            "advisory",
+            "enforce"
+          ]
+        },
+        "toolRegistry": {
+          "enum": [
+            "off",
+            "advisory",
+            "enforce"
+          ]
+        },
+        "finalGate": {
+          "enum": [
+            "off",
+            "advisory",
+            "enforce"
+          ]
+        }
+      },
+      "additionalProperties": false
     }
   },
   "additionalProperties": true

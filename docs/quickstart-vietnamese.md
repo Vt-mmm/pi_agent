@@ -15,7 +15,7 @@ Phần còn lại — OAuth, package, context, harness, MCP, tool-call guard —
 
 ```bash
 npm install -g @earendil-works/pi-coding-agent
-pi install git:github.com/Vt-mmm/pi_agent@v0.2.0
+pi install git:github.com/Vt-mmm/pi_agent@v0.3.0
 ```
 
 Sau bước này, project mới không cần chạy bash init profile. Chỉ cần:
@@ -64,7 +64,7 @@ File này là snapshot context cho task sau. Nếu file còn `Generated: not yet
 bash /path/to/pi_agent/scripts/setup.sh /path/to/project \
   --project-only \
   --profile auto \
-  --package-source git:github.com/Vt-mmm/pi_agent@v0.2.0
+  --package-source git:github.com/Vt-mmm/pi_agent@v0.3.0
 ```
 
 Đổi profile sau này trong Pi:
@@ -83,7 +83,7 @@ Script bash chỉ dùng khi muốn preseed config vào repo:
 ```bash
 bash /path/to/pi_agent/scripts/setup.sh /path/to/project \
   --profile be-readonly-fe \
-  --package-source git:github.com/Vt-mmm/pi_agent@v0.2.0
+  --package-source git:github.com/Vt-mmm/pi_agent@v0.3.0
 ```
 
 ## Bước 6 — chạy hằng ngày
@@ -103,7 +103,7 @@ Prompt mẫu khi requirement chưa rõ:
 Prompt mẫu khi đã rõ task:
 
 ```text
-/task Implement this request. Load project profile first. Follow protected paths, required context, MCP/tool policy, and verify commands before done.
+/task Implement this request. Use company_context, company_task_start, company_context_budget, company_exec_policy_check when shell is needed, company_verify_record, company_trace_record, and company_task_gate_check before done.
 ```
 
 Prompt mẫu cho 2 recipe hay gặp:
@@ -118,6 +118,15 @@ Cache repo tham chiếu để đọc targeted trong Pi:
 
 ```text
 Use company_reference_checkout for mitsuhiko/agent-stuff, inspect only relevant files, then summarize applicable patterns.
+```
+
+Runtime gate tools có sẵn:
+
+```text
+company_exec_policy_check      # check shell command
+company_context_budget         # check context size/hard cap
+company_tool_policy_check      # check tool capability
+company_task_gate_check        # check before final DONE
 ```
 
 Fallback bằng shell nếu cần:

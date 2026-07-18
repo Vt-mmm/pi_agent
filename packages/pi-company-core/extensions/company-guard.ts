@@ -16,6 +16,7 @@ type ProjectProfile = {
   verifyCommands?: Record<string, string[]>;
   mcpCapabilities?: string[];
   memory?: MemorySettings;
+  runtimePolicy?: RuntimePolicySettings;
 };
 
 type MemorySettings = {
@@ -29,6 +30,13 @@ type MemorySettings = {
   writePolicy?: "explicit-only" | "task-trace" | "session-summary";
   maxInjectedChars?: number;
   externalPackages?: string[];
+};
+
+type RuntimePolicySettings = {
+  execPolicy?: "off" | "advisory" | "enforce";
+  contextBudget?: "off" | "advisory" | "enforce";
+  toolRegistry?: "off" | "advisory" | "enforce";
+  finalGate?: "off" | "advisory" | "enforce";
 };
 
 type ProfileOption = {
@@ -84,6 +92,47 @@ type BasePolicy = {
   blockedCommandPatterns: string[];
   requireConfirmationPatterns: string[];
   defaultRequiredContext: string[];
+  execPolicy?: ExecPolicyConfig;
+  contextBudget?: ContextBudgetConfig;
+  toolRegistry?: ToolRegistryConfig;
+  finalGate?: FinalGateConfig;
+};
+
+type CommandRule = {
+  id: string;
+  action: "allow" | "prompt" | "forbid";
+  match: "prefix" | "contains" | "regex";
+  value: string | string[];
+  reason: string;
+};
+
+type ExecPolicyConfig = {
+  defaultMode?: "advisory" | "enforce";
+  bannedPrefixSuggestions?: string[][];
+  rules?: CommandRule[];
+};
+
+type ContextBudgetConfig = {
+  defaultMode?: "advisory" | "enforce";
+  maxContextFileChars?: number;
+  maxMemoryFileChars?: number;
+  maxManifestFiles?: number;
+  warnFragmentChars?: number;
+};
+
+type ToolRegistryConfig = {
+  defaultMode?: "advisory" | "enforce";
+  alwaysAllowedTools?: string[];
+  toolCapabilities?: Record<string, string[]>;
+};
+
+type FinalGateConfig = {
+  defaultMode?: "advisory" | "enforce";
+  requireTaskContract?: boolean;
+  requireContextManifest?: boolean;
+  requireVerifyEvidence?: boolean;
+  requireTrace?: boolean;
+  requirePassingVerify?: boolean;
 };
 
 type ReferenceRepo = {
@@ -111,6 +160,13 @@ const DEFAULT_MEMORY_SETTINGS: Required<MemorySettings> = {
   externalPackages: []
 };
 
+const DEFAULT_RUNTIME_POLICY: Required<RuntimePolicySettings> = {
+  execPolicy: "enforce",
+  contextBudget: "enforce",
+  toolRegistry: "advisory",
+  finalGate: "enforce"
+};
+
 const SECRET_PATTERNS = [
   /AKIA[0-9A-Z]{16}/g,
   /\b(?:gho_|ghp_|sk-)[A-Za-z0-9_]{16,}\b/g,
@@ -122,7 +178,76 @@ const DEFAULT_POLICY: BasePolicy = {
   protectedPaths: [".git/**", "**/auth.json", "**/.env", "**/.env.*"],
   blockedCommandPatterns: ["rm -rf /", "rm -rf ~", "rm -rf $HOME", "git reset --hard", "git clean -fd"],
   requireConfirmationPatterns: ["deploy", "release", "publish", "migration", "gh pr merge", "git push"],
-  defaultRequiredContext: ["AGENTS.md", "README.md"]
+  defaultRequiredContext: ["AGENTS.md", "README.md"],
+  execPolicy: {
+    defaultMode: "enforce",
+    bannedPrefixSuggestions: [
+      ["python"],
+      ["python3"],
+      ["node"],
+      ["node", "-e"],
+      ["bash"],
+      ["bash", "-lc"],
+      ["sh"],
+      ["sh", "-c"],
+      ["zsh"],
+      ["zsh", "-lc"],
+      ["git"],
+      ["sudo"],
+      ["env"]
+    ],
+    rules: []
+  },
+  contextBudget: {
+    defaultMode: "enforce",
+    maxContextFileChars: 50000,
+    maxMemoryFileChars: 20000,
+    maxManifestFiles: 80,
+    warnFragmentChars: 4000
+  },
+  toolRegistry: {
+    defaultMode: "advisory",
+    alwaysAllowedTools: [
+      "company_context",
+      "company_exec_policy_check",
+      "company_context_budget",
+      "company_tool_policy_check",
+      "company_task_gate_check",
+      "company_memory_status",
+      "company_memory_note",
+      "company_memory_search",
+      "company_memory_citation_record",
+      "company_profile_options",
+      "company_profile_apply",
+      "company_project_onboarding_record",
+      "company_task_start",
+      "company_reference_checkout",
+      "company_context_record",
+      "company_verify_record",
+      "company_trace_record"
+    ],
+    toolCapabilities: {
+      bash: ["shell"],
+      shell: ["shell"],
+      exec: ["shell"],
+      read: ["filesystem-readonly"],
+      grep: ["filesystem-readonly"],
+      find: ["filesystem-readonly"],
+      ls: ["filesystem-readonly"],
+      write: ["filesystem-write"],
+      edit: ["filesystem-write"],
+      browser: ["browser"],
+      github: ["github"]
+    }
+  },
+  finalGate: {
+    defaultMode: "enforce",
+    requireTaskContract: true,
+    requireContextManifest: true,
+    requireVerifyEvidence: true,
+    requireTrace: true,
+    requirePassingVerify: true
+  }
 };
 
 function readJsonFile<T>(filePath: string): T | undefined {
@@ -229,6 +354,179 @@ function commandIncludes(command: string, patterns: string[]): string | undefine
   return patterns.find((pattern) => normalized.includes(pattern.toLowerCase()));
 }
 
+function splitShellSegments(command: string): string[] {
+  const segments: string[] = [];
+  let current = "";
+  let quote: "'" | "\"" | undefined;
+  let escaped = false;
+  for (let index = 0; index < command.length; index += 1) {
+    const char = command[index];
+    const next = command[index + 1];
+    if (escaped) {
+      current += char;
+      escaped = false;
+      continue;
+    }
+    if (char === "\\") {
+      current += char;
+      escaped = true;
+      continue;
+    }
+    if ((char === "'" || char === "\"") && !quote) {
+      quote = char;
+      current += char;
+      continue;
+    }
+    if (quote === char) {
+      quote = undefined;
+      current += char;
+      continue;
+    }
+    if (!quote && (char === ";" || char === "|" || (char === "&" && next === "&"))) {
+      const segment = current.trim();
+      if (segment) segments.push(segment);
+      current = "";
+      if ((char === "&" && next === "&") || (char === "|" && next === "|")) index += 1;
+      continue;
+    }
+    current += char;
+  }
+  const tail = current.trim();
+  if (tail) segments.push(tail);
+  return segments.length ? segments : [command.trim()].filter(Boolean);
+}
+
+function shellWords(segment: string): string[] {
+  const words: string[] = [];
+  let current = "";
+  let quote: "'" | "\"" | undefined;
+  let escaped = false;
+  for (const char of segment.trim()) {
+    if (escaped) {
+      current += char;
+      escaped = false;
+      continue;
+    }
+    if (char === "\\") {
+      escaped = true;
+      continue;
+    }
+    if ((char === "'" || char === "\"") && !quote) {
+      quote = char;
+      continue;
+    }
+    if (quote === char) {
+      quote = undefined;
+      continue;
+    }
+    if (!quote && /\s/.test(char)) {
+      if (current) {
+        words.push(current);
+        current = "";
+      }
+      continue;
+    }
+    current += char;
+  }
+  if (current) words.push(current);
+  return words;
+}
+
+function arrayStartsWith<T>(items: T[], prefix: T[]): boolean {
+  return prefix.length > 0 && prefix.every((item, index) => items[index] === item);
+}
+
+function commandRuleMatches(rule: CommandRule, segment: string, words: string[]): boolean {
+  if (rule.match === "prefix") {
+    const prefix = Array.isArray(rule.value) ? rule.value : shellWords(rule.value);
+    return arrayStartsWith(words, prefix);
+  }
+  const raw = Array.isArray(rule.value) ? rule.value.join(" ") : rule.value;
+  if (rule.match === "contains") return segment.toLowerCase().includes(raw.toLowerCase());
+  try {
+    return new RegExp(raw, "i").test(segment);
+  } catch {
+    return false;
+  }
+}
+
+function evaluateExecPolicy(command: string, profile: ProjectProfile, policy: BasePolicy): {
+  mode: RuntimePolicySettings["execPolicy"];
+  decision: "allow" | "prompt" | "forbid";
+  reasons: string[];
+  segments: Array<{ command: string; words: string[]; matches: string[]; warnings: string[] }>;
+} {
+  const runtime = resolveRuntimePolicy(profile);
+  const execPolicy = execPolicyConfig(policy);
+  const mode = runtime.execPolicy === "off" ? "off" : runtime.execPolicy ?? execPolicy.defaultMode;
+  const reasons: string[] = [];
+  const segments = splitShellSegments(command).map((segment) => {
+    const words = shellWords(segment);
+    const matches: string[] = [];
+    const warnings: string[] = [];
+    for (const prefix of execPolicy.bannedPrefixSuggestions) {
+      if (arrayStartsWith(words, prefix)) {
+        warnings.push(`Do not persist broad approval prefix: ${prefix.join(" ")}`);
+      }
+    }
+    for (const rule of execPolicy.rules) {
+      if (!commandRuleMatches(rule, segment, words)) continue;
+      matches.push(`${rule.action}:${rule.id}`);
+      if (rule.action === "forbid") reasons.push(`Forbidden by exec policy ${rule.id}: ${rule.reason}`);
+      if (rule.action === "prompt") reasons.push(`Prompt required by exec policy ${rule.id}: ${rule.reason}`);
+    }
+    return { command: segment, words, matches, warnings };
+  });
+
+  const legacyBlocked = commandIncludes(command, policy.blockedCommandPatterns);
+  if (legacyBlocked) reasons.push(`Blocked by legacy policy pattern: ${legacyBlocked}`);
+  const legacyPrompt = commandIncludes(command, policy.requireConfirmationPatterns);
+  if (legacyPrompt) reasons.push(`Confirmation required by legacy policy pattern: ${legacyPrompt}`);
+
+  const hasForbid = reasons.some((reason) => reason.startsWith("Forbidden") || reason.startsWith("Blocked"));
+  const hasPrompt = reasons.some((reason) => reason.startsWith("Prompt") || reason.startsWith("Confirmation"));
+  return {
+    mode,
+    decision: mode === "off" ? "allow" : hasForbid ? "forbid" : hasPrompt ? "prompt" : "allow",
+    reasons,
+    segments
+  };
+}
+
+function evaluateToolPolicy(toolName: string, profile: ProjectProfile, policy: BasePolicy): {
+  mode: RuntimePolicySettings["toolRegistry"];
+  decision: "allow" | "warn" | "block";
+  requiredCapabilities: string[];
+  availableCapabilities: string[];
+  reason: string;
+} {
+  const runtime = resolveRuntimePolicy(profile);
+  const registry = toolRegistryConfig(policy);
+  const mode = runtime.toolRegistry === "off" ? "off" : runtime.toolRegistry ?? registry.defaultMode;
+  if (mode === "off") {
+    return { mode, decision: "allow", requiredCapabilities: [], availableCapabilities: profile.mcpCapabilities ?? [], reason: "Tool registry is disabled for this profile." };
+  }
+  if (registry.alwaysAllowedTools.includes(toolName) || toolName.startsWith("company_")) {
+    return { mode, decision: "allow", requiredCapabilities: [], availableCapabilities: profile.mcpCapabilities ?? [], reason: "Company platform tool is always allowed." };
+  }
+  const requiredCapabilities = registry.toolCapabilities[toolName] ?? [];
+  if (requiredCapabilities.length === 0) {
+    return { mode, decision: mode === "enforce" ? "block" : "warn", requiredCapabilities, availableCapabilities: profile.mcpCapabilities ?? [], reason: "Tool is not registered in company tool registry." };
+  }
+  const available = new Set(profile.mcpCapabilities ?? []);
+  const missing = requiredCapabilities.filter((capability) => !available.has(capability));
+  if (missing.length === 0) {
+    return { mode, decision: "allow", requiredCapabilities, availableCapabilities: profile.mcpCapabilities ?? [], reason: "Required capability is present." };
+  }
+  return {
+    mode,
+    decision: mode === "enforce" ? "block" : "warn",
+    requiredCapabilities,
+    availableCapabilities: profile.mcpCapabilities ?? [],
+    reason: `Missing capability: ${missing.join(", ")}`
+  };
+}
+
 function extractLikelyPathFromInput(cwd: string, input: Record<string, unknown>): string | undefined {
   return normalizeRelative(cwd, input.path ?? input.filePath ?? input.target ?? input.filename);
 }
@@ -292,6 +590,50 @@ function resolveMemorySettings(profile: ProjectProfile): Required<MemorySettings
   };
 }
 
+function resolveRuntimePolicy(profile: ProjectProfile): Required<RuntimePolicySettings> {
+  return {
+    ...DEFAULT_RUNTIME_POLICY,
+    ...(profile.runtimePolicy ?? {})
+  };
+}
+
+function contextBudgetConfig(policy: BasePolicy): Required<ContextBudgetConfig> {
+  return {
+    defaultMode: policy.contextBudget?.defaultMode ?? DEFAULT_POLICY.contextBudget?.defaultMode ?? "enforce",
+    maxContextFileChars: policy.contextBudget?.maxContextFileChars ?? DEFAULT_POLICY.contextBudget?.maxContextFileChars ?? 50000,
+    maxMemoryFileChars: policy.contextBudget?.maxMemoryFileChars ?? DEFAULT_POLICY.contextBudget?.maxMemoryFileChars ?? 20000,
+    maxManifestFiles: policy.contextBudget?.maxManifestFiles ?? DEFAULT_POLICY.contextBudget?.maxManifestFiles ?? 80,
+    warnFragmentChars: policy.contextBudget?.warnFragmentChars ?? DEFAULT_POLICY.contextBudget?.warnFragmentChars ?? 4000
+  };
+}
+
+function execPolicyConfig(policy: BasePolicy): Required<ExecPolicyConfig> {
+  return {
+    defaultMode: policy.execPolicy?.defaultMode ?? DEFAULT_POLICY.execPolicy?.defaultMode ?? "enforce",
+    bannedPrefixSuggestions: policy.execPolicy?.bannedPrefixSuggestions ?? DEFAULT_POLICY.execPolicy?.bannedPrefixSuggestions ?? [],
+    rules: policy.execPolicy?.rules ?? []
+  };
+}
+
+function toolRegistryConfig(policy: BasePolicy): Required<ToolRegistryConfig> {
+  return {
+    defaultMode: policy.toolRegistry?.defaultMode ?? DEFAULT_POLICY.toolRegistry?.defaultMode ?? "advisory",
+    alwaysAllowedTools: policy.toolRegistry?.alwaysAllowedTools ?? DEFAULT_POLICY.toolRegistry?.alwaysAllowedTools ?? [],
+    toolCapabilities: policy.toolRegistry?.toolCapabilities ?? DEFAULT_POLICY.toolRegistry?.toolCapabilities ?? {}
+  };
+}
+
+function finalGateConfig(policy: BasePolicy): Required<FinalGateConfig> {
+  return {
+    defaultMode: policy.finalGate?.defaultMode ?? DEFAULT_POLICY.finalGate?.defaultMode ?? "enforce",
+    requireTaskContract: policy.finalGate?.requireTaskContract ?? true,
+    requireContextManifest: policy.finalGate?.requireContextManifest ?? true,
+    requireVerifyEvidence: policy.finalGate?.requireVerifyEvidence ?? true,
+    requireTrace: policy.finalGate?.requireTrace ?? true,
+    requirePassingVerify: policy.finalGate?.requirePassingVerify ?? true
+  };
+}
+
 function projectFilePath(cwd: string, relativePath: string): string {
   const absolute = path.resolve(cwd, relativePath);
   const relative = path.relative(cwd, absolute);
@@ -299,6 +641,27 @@ function projectFilePath(cwd: string, relativePath: string): string {
     throw new Error(`Path escapes project root: ${relativePath}`);
   }
   return absolute;
+}
+
+function candidateFileBudget(cwd: string, rel: string, budget: Required<ContextBudgetConfig>): {
+  path: string;
+  exists: boolean;
+  chars: number;
+  overLimit: boolean;
+  warn: boolean;
+} {
+  const absolute = projectFilePath(cwd, rel);
+  if (!fs.existsSync(absolute) || !fs.statSync(absolute).isFile()) {
+    return { path: rel, exists: false, chars: 0, overLimit: false, warn: false };
+  }
+  const text = fs.readFileSync(absolute, "utf8");
+  return {
+    path: rel,
+    exists: true,
+    chars: text.length,
+    overLimit: text.length > budget.maxContextFileChars,
+    warn: text.length > budget.warnFragmentChars
+  };
 }
 
 function memorySummaryPath(cwd: string, settings: Required<MemorySettings>): string {
@@ -587,6 +950,25 @@ function writeTask(cwd: string, task: TaskContract): TaskContract {
   return task;
 }
 
+function evaluateTaskGate(task: TaskContract | undefined, policy: BasePolicy): {
+  decision: "pass" | "fail";
+  missing: string[];
+  warnings: string[];
+} {
+  const finalGate = finalGateConfig(policy);
+  const missing: string[] = [];
+  const warnings: string[] = [];
+  if (!task) {
+    return { decision: "fail", missing: ["task contract"], warnings };
+  }
+  if (finalGate.requireContextManifest && task.contextManifest.length === 0) missing.push("context manifest");
+  if (finalGate.requireVerifyEvidence && task.verifyEvidence.length === 0) missing.push("verify evidence");
+  if (finalGate.requirePassingVerify && task.verifyEvidence.length > 0 && !task.verifyEvidence.some((evidence) => evidence.exitCode === 0)) missing.push("passing verify evidence");
+  if (finalGate.requireTrace && task.trace.outcome === "pending") missing.push("final trace");
+  if (task.changedFiles.length === 0 && task.trace.outcome === "completed") warnings.push("Trace is completed but changedFiles is empty.");
+  return { decision: missing.length === 0 ? "pass" : "fail", missing, warnings };
+}
+
 function appendTrace(cwd: string, payload: Record<string, unknown>): void {
   ensureStateDirs(cwd);
   fs.appendFileSync(traceFilePath(cwd), `${JSON.stringify({ recordedAt: nowIso(), ...payload })}\n`);
@@ -734,16 +1116,21 @@ export default function companyGuard(pi: ExtensionAPI) {
 
   pi.on("tool_call", async (event, ctx) => {
     const profile = loadProfileFromContext(ctx);
+    const runtime = resolveRuntimePolicy(profile);
     const protectedPaths = [
       ...policy.protectedPaths,
       ...(profile.protectedPaths ?? [])
     ];
+    const toolDecision = evaluateToolPolicy(event.toolName, profile, policy);
+    if (toolDecision.decision === "block") {
+      return { block: true, reason: `Tool registry blocked ${event.toolName}: ${toolDecision.reason}` };
+    }
 
     if (isToolCallEventType("bash", event)) {
       const command = String(event.input.command ?? "");
-      const blocked = commandIncludes(command, policy.blockedCommandPatterns);
-      if (blocked) {
-        return { block: true, reason: `Blocked by company policy: ${blocked}` };
+      const execDecision = evaluateExecPolicy(command, profile, policy);
+      if (execDecision.mode !== "off" && execDecision.decision === "forbid") {
+        return { block: true, reason: execDecision.reasons.join("; ") };
       }
 
       const protectedHit = protectedPaths.find((pattern) => command.includes(pattern.replace("/**", "")));
@@ -751,13 +1138,12 @@ export default function companyGuard(pi: ExtensionAPI) {
         return { block: true, reason: `Command touches protected path: ${protectedHit}` };
       }
 
-      const confirmPattern = commandIncludes(command, policy.requireConfirmationPatterns);
-      if (confirmPattern) {
+      if (execDecision.mode !== "off" && execDecision.decision === "prompt") {
         const ok = await ctx.ui.confirm(
-          `Command matches high-impact pattern "${confirmPattern}". Allow?`,
-          "Company guard confirmation"
+          `Command requires confirmation.\n\n${execDecision.reasons.join("\n")}\n\nAllow?`,
+          "Company exec policy confirmation"
         );
-        if (!ok) return { block: true, reason: `User denied high-impact command: ${confirmPattern}` };
+        if (!ok) return { block: true, reason: `User denied command: ${execDecision.reasons.join("; ")}` };
       }
     }
 
@@ -767,6 +1153,17 @@ export default function companyGuard(pi: ExtensionAPI) {
         const matched = matchesAny(relativePath, protectedPaths);
         if (matched) {
           return { block: true, reason: `Blocked write to protected path: ${relativePath} matches ${matched}` };
+        }
+      }
+    }
+
+    if (runtime.contextBudget !== "off" && ["write", "edit"].includes(event.toolName)) {
+      const relativePath = extractLikelyPathFromInput(ctx.cwd, event.input as Record<string, unknown>);
+      if (relativePath) {
+        const budget = contextBudgetConfig(policy);
+        const stats = candidateFileBudget(ctx.cwd, relativePath, budget);
+        if (runtime.contextBudget === "enforce" && stats.exists && stats.overLimit) {
+          return { block: true, reason: `Context budget blocked editing large file ${relativePath}: ${stats.chars} chars > ${budget.maxContextFileChars}` };
         }
       }
     }
@@ -808,7 +1205,14 @@ export default function companyGuard(pi: ExtensionAPI) {
         requiredContext: Array.from(new Set(requiredContext)),
         verifyCommands: profile.verifyCommands ?? {},
         mcpCapabilities: profile.mcpCapabilities ?? [],
-        memory: resolveMemorySettings(profile)
+        memory: resolveMemorySettings(profile),
+        runtimePolicy: resolveRuntimePolicy(profile),
+        policy: {
+          execPolicy: execPolicyConfig(policy),
+          contextBudget: contextBudgetConfig(policy),
+          toolRegistry: toolRegistryConfig(policy),
+          finalGate: finalGateConfig(policy)
+        }
       };
 
       const text = detail === "full"
@@ -821,13 +1225,107 @@ export default function companyGuard(pi: ExtensionAPI) {
         `requiredContext: ${payload.requiredContext.join(", ") || "none"}`,
         `verifyCommands: ${Object.keys(payload.verifyCommands).join(", ") || "none"}`,
         `mcpCapabilities: ${payload.mcpCapabilities.join(", ") || "none"}`,
-        `memory: ${payload.memory.enabled ? payload.memory.mode : "off"} (${payload.memory.summaryFile})`
+        `memory: ${payload.memory.enabled ? payload.memory.mode : "off"} (${payload.memory.summaryFile})`,
+        `runtimePolicy: exec=${payload.runtimePolicy.execPolicy}, context=${payload.runtimePolicy.contextBudget}, tools=${payload.runtimePolicy.toolRegistry}, final=${payload.runtimePolicy.finalGate}`
       ].join("\n");
 
       return {
         content: [{ type: "text", text }],
         details: payload
       };
+    }
+  });
+
+  pi.registerTool({
+    name: "company_exec_policy_check",
+    label: "Company Exec Policy Check",
+    description: "Evaluate a shell command against company exec policy before running it.",
+    promptSnippet: "Use this before high-impact, complex, generated, or unfamiliar shell commands.",
+    parameters: Type.Object({
+      command: Type.String({ minLength: 1 })
+    }),
+    async execute(_toolCallId, params, _signal, _onUpdate, ctx) {
+      const profile = loadProfileFromContext(ctx);
+      const result = evaluateExecPolicy(params.command, profile, policy);
+      const text = [
+        `decision: ${result.decision}`,
+        `mode: ${result.mode}`,
+        `reasons: ${result.reasons.join("; ") || "none"}`,
+        "",
+        "segments:",
+        ...result.segments.map((segment) => `- ${segment.command}\n  words: ${segment.words.join(" ")}\n  matches: ${segment.matches.join(", ") || "none"}\n  warnings: ${segment.warnings.join(", ") || "none"}`)
+      ].join("\n");
+      return { content: [{ type: "text", text }], details: result };
+    }
+  });
+
+  pi.registerTool({
+    name: "company_context_budget",
+    label: "Company Context Budget",
+    description: "Check candidate context files against hard context budget limits.",
+    promptSnippet: "Use this before injecting or relying on large files as context.",
+    parameters: Type.Object({
+      files: Type.Array(Type.String({ minLength: 1 }), { minItems: 1 })
+    }),
+    async execute(_toolCallId, params, _signal, _onUpdate, ctx) {
+      const budget = contextBudgetConfig(policy);
+      const results = params.files.map((file) => candidateFileBudget(ctx.cwd, file, budget));
+      const overLimit = results.filter((item) => item.overLimit);
+      const warnings = results.filter((item) => item.warn && !item.overLimit);
+      const text = [
+        `decision: ${overLimit.length ? "fail" : "pass"}`,
+        `limits: maxContextFileChars=${budget.maxContextFileChars}, warnFragmentChars=${budget.warnFragmentChars}`,
+        `overLimit: ${overLimit.map((item) => item.path).join(", ") || "none"}`,
+        `warnings: ${warnings.map((item) => `${item.path} (${item.chars} chars)`).join(", ") || "none"}`,
+        "",
+        ...results.map((item) => `- ${item.path}: ${item.exists ? `${item.chars} chars` : "missing"}${item.overLimit ? " OVER_LIMIT" : item.warn ? " WARN" : ""}`)
+      ].join("\n");
+      return { content: [{ type: "text", text }], details: { budget, results } };
+    }
+  });
+
+  pi.registerTool({
+    name: "company_tool_policy_check",
+    label: "Company Tool Policy Check",
+    description: "Evaluate whether a tool is registered and allowed by the active project profile capabilities.",
+    promptSnippet: "Use this before relying on MCP/app/tools that are not obviously in the profile.",
+    parameters: Type.Object({
+      toolName: Type.String({ minLength: 1 })
+    }),
+    async execute(_toolCallId, params, _signal, _onUpdate, ctx) {
+      const profile = loadProfileFromContext(ctx);
+      const result = evaluateToolPolicy(params.toolName, profile, policy);
+      const text = [
+        `decision: ${result.decision}`,
+        `mode: ${result.mode}`,
+        `tool: ${params.toolName}`,
+        `requiredCapabilities: ${result.requiredCapabilities.join(", ") || "none"}`,
+        `availableCapabilities: ${result.availableCapabilities.join(", ") || "none"}`,
+        `reason: ${result.reason}`
+      ].join("\n");
+      return { content: [{ type: "text", text }], details: result };
+    }
+  });
+
+  pi.registerTool({
+    name: "company_task_gate_check",
+    label: "Company Task Gate Check",
+    description: "Check whether a governed task has enough context, verify evidence, and trace before claiming done.",
+    promptSnippet: "Use this before final on source-changing tasks.",
+    parameters: Type.Object({
+      taskId: Type.String({ minLength: 1 })
+    }),
+    async execute(_toolCallId, params, _signal, _onUpdate, ctx) {
+      const task = readTask(ctx.cwd, params.taskId);
+      const result = evaluateTaskGate(task, policy);
+      const runtime = resolveRuntimePolicy(loadProfileFromContext(ctx));
+      const text = [
+        `decision: ${result.decision}`,
+        `mode: ${runtime.finalGate}`,
+        `missing: ${result.missing.join(", ") || "none"}`,
+        `warnings: ${result.warnings.join("; ") || "none"}`
+      ].join("\n");
+      return { content: [{ type: "text", text }], details: { ...result, task } };
     }
   });
 
@@ -1149,9 +1647,27 @@ export default function companyGuard(pi: ExtensionAPI) {
       }), { minItems: 1 })
     }),
     async execute(_toolCallId, params, _signal, _onUpdate, ctx) {
+      const profile = loadProfileFromContext(ctx);
+      const runtime = resolveRuntimePolicy(profile);
+      const budget = contextBudgetConfig(policy);
       const task = readTask(ctx.cwd, params.taskId);
       if (!task) {
         return { content: [{ type: "text", text: `Task not found: ${params.taskId}` }], isError: true };
+      }
+      if (runtime.contextBudget !== "off" && task.contextManifest.length + params.files.length > budget.maxManifestFiles) {
+        return {
+          content: [{ type: "text", text: `Context manifest budget exceeded: ${task.contextManifest.length + params.files.length} files > ${budget.maxManifestFiles}` }],
+          isError: true
+        };
+      }
+      const fileBudget = params.files.map((file) => candidateFileBudget(ctx.cwd, file.path, budget));
+      const overLimit = fileBudget.filter((item) => item.overLimit);
+      if (runtime.contextBudget === "enforce" && overLimit.length > 0) {
+        return {
+          content: [{ type: "text", text: `Context file budget exceeded: ${overLimit.map((item) => `${item.path}=${item.chars}`).join(", ")}` }],
+          details: { budget, fileBudget },
+          isError: true
+        };
       }
 
       const seen = new Set(task.contextManifest.map((item) => `${item.path}\u0000${item.reason}`));
@@ -1251,39 +1767,53 @@ export default function companyGuard(pi: ExtensionAPI) {
       notes: Type.Optional(Type.String())
     }),
     async execute(_toolCallId, params, _signal, _onUpdate, ctx) {
+      const profile = loadProfileFromContext(ctx);
+      const runtime = resolveRuntimePolicy(profile);
       const task = readTask(ctx.cwd, params.taskId);
       if (!task) {
         return { content: [{ type: "text", text: `Task not found: ${params.taskId}` }], isError: true };
       }
 
-      task.changedFiles = params.changedFiles ?? task.changedFiles;
-      task.trace = {
-        outcome: params.outcome,
-        friction: params.friction,
-        notes: params.notes,
-        recordedAt: nowIso()
+      const nextTask: TaskContract = {
+        ...task,
+        changedFiles: params.changedFiles ?? task.changedFiles,
+        trace: {
+          outcome: params.outcome,
+          friction: params.friction,
+          notes: params.notes,
+          recordedAt: nowIso()
+        }
       };
-      writeTask(ctx.cwd, task);
+      const gate = evaluateTaskGate(nextTask, policy);
+      if (params.outcome === "completed" && runtime.finalGate === "enforce" && gate.decision === "fail") {
+        return {
+          content: [{ type: "text", text: `Final gate blocked completion: missing ${gate.missing.join(", ")}` }],
+          details: { gate, task: nextTask },
+          isError: true
+        };
+      }
+
+      writeTask(ctx.cwd, nextTask);
       appendTrace(ctx.cwd, {
-        taskId: task.taskId,
+        taskId: nextTask.taskId,
         event: "trace_record",
         outcome: params.outcome,
-        changedFiles: task.changedFiles,
+        changedFiles: nextTask.changedFiles,
         friction: params.friction,
         notes: params.notes
       });
       appendSessionTrace(pi, {
-        taskId: task.taskId,
+        taskId: nextTask.taskId,
         event: "trace_record",
         outcome: params.outcome,
-        changedFiles: task.changedFiles,
+        changedFiles: nextTask.changedFiles,
         friction: params.friction,
         notes: params.notes
       });
 
       return {
-        content: [{ type: "text", text: `Trace recorded for ${task.taskId}: ${params.outcome}` }],
-        details: task
+        content: [{ type: "text", text: `Trace recorded for ${nextTask.taskId}: ${params.outcome}${gate.decision === "fail" ? ` (gate warning: missing ${gate.missing.join(", ")})` : ""}` }],
+        details: { task: nextTask, gate }
       };
     }
   });

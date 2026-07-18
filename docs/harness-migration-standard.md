@@ -52,13 +52,14 @@ Pi Company Platform cần 7 module logic:
 
 | Module | Vai trò | Trạng thái hiện tại |
 |---|---|---|
-| Profile loader | Đọc `.pi/company-profile.json` hoặc `PI_COMPANY_PROFILE` | Có P2-alpha, trust-aware |
-| Policy guard | Block protected path/destructive command | Có P2-alpha, cần thêm profile-specific tool wrapper |
-| Task contract | Bắt scope/output/acceptance/verify trước edit | Có P2-alpha |
-| Context manifest | Ghi required context đã đọc | Có P2-alpha |
-| Tool/MCP registry | Cho phép tool theo capability | Có docs, thiếu enforcement đầy đủ |
-| Verify evidence | Ghi command/result/hash trước DONE | Có P2-alpha |
-| Trace/handoff | Ghi task trace để audit/resume | Có P2-alpha |
+| Profile loader | Đọc `.pi/company-profile.json` hoặc `PI_COMPANY_PROFILE` | Có P3-baseline, trust-aware |
+| Exec policy guard | Block/prompt shell theo pattern + rules + segment parser | Có P3-baseline |
+| Context budget | Hard cap context files/manifest | Có P3-baseline |
+| Task contract | Bắt scope/output/acceptance/verify trước edit | Có P3-baseline |
+| Context manifest | Ghi required context đã đọc | Có P3-baseline |
+| Tool/MCP registry | Cho phép tool theo capability | Có P3-baseline, default advisory |
+| Verify evidence | Ghi command/result/hash trước DONE | Có P3-baseline |
+| Trace/final gate | Ghi task trace + gate check | Có P3-baseline, final hard hook phụ thuộc Pi API |
 
 ## Task lifecycle chuẩn
 
@@ -73,6 +74,7 @@ Pi Company Platform cần 7 module logic:
    - load company_context
    - read `.pi/project-context.md`
    - read requiredContext
+   - check large files with company_context_budget
    - read task-specific files only
    - record context manifest
 
@@ -82,6 +84,8 @@ Pi Company Platform cần 7 module logic:
    - rollback/handoff if high-risk
 
 4. Implement
+   - check complex shell with company_exec_policy_check
+   - check non-company tools with company_tool_policy_check
    - guarded write/edit/bash
    - MCP only by declared capability
    - no protected paths
@@ -97,6 +101,7 @@ Pi Company Platform cần 7 module logic:
    - result
    - friction
    - next step
+   - company_task_gate_check before DONE
 ```
 
 ## Runtime enforcement roadmap
@@ -106,7 +111,7 @@ Pi Company Platform cần 7 module logic:
 | P0 | package core + profile + docs + protected path guard | Không. Chỉ đủ pilot/read-only. |
 | P1 | schema + task contract + doctor + verify-local + lean prompts | Có thể dùng cho task nhỏ nếu human review sát. |
 | P2 | extension tools: task_start/context_record/verify_record/trace + session custom entries | Có thể dùng cho FE/source task có guard rõ. |
-| P3 | verify-before-done hard enforcement + benchmark/parity suite | Đủ để thay một phần Codex/Claude CLI baseline. |
+| P3 | exec policy + context budget + tool registry + task gate + benchmark recorder | Đủ để thay một phần Codex/Claude CLI baseline sau project benchmark. |
 | P4 | subagent/worktree isolation + team publish + security review | Đủ triển khai cho team. |
 
 ## Chuẩn “DONE”

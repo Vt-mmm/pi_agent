@@ -1,0 +1,179 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+usage() {
+  cat <<'USAGE'
+Usage:
+  scripts/parity-benchmark.sh <project-path> --init
+  scripts/parity-benchmark.sh <project-path> --record --scenario <name> --agent <pi|codex|claude|other> --result <pass|fail|partial> [options]
+
+Options:
+  --task-file <path>      File containing task prompt/spec.
+  --verify <command>      Verification command used for the run.
+  --tokens <number>       Total tokens reported by the agent/provider.
+  --cost <number>         Cost reported for the run.
+  --duration <seconds>    Wall-clock duration.
+  --notes <text>          Short notes or quality observations.
+
+Output:
+  <project-path>/.pi/benchmarks/parity-runs.jsonl
+USAGE
+}
+
+PROJECT_PATH="${1:-}"
+if [[ -z "$PROJECT_PATH" ]]; then
+  usage
+  exit 2
+fi
+shift || true
+
+PROJECT_PATH="$(cd "$PROJECT_PATH" && pwd)"
+MODE=""
+SCENARIO=""
+AGENT=""
+RESULT=""
+TASK_FILE=""
+VERIFY_CMD=""
+TOKENS=""
+COST=""
+DURATION=""
+NOTES=""
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --init)
+      MODE="init"
+      shift
+      ;;
+    --record)
+      MODE="record"
+      shift
+      ;;
+    --scenario)
+      SCENARIO="${2:-}"
+      shift 2
+      ;;
+    --agent)
+      AGENT="${2:-}"
+      shift 2
+      ;;
+    --result)
+      RESULT="${2:-}"
+      shift 2
+      ;;
+    --task-file)
+      TASK_FILE="${2:-}"
+      shift 2
+      ;;
+    --verify)
+      VERIFY_CMD="${2:-}"
+      shift 2
+      ;;
+    --tokens)
+      TOKENS="${2:-}"
+      shift 2
+      ;;
+    --cost)
+      COST="${2:-}"
+      shift 2
+      ;;
+    --duration)
+      DURATION="${2:-}"
+      shift 2
+      ;;
+    --notes)
+      NOTES="${2:-}"
+      shift 2
+      ;;
+    -h|--help)
+      usage
+      exit 0
+      ;;
+    *)
+      echo "Unknown argument: $1" >&2
+      usage
+      exit 2
+      ;;
+  esac
+done
+
+BENCHMARK_DIR="$PROJECT_PATH/.pi/benchmarks"
+mkdir -p "$BENCHMARK_DIR"
+
+if [[ "$MODE" == "init" ]]; then
+  cat > "$BENCHMARK_DIR/parity-scenarios.md" <<'SCENARIOS'
+# Agent parity benchmark scenarios
+
+Use the same scenario across Pi, Codex, and Claude before claiming token/cost/quality parity.
+
+## Scenario 1: read-only scout
+
+- Goal: inspect repo structure and produce implementation plan.
+- Must not edit files.
+- Evidence: context files read, plan, risks, verify command proposal.
+
+## Scenario 2: bounded source fix
+
+- Goal: implement a small bugfix with clear acceptance criteria.
+- Evidence: changed files, verify command exit 0, trace/handoff.
+
+## Scenario 3: backend-readonly to frontend implementation
+
+- Goal: scout backend/spec read-only, implement frontend mapping only.
+- Evidence: backend contract snapshot, frontend changed files, frontend verify pass.
+SCENARIOS
+  echo "Initialized benchmark scenarios: $BENCHMARK_DIR/parity-scenarios.md"
+  exit 0
+fi
+
+if [[ "$MODE" != "record" || -z "$SCENARIO" || -z "$AGENT" || -z "$RESULT" ]]; then
+  usage
+  exit 2
+fi
+
+case "$RESULT" in
+  pass|fail|partial) ;;
+  *)
+    echo "--result must be pass, fail, or partial" >&2
+    exit 2
+    ;;
+esac
+
+export PI_BENCHMARK_PROJECT_PATH="$PROJECT_PATH"
+export PI_BENCHMARK_SCENARIO="$SCENARIO"
+export PI_BENCHMARK_AGENT="$AGENT"
+export PI_BENCHMARK_RESULT="$RESULT"
+export PI_BENCHMARK_TASK_FILE="$TASK_FILE"
+export PI_BENCHMARK_VERIFY="$VERIFY_CMD"
+export PI_BENCHMARK_TOKENS="$TOKENS"
+export PI_BENCHMARK_COST="$COST"
+export PI_BENCHMARK_DURATION="$DURATION"
+export PI_BENCHMARK_NOTES="$NOTES"
+
+node --input-type=module <<'NODE'
+import fs from "node:fs";
+import path from "node:path";
+
+const root = process.env.PI_BENCHMARK_PROJECT_PATH;
+const target = path.join(root, ".pi", "benchmarks", "parity-runs.jsonl");
+const numberOrNull = (value) => {
+  if (!value) return null;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
+};
+const payload = {
+  schemaVersion: 1,
+  recordedAt: new Date().toISOString(),
+  scenario: process.env.PI_BENCHMARK_SCENARIO,
+  agent: process.env.PI_BENCHMARK_AGENT,
+  result: process.env.PI_BENCHMARK_RESULT,
+  taskFile: process.env.PI_BENCHMARK_TASK_FILE || null,
+  verifyCommand: process.env.PI_BENCHMARK_VERIFY || null,
+  tokens: numberOrNull(process.env.PI_BENCHMARK_TOKENS),
+  cost: numberOrNull(process.env.PI_BENCHMARK_COST),
+  durationSeconds: numberOrNull(process.env.PI_BENCHMARK_DURATION),
+  notes: process.env.PI_BENCHMARK_NOTES || null
+};
+fs.appendFileSync(target, `${JSON.stringify(payload)}\n`);
+console.log(`Recorded benchmark run: ${target}`);
+NODE

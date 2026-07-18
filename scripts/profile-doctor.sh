@@ -69,6 +69,19 @@ for (const contextPath of requiredContext) {
 if (protectedPaths.length === 0) warnings.push("protectedPaths is empty");
 if (mcpCapabilities.length === 0) warnings.push("mcpCapabilities is empty");
 
+const runtimePolicy = {
+  execPolicy: "enforce",
+  contextBudget: "enforce",
+  toolRegistry: "advisory",
+  finalGate: "advisory",
+  ...(profile.runtimePolicy ?? {})
+};
+for (const [key, value] of Object.entries(runtimePolicy)) {
+  if (!["off", "advisory", "enforce"].includes(value)) {
+    errors.push(`runtimePolicy.${key} must be off, advisory, or enforce`);
+  }
+}
+
 const verifyEntries = Object.entries(profile.verifyCommands ?? {});
 if (verifyEntries.length === 0) {
   errors.push("verifyCommands has no entries");
@@ -94,6 +107,7 @@ const report = {
   protectedPathCount: protectedPaths.length,
   verifyProfiles: verifyEntries.map(([key]) => key),
   mcpCapabilities,
+  runtimePolicy,
   warnings,
   errors
 };
@@ -102,4 +116,3 @@ console.log(JSON.stringify(report, null, 2));
 
 if (errors.length > 0) process.exit(1);
 NODE
-

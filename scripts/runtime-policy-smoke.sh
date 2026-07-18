@@ -1,0 +1,47 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+TMP_ROOT="$(mktemp -d)"
+cleanup() {
+  rm -rf "$TMP_ROOT"
+}
+trap cleanup EXIT
+
+PROJECT="$TMP_ROOT/sample-project"
+mkdir -p "$PROJECT"
+cat > "$PROJECT/README.md" <<'README'
+# Sample Project
+README
+cat > "$PROJECT/AGENTS.md" <<'AGENTS'
+# Sample Agent Instructions
+
+Use project profile and verify before done.
+AGENTS
+
+bash "$ROOT/scripts/init-project.sh" "$PROJECT" --profile generic --package-source "git:github.com/Vt-mmm/pi_agent@v0.3.0" >/dev/null
+bash "$ROOT/scripts/profile-doctor.sh" "$PROJECT" >/dev/null
+bash "$ROOT/scripts/parity-benchmark.sh" "$PROJECT" --init >/dev/null
+bash "$ROOT/scripts/parity-benchmark.sh" "$PROJECT" --record --scenario smoke --agent pi --result pass --tokens 1 --verify "test -s README.md" >/dev/null
+
+node --input-type=module - "$PROJECT/.pi/company-profile.json" "$PROJECT/.pi/benchmarks/parity-runs.jsonl" <<'NODE'
+import fs from "node:fs";
+
+const [profilePath, benchmarkPath] = process.argv.slice(2);
+const profile = JSON.parse(fs.readFileSync(profilePath, "utf8"));
+for (const capability of ["filesystem-readonly", "filesystem-write", "shell", "memory"]) {
+  if (!profile.mcpCapabilities.includes(capability)) {
+    throw new Error(`missing capability ${capability}`);
+  }
+}
+const runtimePolicy = profile.runtimePolicy ?? {};
+for (const key of ["execPolicy", "contextBudget", "toolRegistry", "finalGate"]) {
+  if (!runtimePolicy[key]) throw new Error(`missing runtimePolicy.${key}`);
+}
+const runs = fs.readFileSync(benchmarkPath, "utf8").trim().split(/\n+/).map((line) => JSON.parse(line));
+if (runs.length !== 1 || runs[0].scenario !== "smoke" || runs[0].result !== "pass") {
+  throw new Error("benchmark smoke record is invalid");
+}
+NODE
+
+echo "PASS: runtime policy smoke"

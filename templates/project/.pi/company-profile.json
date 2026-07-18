@@ -28,6 +28,8 @@
   },
   "mcpCapabilities": [
     "filesystem-readonly",
+    "filesystem-write",
+    "shell",
     "memory"
   ],
   "memory": {
@@ -41,5 +43,11 @@
     "writePolicy": "explicit-only",
     "maxInjectedChars": 4000,
     "externalPackages": []
+  },
+  "runtimePolicy": {
+    "execPolicy": "enforce",
+    "contextBudget": "enforce",
+    "toolRegistry": "advisory",
+    "finalGate": "enforce"
   }
 }

@@ -23,7 +23,19 @@ Adapter mô tả project cho Pi core. Core không biết domain/project cụ th�
     "docsOnly": ["test -s README.md"],
     "source": ["npm test"]
   },
-  "mcpCapabilities": ["filesystem-readonly", "github"]
+  "mcpCapabilities": [
+    "filesystem-readonly",
+    "filesystem-write",
+    "shell",
+    "github",
+    "memory"
+  ],
+  "runtimePolicy": {
+    "execPolicy": "enforce",
+    "contextBudget": "enforce",
+    "toolRegistry": "advisory",
+    "finalGate": "enforce"
+  }
 }
 ```
 
@@ -87,6 +99,7 @@ Custom profile khi project có ít nhất một điểm sau:
 - protected path riêng;
 - context bắt buộc riêng;
 - tool/MCP capability riêng;
+- runtime policy riêng;
 - rule domain hoặc compliance riêng.
 
 Không sửa core extension chỉ để phục vụ một repo. Sửa `.pi/company-profile.json` của repo đó trước.

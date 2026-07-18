@@ -12,6 +12,12 @@ This repository is designed for teams that want a `cd project && pi` workflow wi
 - Explicit project memory via `/memory-policy` and `company_memory_*` tools.
 - Built-in profiles for frontend, backend, fullstack, BE-readonly/FE-write, data, DevOps, mobile, docs, Python, and Node TypeScript.
 - Guardrails for protected paths, destructive shell commands, task contracts, context manifests, verification evidence, and trace records.
+- Codex-inspired runtime policy modules:
+  - `company_exec_policy_check`
+  - `company_context_budget`
+  - `company_tool_policy_check`
+  - `company_task_gate_check`
+- Parity benchmark recorder for Pi vs Codex vs Claude task comparisons.
 - Reusable workflow prompts:
   - `/platform-migration`
   - `/be-to-fe`
@@ -25,7 +31,7 @@ This repository is designed for teams that want a `cd project && pi` workflow wi
 
 ```bash
 npm install -g @earendil-works/pi-coding-agent
-pi install git:github.com/Vt-mmm/pi_agent@v0.2.0
+pi install git:github.com/Vt-mmm/pi_agent@v0.3.0
 ```
 
 Optional Herdr integration:
@@ -134,7 +140,7 @@ Most projects do not need shell init. Use this only when you want to pre-create 
 ```bash
 bash /path/to/pi_agent/scripts/setup.sh /path/to/project \
   --profile be-readonly-fe \
-  --package-source git:github.com/Vt-mmm/pi_agent@v0.2.0
+  --package-source git:github.com/Vt-mmm/pi_agent@v0.3.0
 ```
 
 ## Repository layout
@@ -156,6 +162,18 @@ pi_agent/
 bash scripts/verify-local.sh
 bash scripts/team-doctor.sh . --strict-share
 pi list --approve
+```
+
+Benchmark parity:
+
+```bash
+bash scripts/parity-benchmark.sh /path/to/project --init
+bash scripts/parity-benchmark.sh /path/to/project --record \
+  --scenario bounded-source-fix \
+  --agent pi \
+  --result pass \
+  --tokens 12345 \
+  --verify "npm test"
 ```
 
 ## Public safety
@@ -184,12 +202,14 @@ MIT License. See [LICENSE](LICENSE).
 - [Context-window policy](docs/context-window-policy.md)
 - [Memory policy](docs/memory-policy.md)
 - [Task implementation contract](docs/task-implementation-contract.md)
+- [Codex parity baseline](docs/codex-parity-baseline.md)
+- [Benchmark parity guide](docs/benchmark-parity.md)
 - [Codex migration reference](docs/codex-migration-reference.md)
 - [Agent-stuff research](docs/agent-stuff-research.md)
 
 ## Maturity
 
-Current maturity: `P2-alpha`.
+Current maturity: `P3-baseline`.
 
 Good for:
 
@@ -197,10 +217,13 @@ Good for:
 - project onboarding;
 - profile-driven guarded pilot tasks;
 - read-only scouting;
-- small or normal source tasks with clear verification.
+- small or normal source tasks with clear verification;
+- Codex-inspired exec/context/tool/task gate checks;
+- collecting Pi vs Codex vs Claude benchmark evidence.
 
 Not yet proven for:
 
-- replacing Codex/Claude CLI on high-risk tasks without benchmark evidence;
-- automated final-DONE enforcement;
+- replacing Codex/Claude CLI on high-risk tasks without project-specific benchmark evidence;
+- true final assistant stop-hook enforcement when Pi does not expose a hard final hook;
+- Codex-grade filesystem/network/env sandbox if Pi/host runtime does not provide it;
 - complex multi-agent worktree isolation.

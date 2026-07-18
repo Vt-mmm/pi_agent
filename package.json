@@ -1,6 +1,6 @@
 {
   "name": "pi-agent-platform",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "private": true,
   "license": "MIT",
   "type": "module",
@@ -16,7 +16,8 @@
     "pi-company-setup": "scripts/setup.sh",
     "pi-company-install": "scripts/install-global.sh",
     "pi-company-init": "scripts/init-project.sh",
-    "pi-company-doctor": "scripts/team-doctor.sh"
+    "pi-company-doctor": "scripts/team-doctor.sh",
+    "pi-company-benchmark": "scripts/parity-benchmark.sh"
   },
   "pi": {
     "extensions": [
@@ -43,7 +44,9 @@
     "bootstrap": "bash scripts/bootstrap-local.sh",
     "install-global": "bash scripts/install-global.sh",
     "init-project": "bash scripts/init-project.sh",
-    "doctor": "bash scripts/team-doctor.sh"
+    "doctor": "bash scripts/team-doctor.sh",
+    "benchmark": "bash scripts/parity-benchmark.sh",
+    "smoke": "bash scripts/runtime-policy-smoke.sh"
   },
   "engines": {
     "node": ">=20"

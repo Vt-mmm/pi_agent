@@ -60,6 +60,8 @@
   },
   "mcpCapabilities": [
     "filesystem-readonly",
+    "filesystem-write",
+    "shell",
     "github",
     "database-readonly",
     "memory"
@@ -75,5 +77,11 @@
     "writePolicy": "explicit-only",
     "maxInjectedChars": 4000,
     "externalPackages": []
+  },
+  "runtimePolicy": {
+    "execPolicy": "enforce",
+    "contextBudget": "enforce",
+    "toolRegistry": "advisory",
+    "finalGate": "enforce"
   }
 }

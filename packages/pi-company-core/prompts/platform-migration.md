@@ -20,10 +20,10 @@ Use this for tasks like:
 
 Mandatory flow:
 
-1. Call `company_context` with `detail=full`.
+1. Call `company_context` with `detail=full` and inspect runtime policy.
 2. Call `company_memory_status`; search memory for prior migration decisions if relevant, record citations with `company_memory_citation_record`, then verify against current source/docs.
 3. Read `.pi/project-context.md`. If pending, stop and ask for `/onboard-project`.
-4. Read required context from the active profile.
+4. Read required context from the active profile and call `company_context_budget` before injecting large reference files.
 5. Identify source evidence:
    - official docs URL + date/version;
    - reference repo URL + commit/tag;
@@ -31,14 +31,17 @@ Mandatory flow:
    - exact behavior/concept being migrated.
 6. Use `company_reference_checkout` for repo references when available.
 7. Do targeted inspection only. Do not copy large source blocks or vendor code.
-8. Produce a migration matrix:
+8. Before shell commands that fetch, clone, build, publish, or mutate package state, call `company_exec_policy_check`.
+9. Before non-company MCP/app tools, call `company_tool_policy_check`.
+10. Produce a migration matrix:
 
    | Source concept | Evidence | Apply? | Target file/config | Reason |
    |---|---|---:|---|---|
 
-9. Implement only the bounded target behavior.
-10. If policy/runtime behavior changes, update docs and add/adjust a decision note when appropriate.
-11. Run platform verification before final.
+11. Implement only the bounded target behavior.
+12. If policy/runtime behavior changes, update docs and add/adjust a decision note when appropriate.
+13. For source-changing platform tasks, record verify evidence and trace, then call `company_task_gate_check` before final.
+14. Run platform verification before final.
 
 Default verification:
 
@@ -51,7 +54,7 @@ pi list --approve
 If setup/init behavior changed, also verify with a temporary project:
 
 ```bash
-bash scripts/setup.sh /tmp/pi-fixture --project-only --profile auto --package-source git:github.com/Vt-mmm/pi_agent@v0.2.0
+bash scripts/setup.sh /tmp/pi-fixture --project-only --profile auto --package-source git:github.com/Vt-mmm/pi_agent@v0.3.0
 ```
 
 Final output:
@@ -62,4 +65,5 @@ Final output:
 - Changed files.
 - Verify command/result.
 - Memory cited, if any.
+- Task gate result.
 - Residual parity gaps vs the source tool.
