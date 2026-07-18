@@ -27,7 +27,7 @@ Pi package dùng chung cho nhiều project.
 ## Cài local
 
 ```bash
-pi install git:github.com/Vt-mmm/pi_agent@v0.3.3
+pi install git:github.com/Vt-mmm/pi_agent@v0.3.4
 ```
 
 ## Project profile

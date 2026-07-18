@@ -33,7 +33,7 @@ This repository is designed for teams that want a `cd project && pi` workflow wi
 
 ```bash
 npm install -g @earendil-works/pi-coding-agent
-pi install git:github.com/Vt-mmm/pi_agent@v0.3.3
+pi install git:github.com/Vt-mmm/pi_agent@v0.3.4
 ```
 
 Optional Herdr integration:
@@ -141,8 +141,13 @@ Examples:
 
 ```bash
 pi --model openai-codex/gpt-5.5:xhigh
+pi --model openai-codex/gpt-5.6-sol:xhigh
+pi --model openai-codex/gpt-5.6-terra:xhigh
 pi --model anthropic/claude-sonnet-5:xhigh
+pi --model anthropic/claude-opus-4-7:max
+pi --model anthropic/claude-fable-5:max
 pi --model anthropic/claude-haiku-4-5:low
+pi-company-models
 ```
 
 ### Planning and clarification
@@ -159,7 +164,7 @@ Most projects do not need shell init. Use this only when you want to pre-create 
 ```bash
 bash /path/to/pi_agent/scripts/setup.sh /path/to/project \
   --profile be-readonly-fe \
-  --package-source git:github.com/Vt-mmm/pi_agent@v0.3.3
+  --package-source git:github.com/Vt-mmm/pi_agent@v0.3.4
 ```
 
 ## Repository layout

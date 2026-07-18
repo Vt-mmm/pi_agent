@@ -15,7 +15,7 @@ Phần còn lại — OAuth, package, context, harness, MCP, tool-call guard —
 
 ```bash
 npm install -g @earendil-works/pi-coding-agent
-pi install git:github.com/Vt-mmm/pi_agent@v0.3.3
+pi install git:github.com/Vt-mmm/pi_agent@v0.3.4
 ```
 
 Sau bước này, project mới không cần chạy bash init profile. Chỉ cần:
@@ -48,8 +48,13 @@ Ví dụ model option:
 
 ```bash
 pi --model openai-codex/gpt-5.5:xhigh
+pi --model openai-codex/gpt-5.6-sol:xhigh
+pi --model openai-codex/gpt-5.6-terra:xhigh
 pi --model anthropic/claude-sonnet-5:xhigh
+pi --model anthropic/claude-opus-4-7:max
+pi --model anthropic/claude-fable-5:max
 pi --model anthropic/claude-haiku-4-5:low
+pi-company-models
 ```
 
 Lệnh này yêu cầu model đọc qua project theo phạm vi có kiểm soát, rồi ghi:
@@ -73,7 +78,7 @@ File này là snapshot context cho task sau. Nếu file còn `Generated: not yet
 bash /path/to/pi_agent/scripts/setup.sh /path/to/project \
   --project-only \
   --profile auto \
-  --package-source git:github.com/Vt-mmm/pi_agent@v0.3.3
+  --package-source git:github.com/Vt-mmm/pi_agent@v0.3.4
 ```
 
 Đổi profile sau này trong Pi:
@@ -92,7 +97,7 @@ Script bash chỉ dùng khi muốn preseed config vào repo:
 ```bash
 bash /path/to/pi_agent/scripts/setup.sh /path/to/project \
   --profile be-readonly-fe \
-  --package-source git:github.com/Vt-mmm/pi_agent@v0.3.3
+  --package-source git:github.com/Vt-mmm/pi_agent@v0.3.4
 ```
 
 ## Bước 6 — chạy hằng ngày

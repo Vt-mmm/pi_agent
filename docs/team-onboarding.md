@@ -6,7 +6,7 @@ Một thành viên mới không cần biết local path của maintainer. Luồn
 
 ```bash
 npm install -g @earendil-works/pi-coding-agent
-pi install git:github.com/Vt-mmm/pi_agent@v0.3.3
+pi install git:github.com/Vt-mmm/pi_agent@v0.3.4
 cd /path/to/project
 pi
 /login
@@ -29,14 +29,14 @@ Khuyến nghị dùng tag cố định:
 
 ```bash
 npm install -g @earendil-works/pi-coding-agent
-pi install git:github.com/Vt-mmm/pi_agent@v0.3.3
+pi install git:github.com/Vt-mmm/pi_agent@v0.3.4
 ```
 
 Nếu team publish npm private:
 
 ```bash
 npm install -g @earendil-works/pi-coding-agent
-pi install npm:@company/pi_agent@0.3.3
+pi install npm:@company/pi_agent@0.3.4
 ```
 
 Không cần chạy bash để set profile cho từng project.
@@ -63,8 +63,13 @@ Ví dụ:
 
 ```bash
 pi --model openai-codex/gpt-5.5:xhigh
+pi --model openai-codex/gpt-5.6-sol:xhigh
+pi --model openai-codex/gpt-5.6-terra:xhigh
 pi --model anthropic/claude-sonnet-5:xhigh
+pi --model anthropic/claude-opus-4-7:max
+pi --model anthropic/claude-fable-5:max
 pi --model anthropic/claude-haiku-4-5:low
+pi-company-models
 ```
 
 Rồi chạy:
@@ -103,13 +108,13 @@ Các script setup/init vẫn tồn tại cho case preseed config vào repo hoặ
 ```bash
 bash /path/to/pi_agent/scripts/setup.sh /path/to/project \
   --profile be-readonly-fe \
-  --package-source git:github.com/Vt-mmm/pi_agent@v0.3.3
+  --package-source git:github.com/Vt-mmm/pi_agent@v0.3.4
 ```
 
 Nếu cần override profile:
 
 ```bash
-bash /path/to/pi_agent/scripts/setup.sh /path/to/project --project-only --profile backend-api --package-source git:github.com/Vt-mmm/pi_agent@v0.3.3
+bash /path/to/pi_agent/scripts/setup.sh /path/to/project --project-only --profile backend-api --package-source git:github.com/Vt-mmm/pi_agent@v0.3.4
 ```
 
 Profile built-in trong Pi:

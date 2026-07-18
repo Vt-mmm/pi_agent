@@ -69,6 +69,7 @@ required_files=(
   "$ROOT/scripts/parity-benchmark.sh"
   "$ROOT/scripts/runtime-policy-smoke.sh"
   "$ROOT/scripts/pi-session-stats.sh"
+  "$ROOT/scripts/pi-model-catalog.sh"
 )
 
 for file in "${required_files[@]}"; do
@@ -146,6 +147,9 @@ grep -R "/onboard-project" "$ROOT/README.md" "$ROOT/docs" "$ROOT/templates/proje
 grep -R "/memory-policy" "$ROOT/README.md" "$ROOT/docs" "$ROOT/packages/pi-company-core/prompts" >/dev/null
 grep -R "/model-options" "$ROOT/README.md" "$ROOT/docs" "$ROOT/packages/pi-company-core/prompts" >/dev/null
 grep -R "anthropic/claude" "$ROOT/README.md" "$ROOT/docs/model-options.md" "$ROOT/packages/pi-company-core/prompts/model-options.md" >/dev/null
+grep -R "gpt-5.6" "$ROOT/README.md" "$ROOT/docs/model-options.md" "$ROOT/packages/pi-company-core/prompts/model-options.md" >/dev/null
+grep -R "claude-fable-5" "$ROOT/README.md" "$ROOT/docs/model-options.md" "$ROOT/packages/pi-company-core/prompts/model-options.md" >/dev/null
+grep -R "pi-company-models" "$ROOT/README.md" "$ROOT/docs/model-options.md" >/dev/null
 grep -R "/platform-migration" "$ROOT/packages/pi-company-core/prompts" "$ROOT/docs" >/dev/null
 grep -R "/be-to-fe" "$ROOT/packages/pi-company-core/prompts" "$ROOT/docs" >/dev/null
 grep -R "Codex CLI" "$ROOT/docs/codex-migration-reference.md" >/dev/null
@@ -161,6 +165,8 @@ node --check "$ROOT/packages/pi-company-core/extensions/company-guard.ts" >/dev/
 bash -n "$ROOT/scripts/parity-benchmark.sh"
 bash -n "$ROOT/scripts/runtime-policy-smoke.sh"
 bash -n "$ROOT/scripts/pi-session-stats.sh"
+bash -n "$ROOT/scripts/pi-model-catalog.sh"
+bash "$ROOT/scripts/pi-model-catalog.sh" --json >/dev/null
 bash "$ROOT/scripts/runtime-policy-smoke.sh" >/dev/null
 
 bash "$ROOT/scripts/profile-doctor.sh" "$ROOT" "$ROOT/.pi/company-profile.json" >/dev/null
