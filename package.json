@@ -2,6 +2,7 @@
   "name": "pi-agent-platform",
   "version": "0.1.0",
   "private": true,
+  "license": "MIT",
   "type": "module",
   "description": "Reusable Pi agent platform, project adapters, MCP/tool policy, and coding workflow harness.",
   "keywords": [

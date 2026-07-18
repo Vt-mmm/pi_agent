@@ -155,6 +155,10 @@ This repository intentionally excludes:
 - project-private data dumps;
 - local machine paths.
 
+## License
+
+MIT License. See [LICENSE](LICENSE).
+
 ## Documentation
 
 - [Quickstart tiếng Việt](docs/quickstart-vietnamese.md)
