@@ -23,7 +23,7 @@ This repository is designed for teams that want a `cd project && pi` workflow wi
 
 ```bash
 npm install -g @earendil-works/pi-coding-agent
-pi install git:github.com/Vt-mmm/pi_agent@v0.1.0
+pi install git:github.com/Vt-mmm/pi_agent@v0.1.1
 ```
 
 Optional Herdr integration:
@@ -121,7 +121,7 @@ Most projects do not need shell init. Use this only when you want to pre-create 
 ```bash
 bash /path/to/pi_agent/scripts/setup.sh /path/to/project \
   --profile be-readonly-fe \
-  --package-source git:github.com/Vt-mmm/pi_agent@v0.1.0
+  --package-source git:github.com/Vt-mmm/pi_agent@v0.1.1
 ```
 
 ## Repository layout

@@ -50,7 +50,7 @@ pi list --approve
 If setup/init behavior changed, also verify with a temporary project:
 
 ```bash
-bash scripts/setup.sh /tmp/pi-fixture --project-only --profile auto --package-source git:github.com/Vt-mmm/pi_agent@v0.1.0
+bash scripts/setup.sh /tmp/pi-fixture --project-only --profile auto --package-source git:github.com/Vt-mmm/pi_agent@v0.1.1
 ```
 
 Final output:
