@@ -16,6 +16,7 @@ required_files=(
   "$ROOT/packages/pi-company-core/extensions/company-guard.ts"
   "$ROOT/packages/pi-company-core/prompts/onboard-project.md"
   "$ROOT/packages/pi-company-core/prompts/profiles.md"
+  "$ROOT/packages/pi-company-core/prompts/model-options.md"
   "$ROOT/packages/pi-company-core/prompts/memory-policy.md"
   "$ROOT/packages/pi-company-core/prompts/platform-migration.md"
   "$ROOT/packages/pi-company-core/prompts/be-to-fe.md"
@@ -48,6 +49,7 @@ required_files=(
   "$ROOT/docs/project-onboarding.md"
   "$ROOT/docs/workflow-recipes.md"
   "$ROOT/docs/memory-policy.md"
+  "$ROOT/docs/model-options.md"
   "$ROOT/docs/harness-migration-standard.md"
   "$ROOT/docs/task-implementation-contract.md"
   "$ROOT/docs/codex-parity-baseline.md"
@@ -142,6 +144,8 @@ grep -R "company_memory_search" "$ROOT/packages/pi-company-core" "$ROOT/docs" >/
 grep -R "company_memory_citation_record" "$ROOT/packages/pi-company-core" "$ROOT/docs" >/dev/null
 grep -R "/onboard-project" "$ROOT/README.md" "$ROOT/docs" "$ROOT/templates/project/AGENTS.md" >/dev/null
 grep -R "/memory-policy" "$ROOT/README.md" "$ROOT/docs" "$ROOT/packages/pi-company-core/prompts" >/dev/null
+grep -R "/model-options" "$ROOT/README.md" "$ROOT/docs" "$ROOT/packages/pi-company-core/prompts" >/dev/null
+grep -R "anthropic/claude" "$ROOT/README.md" "$ROOT/docs/model-options.md" "$ROOT/packages/pi-company-core/prompts/model-options.md" >/dev/null
 grep -R "/platform-migration" "$ROOT/packages/pi-company-core/prompts" "$ROOT/docs" >/dev/null
 grep -R "/be-to-fe" "$ROOT/packages/pi-company-core/prompts" "$ROOT/docs" >/dev/null
 grep -R "Codex CLI" "$ROOT/docs/codex-migration-reference.md" >/dev/null

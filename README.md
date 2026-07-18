@@ -22,6 +22,7 @@ This repository is designed for teams that want a `cd project && pi` workflow wi
 - Reusable workflow prompts:
   - `/platform-migration`
   - `/be-to-fe`
+  - `/model-options`
   - `/memory-policy`
   - `/task`
   - `/plan`
@@ -32,7 +33,7 @@ This repository is designed for teams that want a `cd project && pi` workflow wi
 
 ```bash
 npm install -g @earendil-works/pi-coding-agent
-pi install git:github.com/Vt-mmm/pi_agent@v0.3.2
+pi install git:github.com/Vt-mmm/pi_agent@v0.3.3
 ```
 
 Optional Herdr integration:
@@ -52,7 +53,8 @@ First run inside a project:
 
 ```text
 /login
-<select provider/model>
+<select provider/model: OpenAI Codex or Claude>
+/model-options
 /onboard-project
 /memory-policy
 ```
@@ -127,6 +129,22 @@ Use when you want Pi to inspect memory policy or remember durable project facts 
 Remember: this repo uses pnpm, never npm.
 ```
 
+### Model options
+
+Use when choosing between OpenAI Codex and Claude/Anthropic for a task.
+
+```text
+/model-options Recommend fast/balanced/deep options for this project.
+```
+
+Examples:
+
+```bash
+pi --model openai-codex/gpt-5.5:xhigh
+pi --model anthropic/claude-sonnet-5:xhigh
+pi --model anthropic/claude-haiku-4-5:low
+```
+
 ### Planning and clarification
 
 ```text
@@ -141,7 +159,7 @@ Most projects do not need shell init. Use this only when you want to pre-create 
 ```bash
 bash /path/to/pi_agent/scripts/setup.sh /path/to/project \
   --profile be-readonly-fe \
-  --package-source git:github.com/Vt-mmm/pi_agent@v0.3.2
+  --package-source git:github.com/Vt-mmm/pi_agent@v0.3.3
 ```
 
 ## Repository layout
@@ -220,6 +238,7 @@ MIT License. See [LICENSE](LICENSE).
 - [Task implementation contract](docs/task-implementation-contract.md)
 - [Codex parity baseline](docs/codex-parity-baseline.md)
 - [Usage observability](docs/usage-observability.md)
+- [Model options](docs/model-options.md)
 - [Benchmark parity guide](docs/benchmark-parity.md)
 - [Codex migration reference](docs/codex-migration-reference.md)
 - [Agent-stuff research](docs/agent-stuff-research.md)

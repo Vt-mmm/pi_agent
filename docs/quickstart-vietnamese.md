@@ -15,7 +15,7 @@ Phần còn lại — OAuth, package, context, harness, MCP, tool-call guard —
 
 ```bash
 npm install -g @earendil-works/pi-coding-agent
-pi install git:github.com/Vt-mmm/pi_agent@v0.3.2
+pi install git:github.com/Vt-mmm/pi_agent@v0.3.3
 ```
 
 Sau bước này, project mới không cần chạy bash init profile. Chỉ cần:
@@ -25,22 +25,31 @@ cd /path/to/project
 pi
 ```
 
-## Bước 2 — login OAuth Codex/ChatGPT
+## Bước 2 — login OAuth OpenAI Codex/ChatGPT hoặc Claude/Anthropic
 
 ```bash
 pi
 /login
 ```
 
-Chọn provider OpenAI/Codex/ChatGPT trong danh sách Pi. Token được lưu local trong Pi agent dir, không nằm trong repo.
+Chọn provider OpenAI/Codex/ChatGPT hoặc Anthropic/Claude trong danh sách Pi. Token được lưu local trong Pi agent dir, không nằm trong repo.
 
 ## Bước 3 — chọn model và chạy project onboarding
 
 Sau khi login và chọn model intended cho project understanding:
 
 ```text
+/model-options
 /onboard-project
 /memory-policy
+```
+
+Ví dụ model option:
+
+```bash
+pi --model openai-codex/gpt-5.5:xhigh
+pi --model anthropic/claude-sonnet-5:xhigh
+pi --model anthropic/claude-haiku-4-5:low
 ```
 
 Lệnh này yêu cầu model đọc qua project theo phạm vi có kiểm soát, rồi ghi:
@@ -64,7 +73,7 @@ File này là snapshot context cho task sau. Nếu file còn `Generated: not yet
 bash /path/to/pi_agent/scripts/setup.sh /path/to/project \
   --project-only \
   --profile auto \
-  --package-source git:github.com/Vt-mmm/pi_agent@v0.3.2
+  --package-source git:github.com/Vt-mmm/pi_agent@v0.3.3
 ```
 
 Đổi profile sau này trong Pi:
@@ -83,7 +92,7 @@ Script bash chỉ dùng khi muốn preseed config vào repo:
 ```bash
 bash /path/to/pi_agent/scripts/setup.sh /path/to/project \
   --profile be-readonly-fe \
-  --package-source git:github.com/Vt-mmm/pi_agent@v0.3.2
+  --package-source git:github.com/Vt-mmm/pi_agent@v0.3.3
 ```
 
 ## Bước 6 — chạy hằng ngày

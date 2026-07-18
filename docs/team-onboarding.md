@@ -6,7 +6,7 @@ Một thành viên mới không cần biết local path của maintainer. Luồn
 
 ```bash
 npm install -g @earendil-works/pi-coding-agent
-pi install git:github.com/Vt-mmm/pi_agent@v0.3.2
+pi install git:github.com/Vt-mmm/pi_agent@v0.3.3
 cd /path/to/project
 pi
 /login
@@ -29,14 +29,14 @@ Khuyến nghị dùng tag cố định:
 
 ```bash
 npm install -g @earendil-works/pi-coding-agent
-pi install git:github.com/Vt-mmm/pi_agent@v0.3.2
+pi install git:github.com/Vt-mmm/pi_agent@v0.3.3
 ```
 
 Nếu team publish npm private:
 
 ```bash
 npm install -g @earendil-works/pi-coding-agent
-pi install npm:@company/pi_agent@0.3.2
+pi install npm:@company/pi_agent@0.3.3
 ```
 
 Không cần chạy bash để set profile cho từng project.
@@ -53,7 +53,21 @@ Credential nằm trong user Pi dir, không commit.
 
 ## Bước 3 — chọn model và onboard project
 
-Sau login, chọn provider/model intended cho project understanding. Rồi chạy:
+Sau login, chọn provider/model intended cho project understanding. OpenAI Codex và Claude/Anthropic đều là supported option. Nếu chưa chắc chọn gì, chạy:
+
+```text
+/model-options
+```
+
+Ví dụ:
+
+```bash
+pi --model openai-codex/gpt-5.5:xhigh
+pi --model anthropic/claude-sonnet-5:xhigh
+pi --model anthropic/claude-haiku-4-5:low
+```
+
+Rồi chạy:
 
 ```text
 /onboard-project
@@ -89,13 +103,13 @@ Các script setup/init vẫn tồn tại cho case preseed config vào repo hoặ
 ```bash
 bash /path/to/pi_agent/scripts/setup.sh /path/to/project \
   --profile be-readonly-fe \
-  --package-source git:github.com/Vt-mmm/pi_agent@v0.3.2
+  --package-source git:github.com/Vt-mmm/pi_agent@v0.3.3
 ```
 
 Nếu cần override profile:
 
 ```bash
-bash /path/to/pi_agent/scripts/setup.sh /path/to/project --project-only --profile backend-api --package-source git:github.com/Vt-mmm/pi_agent@v0.3.2
+bash /path/to/pi_agent/scripts/setup.sh /path/to/project --project-only --profile backend-api --package-source git:github.com/Vt-mmm/pi_agent@v0.3.3
 ```
 
 Profile built-in trong Pi:

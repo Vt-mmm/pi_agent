@@ -1,8 +1,8 @@
-# OAuth Codex/ChatGPT trong Pi
+# OAuth OpenAI Codex/ChatGPT và Claude/Anthropic trong Pi
 
 ## Mục tiêu
 
-Dùng Codex/OpenAI model trong Pi, không cần copy token từ Codex CLI.
+Dùng Codex/OpenAI hoặc Claude/Anthropic model trong Pi, không cần copy token từ Codex CLI hay Claude CLI.
 
 ## Setup
 
@@ -11,10 +11,11 @@ pi
 /login
 ```
 
-Chọn provider OpenAI/Codex/ChatGPT theo danh sách Pi hiển thị. Sau đó kiểm tra:
+Chọn provider OpenAI/Codex/ChatGPT hoặc Anthropic/Claude theo danh sách Pi hiển thị. Sau đó kiểm tra:
 
 ```text
 /model
+/model-options
 ```
 
 Hoặc:
@@ -51,4 +52,4 @@ Không dùng OAuth local cho CI. Nếu sau này cần headless automation, dùng
 - Pi providers/OAuth: https://pi.dev/docs/latest/providers
 - Pi settings/trust: https://pi.dev/docs/latest/settings
 - Codex CLI auth overview: https://github.com/openai/codex
-
+- Anthropic Claude docs: https://docs.anthropic.com/
