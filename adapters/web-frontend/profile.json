@@ -1,0 +1,57 @@
+{
+  "schemaVersion": 1,
+  "projectId": "web-frontend",
+  "displayName": "Web Frontend Project",
+  "mode": "web-frontend",
+  "rootMarkers": [
+    "AGENTS.md",
+    "package.json"
+  ],
+  "protectedPaths": [
+    ".git/**",
+    "**/auth.json",
+    "**/.env",
+    "**/.env.*",
+    "**/node_modules/**",
+    "**/dist/**",
+    "**/.next/**"
+  ],
+  "requiredContext": [
+    "AGENTS.md",
+    ".pi/project-context.md",
+    "README.md",
+    "package.json"
+  ],
+  "taskModes": {
+    "readOnly": {
+      "tools": [
+        "read",
+        "grep",
+        "find",
+        "ls"
+      ]
+    },
+    "sourceWrite": {
+      "requiresPlan": true,
+      "requiresVerify": true
+    }
+  },
+  "verifyCommands": {
+    "docsOnly": [
+      "test -s README.md"
+    ],
+    "source": [
+      "npm run type-check",
+      "npm run lint",
+      "npm test"
+    ],
+    "runtime": [
+      "npm run test:e2e"
+    ]
+  },
+  "mcpCapabilities": [
+    "filesystem-readonly",
+    "github",
+    "browser"
+  ]
+}

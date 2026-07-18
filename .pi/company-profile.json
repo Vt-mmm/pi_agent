@@ -1,0 +1,50 @@
+{
+  "schemaVersion": 1,
+  "projectId": "pi-company-platform",
+  "displayName": "Pi Company Platform",
+  "mode": "platform-development",
+  "rootMarkers": [
+    "AGENTS.md",
+    "package.json"
+  ],
+  "protectedPaths": [
+    ".git/**",
+    "**/auth.json",
+    "**/.env",
+    "**/.env.*"
+  ],
+  "requiredContext": [
+    "AGENTS.md",
+    ".pi/project-context.md",
+    "docs/architecture.md",
+    "docs/project-adapters.md",
+    "docs/mcp-and-tools.md"
+  ],
+  "taskModes": {
+    "readOnly": {
+      "tools": [
+        "read",
+        "grep",
+        "find",
+        "ls"
+      ]
+    },
+    "sourceWrite": {
+      "requiresPlan": true,
+      "requiresVerify": true
+    }
+  },
+  "verifyCommands": {
+    "docsOnly": [
+      "bash scripts/verify-local.sh"
+    ],
+    "source": [
+      "bash scripts/verify-local.sh"
+    ]
+  },
+  "mcpCapabilities": [
+    "filesystem-readonly",
+    "github",
+    "browser"
+  ]
+}

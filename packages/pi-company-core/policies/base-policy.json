@@ -1,0 +1,36 @@
+{
+  "schemaVersion": 1,
+  "name": "company-base-policy",
+  "protectedPaths": [
+    ".git/**",
+    "**/auth.json",
+    "**/.env",
+    "**/.env.*",
+    "**/node_modules/**",
+    "**/dist/**"
+  ],
+  "blockedCommandPatterns": [
+    "rm -rf /",
+    "rm -rf ~",
+    "rm -rf $HOME",
+    "git reset --hard",
+    "git clean -fd",
+    "sudo ",
+    "chmod -R 777"
+  ],
+  "requireConfirmationPatterns": [
+    "deploy",
+    "release",
+    "publish",
+    "migration",
+    "terraform apply",
+    "kubectl apply",
+    "gh pr merge",
+    "git push"
+  ],
+  "defaultRequiredContext": [
+    "AGENTS.md",
+    "README.md"
+  ]
+}
+

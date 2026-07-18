@@ -1,0 +1,53 @@
+{
+  "schemaVersion": 1,
+  "projectId": "python-project",
+  "displayName": "Python Project",
+  "mode": "python",
+  "rootMarkers": [
+    "pyproject.toml",
+    "README.md"
+  ],
+  "protectedPaths": [
+    ".git/**",
+    "**/auth.json",
+    "**/.env",
+    "**/.env.*",
+    "**/.venv/**",
+    "**/__pycache__/**",
+    "**/.pytest_cache/**",
+    "**/dist/**",
+    "**/build/**"
+  ],
+  "requiredContext": [
+    "AGENTS.md",
+    ".pi/project-context.md",
+    "README.md",
+    "pyproject.toml"
+  ],
+  "taskModes": {
+    "readOnly": {
+      "tools": [
+        "read",
+        "grep",
+        "find",
+        "ls"
+      ]
+    },
+    "sourceWrite": {
+      "requiresPlan": true,
+      "requiresVerify": true
+    }
+  },
+  "verifyCommands": {
+    "docsOnly": [
+      "test -s README.md"
+    ],
+    "source": [
+      "uv run pytest"
+    ]
+  },
+  "mcpCapabilities": [
+    "filesystem-readonly",
+    "github"
+  ]
+}

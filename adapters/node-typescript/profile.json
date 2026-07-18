@@ -1,0 +1,54 @@
+{
+  "schemaVersion": 1,
+  "projectId": "node-typescript-project",
+  "displayName": "Node TypeScript Project",
+  "mode": "node-typescript",
+  "rootMarkers": [
+    "package.json",
+    "tsconfig.json"
+  ],
+  "protectedPaths": [
+    ".git/**",
+    "**/auth.json",
+    "**/.env",
+    "**/.env.*",
+    "**/node_modules/**",
+    "**/dist/**",
+    "**/coverage/**"
+  ],
+  "requiredContext": [
+    "AGENTS.md",
+    ".pi/project-context.md",
+    "README.md",
+    "package.json",
+    "tsconfig.json"
+  ],
+  "taskModes": {
+    "readOnly": {
+      "tools": [
+        "read",
+        "grep",
+        "find",
+        "ls"
+      ]
+    },
+    "sourceWrite": {
+      "requiresPlan": true,
+      "requiresVerify": true
+    }
+  },
+  "verifyCommands": {
+    "docsOnly": [
+      "test -s README.md"
+    ],
+    "source": [
+      "npm run type-check --if-present",
+      "npm run lint --if-present",
+      "npm test --if-present"
+    ]
+  },
+  "mcpCapabilities": [
+    "filesystem-readonly",
+    "github"
+  ]
+}

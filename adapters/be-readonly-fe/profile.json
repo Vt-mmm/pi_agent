@@ -1,0 +1,76 @@
+{
+  "schemaVersion": 1,
+  "projectId": "be-readonly-fe-project",
+  "displayName": "Backend Readonly / Frontend Write Project",
+  "mode": "be-readonly-fe",
+  "rootMarkers": [
+    "AGENTS.md",
+    "README.md",
+    "package.json",
+    "frontend",
+    "backend",
+    "apps",
+    "packages"
+  ],
+  "protectedPaths": [
+    ".git/**",
+    "**/auth.json",
+    "**/.env",
+    "**/.env.*",
+    "**/*.pem",
+    "**/*.key",
+    "backend/**",
+    "server/**",
+    "api/**",
+    "apps/api/**",
+    "apps/server/**",
+    "services/backend/**",
+    "**/migrations/**",
+    "**/node_modules/**",
+    "**/dist/**",
+    "**/build/**",
+    "**/.next/**",
+    "**/coverage/**"
+  ],
+  "requiredContext": [
+    "AGENTS.md",
+    ".pi/project-context.md",
+    "README.md"
+  ],
+  "taskModes": {
+    "backendScout": {
+      "readOnly": true,
+      "tools": [
+        "read",
+        "grep",
+        "find",
+        "ls"
+      ]
+    },
+    "frontendSourceWrite": {
+      "requiresPlan": true,
+      "requiresContractSnapshot": true,
+      "requiresVerify": true
+    },
+    "backendContractGap": {
+      "requiresReport": true,
+      "backendWriteAllowed": false
+    }
+  },
+  "verifyCommands": {
+    "docsOnly": [
+      "test -s README.md"
+    ],
+    "frontendSource": [
+      "if test -f frontend/package.json; then cd frontend && npm run type-check --if-present && npm run lint --if-present && npm test --if-present; elif test -f apps/web/package.json; then cd apps/web && npm run type-check --if-present && npm run lint --if-present && npm test --if-present; elif test -f package.json; then npm run type-check --if-present && npm run lint --if-present && npm test --if-present; else echo 'No frontend verify command configured; update .pi/company-profile.json'; fi"
+    ],
+    "frontendRuntime": [
+      "if test -f frontend/package.json; then cd frontend && npm run test:e2e --if-present; elif test -f apps/web/package.json; then cd apps/web && npm run test:e2e --if-present; elif test -f package.json; then npm run test:e2e --if-present; else echo 'No frontend runtime verify command configured; update .pi/company-profile.json'; fi"
+    ]
+  },
+  "mcpCapabilities": [
+    "filesystem-readonly",
+    "github",
+    "browser"
+  ]
+}

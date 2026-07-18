@@ -1,0 +1,51 @@
+{
+  "schemaVersion": 1,
+  "projectId": "generic-project",
+  "displayName": "Generic Project",
+  "mode": "generic",
+  "rootMarkers": [
+    "AGENTS.md",
+    "README.md",
+    "package.json",
+    "pyproject.toml",
+    "go.mod"
+  ],
+  "protectedPaths": [
+    ".git/**",
+    "**/auth.json",
+    "**/.env",
+    "**/.env.*",
+    "**/node_modules/**",
+    "**/dist/**"
+  ],
+  "requiredContext": [
+    "AGENTS.md",
+    ".pi/project-context.md",
+    "README.md"
+  ],
+  "taskModes": {
+    "readOnly": {
+      "tools": [
+        "read",
+        "grep",
+        "find",
+        "ls"
+      ]
+    },
+    "sourceWrite": {
+      "requiresPlan": true,
+      "requiresVerify": true
+    }
+  },
+  "verifyCommands": {
+    "docsOnly": [
+      "test -s README.md"
+    ],
+    "source": [
+      "echo 'No project verify command configured; update .pi/company-profile.json'"
+    ]
+  },
+  "mcpCapabilities": [
+    "filesystem-readonly"
+  ]
+}

@@ -1,0 +1,70 @@
+{
+  "schemaVersion": 1,
+  "projectId": "devops-project",
+  "displayName": "DevOps / Infrastructure Project",
+  "mode": "devops",
+  "rootMarkers": [
+    "AGENTS.md",
+    "README.md",
+    "Dockerfile",
+    "docker-compose.yml",
+    "compose.yml",
+    "compose.yaml",
+    ".github/workflows",
+    "terraform",
+    "infra",
+    "k8s",
+    "helm"
+  ],
+  "protectedPaths": [
+    ".git/**",
+    "**/auth.json",
+    "**/.env",
+    "**/.env.*",
+    "**/*.pem",
+    "**/*.key",
+    "**/kubeconfig",
+    "**/.terraform/**",
+    "**/terraform.tfstate",
+    "**/terraform.tfstate.*"
+  ],
+  "requiredContext": [
+    "AGENTS.md",
+    ".pi/project-context.md",
+    "README.md"
+  ],
+  "taskModes": {
+    "readOnly": {
+      "tools": [
+        "read",
+        "grep",
+        "find",
+        "ls"
+      ]
+    },
+    "sourceWrite": {
+      "requiresPlan": true,
+      "requiresVerify": true
+    },
+    "externalApply": {
+      "requiresPlan": true,
+      "requiresVerify": true,
+      "requiresHumanGate": true
+    }
+  },
+  "verifyCommands": {
+    "docsOnly": [
+      "test -s README.md"
+    ],
+    "source": [
+      "git diff --check",
+      "if command -v docker >/dev/null 2>&1 && { test -f docker-compose.yml || test -f compose.yml || test -f compose.yaml; }; then docker compose config >/dev/null; else echo 'docker compose config skipped'; fi",
+      "if command -v terraform >/dev/null 2>&1 && test -d terraform; then terraform -chdir=terraform validate; else echo 'terraform validate skipped'; fi"
+    ]
+  },
+  "mcpCapabilities": [
+    "filesystem-readonly",
+    "github",
+    "cloud-provider-readonly"
+  ]
+}

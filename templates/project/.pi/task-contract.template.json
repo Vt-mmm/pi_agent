@@ -1,0 +1,28 @@
+{
+  "taskId": "TASK-0001",
+  "summary": "Replace with one-sentence task outcome.",
+  "riskLane": "normal",
+  "expectedOutput": "Replace with exact artifact or behavior expected.",
+  "acceptanceCriteria": [
+    "Replace with pass/fail criterion."
+  ],
+  "scope": [
+    "replace/with/allowed/path/**"
+  ],
+  "outOfScope": [
+    "Replace with explicit non-goal."
+  ],
+  "protectedPaths": [],
+  "requiredContext": [],
+  "contextManifest": [],
+  "mcpCapabilities": [],
+  "verifyCommands": [
+    "Replace with verify command."
+  ],
+  "changedFiles": [],
+  "verifyEvidence": [],
+  "trace": {
+    "outcome": "pending"
+  }
+}
+

@@ -1,0 +1,35 @@
+# Secrets and local auth
+auth.json
+*.key
+*.pem
+.env
+.env.*
+!.env.example
+
+# Pi local runtime
+.pi/sessions/
+.pi/company-state/
+.pi/todos/
+.pi/session-control/
+.pi/npm/
+.pi/git/
+.pi/cache/
+.pi/trust.json
+.pi/auth.json
+
+# Node/package output
+node_modules/
+dist/
+coverage/
+*.tsbuildinfo
+
+# OS/editor
+.DS_Store
+.idea/
+.vscode/
+
+# Local/private examples
+examples/private/
+examples/local/
+*.local.json
+harness.db

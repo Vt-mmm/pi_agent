@@ -1,0 +1,66 @@
+{
+  "schemaVersion": 1,
+  "projectId": "backend-api-project",
+  "displayName": "Backend API Project",
+  "mode": "backend-api",
+  "rootMarkers": [
+    "AGENTS.md",
+    "README.md",
+    "package.json",
+    "pom.xml",
+    "build.gradle",
+    "build.gradle.kts",
+    "pyproject.toml"
+  ],
+  "protectedPaths": [
+    ".git/**",
+    "**/auth.json",
+    "**/.env",
+    "**/.env.*",
+    "**/*.pem",
+    "**/*.key",
+    "**/node_modules/**",
+    "**/dist/**",
+    "**/build/**",
+    "**/target/**",
+    "**/.gradle/**",
+    "**/coverage/**"
+  ],
+  "requiredContext": [
+    "AGENTS.md",
+    ".pi/project-context.md",
+    "README.md"
+  ],
+  "taskModes": {
+    "readOnly": {
+      "tools": [
+        "read",
+        "grep",
+        "find",
+        "ls"
+      ]
+    },
+    "sourceWrite": {
+      "requiresPlan": true,
+      "requiresVerify": true
+    },
+    "migrationOrSchema": {
+      "requiresPlan": true,
+      "requiresVerify": true,
+      "requiresHumanGate": true
+    }
+  },
+  "verifyCommands": {
+    "docsOnly": [
+      "test -s README.md"
+    ],
+    "source": [
+      "if test -f package.json; then npm run type-check --if-present && npm run lint --if-present && npm test --if-present; elif test -x ./mvnw; then ./mvnw test; elif test -x ./gradlew; then ./gradlew test; elif test -f pyproject.toml && command -v uv >/dev/null 2>&1; then uv run pytest; elif test -f pyproject.toml; then python -m pytest; else echo 'No backend verify command configured; update .pi/company-profile.json'; fi"
+    ]
+  },
+  "mcpCapabilities": [
+    "filesystem-readonly",
+    "github",
+    "database-readonly"
+  ]
+}

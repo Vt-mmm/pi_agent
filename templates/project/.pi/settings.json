@@ -1,0 +1,13 @@
+{
+  "defaultProjectTrust": "ask",
+  "defaultThinkingLevel": "xhigh",
+  "showCacheMissNotices": true,
+  "compaction": {
+    "enabled": true,
+    "reserveTokens": 16384,
+    "keepRecentTokens": 20000
+  },
+  "packages": [
+    "__PI_COMPANY_PACKAGE_SOURCE__"
+  ]
+}

@@ -1,0 +1,295 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+usage() {
+  cat <<'USAGE'
+Usage:
+  scripts/init-project.sh <project-path> [options]
+
+Options:
+  --profile <name-or-json>       auto | generic | web-frontend | backend-api | be-readonly-fe | fullstack | node-typescript | python | data | devops | mobile | docs | path/to/profile.json
+  --package-source <source>      Pi package source committed into .pi/settings.json
+  --force-profile                Replace existing .pi/company-profile.json
+  --force-settings               Replace existing .pi/settings.json
+  --skip-agents                  Do not create AGENTS.md
+  --skip-review-guidelines       Do not create REVIEW_GUIDELINES.md
+  -h, --help
+
+Package source examples:
+  git:github.com/Vt-mmm/pi_agent@v0.1.0
+  https://github.com/Vt-mmm/pi_agent
+  npm:@company/pi_agent@0.1.0
+
+Default package source:
+  1. --package-source
+  2. PI_COMPANY_PACKAGE_SOURCE
+  3. platform git remote origin
+  4. local platform path (warn; do not commit for team)
+USAGE
+}
+
+if [[ $# -lt 1 ]]; then
+  usage >&2
+  exit 2
+fi
+
+PROJECT_PATH="$1"
+shift
+
+PLATFORM_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+PROFILE_INPUT="auto"
+PACKAGE_SOURCE="${PI_COMPANY_PACKAGE_SOURCE:-}"
+FORCE_PROFILE=false
+FORCE_SETTINGS=false
+SKIP_AGENTS=false
+SKIP_REVIEW=false
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --profile)
+      if [[ $# -lt 2 ]]; then
+        echo "Missing value for --profile" >&2
+        exit 2
+      fi
+      PROFILE_INPUT="$2"
+      shift 2
+      ;;
+    --package-source)
+      if [[ $# -lt 2 ]]; then
+        echo "Missing value for --package-source" >&2
+        exit 2
+      fi
+      PACKAGE_SOURCE="$2"
+      shift 2
+      ;;
+    --force-profile)
+      FORCE_PROFILE=true
+      shift
+      ;;
+    --force-settings)
+      FORCE_SETTINGS=true
+      shift
+      ;;
+    --skip-agents)
+      SKIP_AGENTS=true
+      shift
+      ;;
+    --skip-review-guidelines)
+      SKIP_REVIEW=true
+      shift
+      ;;
+    -h|--help)
+      usage
+      exit 0
+      ;;
+    *)
+      echo "Unknown option: $1" >&2
+      usage >&2
+      exit 2
+      ;;
+  esac
+done
+
+if [[ ! -d "$PROJECT_PATH" ]]; then
+  echo "FAIL: project path does not exist: $PROJECT_PATH" >&2
+  exit 1
+fi
+
+PROJECT_PATH="$(cd "$PROJECT_PATH" && pwd)"
+
+package_has_any() {
+  local project="$1"
+  local pattern="$2"
+  [[ -f "$project/package.json" ]] && grep -Eiq "$pattern" "$project/package.json"
+}
+
+detect_profile() {
+  local project="$1"
+  local has_package=false
+  local frontend=false
+  local backend=false
+  local data=false
+  local mobile=false
+  local devops=false
+  local infra=false
+  local docs=false
+
+  [[ -f "$project/package.json" ]] && has_package=true
+
+  if [[ -f "$project/pubspec.yaml" ]] || { [[ -d "$project/android" ]] && [[ -d "$project/ios" ]]; }; then
+    mobile=true
+  fi
+
+  if [[ -f "$project/dbt_project.yml" ]] || [[ -f "$project/dvc.yaml" ]] || [[ -d "$project/notebooks" ]] || [[ -d "$project/data" ]]; then
+    data=true
+  fi
+
+  if [[ -f "$project/Dockerfile" ]] || [[ -f "$project/docker-compose.yml" ]] || [[ -f "$project/compose.yml" ]] || [[ -f "$project/compose.yaml" ]] || [[ -d "$project/terraform" ]] || [[ -d "$project/infra" ]] || [[ -d "$project/k8s" ]] || [[ -d "$project/helm" ]]; then
+    infra=true
+    devops=true
+  elif [[ -d "$project/.github/workflows" ]]; then
+    devops=true
+  fi
+
+  if [[ -d "$project/docs" ]] || [[ -f "$project/mkdocs.yml" ]] || [[ -f "$project/mint.json" ]] || [[ -f "$project/docusaurus.config.js" ]]; then
+    docs=true
+  fi
+
+  if [[ "$has_package" == true ]]; then
+    if [[ -d "$project/frontend" ]] || [[ -d "$project/apps/web" ]] || [[ -d "$project/apps/frontend" ]]; then
+      frontend=true
+    fi
+
+    if [[ -d "$project/backend" ]] || [[ -d "$project/apps/api" ]] || [[ -d "$project/apps/server" ]]; then
+      backend=true
+    fi
+
+    if package_has_any "$project" '"(next|react|vite|vue|svelte|astro|@angular/core|remix)"' \
+      || [[ -f "$project/next.config.js" ]] || [[ -f "$project/next.config.mjs" ]] || [[ -f "$project/next.config.ts" ]] \
+      || [[ -f "$project/vite.config.js" ]] || [[ -f "$project/vite.config.ts" ]] \
+      || [[ -d "$project/src/app" ]] || [[ -d "$project/pages" ]] || [[ -d "$project/public" ]]; then
+      frontend=true
+    fi
+
+    if package_has_any "$project" '"(@nestjs|express|fastify|hono|koa|apollo-server|graphql-yoga|prisma|typeorm|sequelize|drizzle-orm)"' \
+      || [[ -f "$project/nest-cli.json" ]] || [[ -d "$project/prisma" ]] || [[ -d "$project/src/server" ]] || [[ -d "$project/src/api" ]]; then
+      backend=true
+    fi
+  fi
+
+  if [[ -f "$project/pom.xml" ]] || [[ -f "$project/build.gradle" ]] || [[ -f "$project/build.gradle.kts" ]] || [[ -d "$project/src/main/java" ]] || [[ -d "$project/src/main/kotlin" ]]; then
+    backend=true
+  fi
+
+  if [[ -f "$project/pyproject.toml" ]] && grep -Eiq "(fastapi|flask|django|litestar|starlite)" "$project/pyproject.toml"; then
+    backend=true
+  fi
+
+  if [[ "$mobile" == true ]]; then
+    printf '%s\n' "mobile"
+  elif [[ "$frontend" == true && "$backend" == true ]]; then
+    printf '%s\n' "fullstack"
+  elif [[ "$frontend" == true ]]; then
+    printf '%s\n' "web-frontend"
+  elif [[ "$backend" == true ]]; then
+    printf '%s\n' "backend-api"
+  elif [[ "$data" == true ]]; then
+    printf '%s\n' "data"
+  elif [[ -f "$project/pyproject.toml" ]]; then
+    printf '%s\n' "python"
+  elif [[ "$has_package" == true && -f "$project/tsconfig.json" ]]; then
+    printf '%s\n' "node-typescript"
+  elif [[ "$infra" == true ]]; then
+    printf '%s\n' "devops"
+  elif [[ "$docs" == true ]]; then
+    printf '%s\n' "docs"
+  elif [[ "$devops" == true ]]; then
+    printf '%s\n' "devops"
+  else
+    printf '%s\n' "generic"
+  fi
+}
+
+resolve_profile_path() {
+  local input="$1"
+  if [[ -f "$input" ]]; then
+    printf '%s\n' "$input"
+    return
+  fi
+
+  local candidate="$PLATFORM_ROOT/adapters/$input/profile.json"
+  if [[ -f "$candidate" ]]; then
+    printf '%s\n' "$candidate"
+    return
+  fi
+
+  echo "FAIL: profile not found: $input" >&2
+  echo "Known default profiles:" >&2
+  find "$PLATFORM_ROOT/adapters" -mindepth 2 -maxdepth 2 -name profile.json -print | sed "s#^$PLATFORM_ROOT/adapters/##; s#/profile.json##" | sort >&2
+  exit 1
+}
+
+resolve_package_source() {
+  if [[ -n "$PACKAGE_SOURCE" ]]; then
+    printf '%s\n' "$PACKAGE_SOURCE"
+    return
+  fi
+
+  if git -C "$PLATFORM_ROOT" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+    local remote_url
+    remote_url="$(git -C "$PLATFORM_ROOT" config --get remote.origin.url || true)"
+    if [[ -n "$remote_url" ]]; then
+      printf '%s\n' "$remote_url"
+      return
+    fi
+  fi
+
+  echo "WARN: No package source provided and no git remote detected." >&2
+  echo "WARN: .pi/settings.json will use local platform path; do not commit it for team use." >&2
+  printf '%s\n' "$PLATFORM_ROOT"
+}
+
+REQUESTED_PROFILE="$PROFILE_INPUT"
+if [[ "$PROFILE_INPUT" == "auto" ]]; then
+  PROFILE_INPUT="$(detect_profile "$PROJECT_PATH")"
+fi
+
+PROFILE_PATH="$(resolve_profile_path "$PROFILE_INPUT")"
+PACKAGE_SOURCE="$(resolve_package_source)"
+
+mkdir -p "$PROJECT_PATH/.pi"
+
+SETTINGS_PATH="$PROJECT_PATH/.pi/settings.json"
+if [[ "$FORCE_SETTINGS" == true || ! -f "$SETTINGS_PATH" ]]; then
+  cp "$PLATFORM_ROOT/templates/project/.pi/settings.json" "$SETTINGS_PATH"
+  node --input-type=module - "$SETTINGS_PATH" "$PACKAGE_SOURCE" <<'NODE'
+import fs from "node:fs";
+const [settingsPath, packageSource] = process.argv.slice(2);
+const settings = JSON.parse(fs.readFileSync(settingsPath, "utf8"));
+settings.packages = [packageSource];
+fs.writeFileSync(settingsPath, `${JSON.stringify(settings, null, 2)}\n`);
+NODE
+else
+  echo "SKIP: .pi/settings.json exists. Use --force-settings to replace."
+fi
+
+PROFILE_TARGET="$PROJECT_PATH/.pi/company-profile.json"
+if [[ "$FORCE_PROFILE" == true || ! -f "$PROFILE_TARGET" ]]; then
+  cp "$PROFILE_PATH" "$PROFILE_TARGET"
+else
+  echo "SKIP: .pi/company-profile.json exists. Use --force-profile to replace."
+fi
+
+if [[ ! -f "$PROJECT_PATH/.pi/mcp.json" ]]; then
+  cp "$PLATFORM_ROOT/templates/project/.pi/mcp.json" "$PROJECT_PATH/.pi/mcp.json"
+fi
+
+if [[ ! -f "$PROJECT_PATH/.pi/.gitignore" ]]; then
+  cp "$PLATFORM_ROOT/templates/project/.pi/.gitignore" "$PROJECT_PATH/.pi/.gitignore"
+fi
+
+if [[ ! -f "$PROJECT_PATH/.pi/project-context.md" ]]; then
+  cp "$PLATFORM_ROOT/templates/project/.pi/project-context.md" "$PROJECT_PATH/.pi/project-context.md"
+fi
+
+if [[ "$SKIP_AGENTS" == false && ! -f "$PROJECT_PATH/AGENTS.md" ]]; then
+  cp "$PLATFORM_ROOT/templates/project/AGENTS.md" "$PROJECT_PATH/AGENTS.md"
+fi
+
+if [[ "$SKIP_REVIEW" == false && ! -f "$PROJECT_PATH/REVIEW_GUIDELINES.md" ]]; then
+  cp "$PLATFORM_ROOT/templates/project/REVIEW_GUIDELINES.md" "$PROJECT_PATH/REVIEW_GUIDELINES.md"
+fi
+
+echo "Project initialized:"
+echo "  project: $PROJECT_PATH"
+echo "  requestedProfile: $REQUESTED_PROFILE"
+echo "  resolvedProfile: $PROFILE_INPUT"
+echo "  profile: $PROFILE_TARGET"
+echo "  profileSource: $PROFILE_PATH"
+echo "  packageSource: $PACKAGE_SOURCE"
+echo
+echo "Next:"
+echo "  cd \"$PROJECT_PATH\""
+echo "  pi"
+echo "  /login              # first time only"
+echo "  /onboard-project    # first project-read after model selection"

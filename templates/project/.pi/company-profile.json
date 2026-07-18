@@ -1,0 +1,32 @@
+{
+  "schemaVersion": 1,
+  "projectId": "replace-me",
+  "displayName": "Replace Me",
+  "mode": "generic",
+  "rootMarkers": [
+    "AGENTS.md",
+    "README.md"
+  ],
+  "protectedPaths": [
+    ".git/**",
+    "**/auth.json",
+    "**/.env",
+    "**/.env.*"
+  ],
+  "requiredContext": [
+    "AGENTS.md",
+    ".pi/project-context.md",
+    "README.md"
+  ],
+  "verifyCommands": {
+    "docsOnly": [
+      "test -s README.md"
+    ],
+    "source": [
+      "echo 'Configure verify command in .pi/company-profile.json'"
+    ]
+  },
+  "mcpCapabilities": [
+    "filesystem-readonly"
+  ]
+}

@@ -1,0 +1,14 @@
+{
+  "defaultProjectTrust": "ask",
+  "defaultThinkingLevel": "xhigh",
+  "hideThinkingBlock": false,
+  "showCacheMissNotices": true,
+  "compaction": {
+    "enabled": true,
+    "reserveTokens": 16384,
+    "keepRecentTokens": 20000
+  },
+  "packages": [
+    "../"
+  ]
+}

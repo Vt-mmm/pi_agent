@@ -1,0 +1,50 @@
+{
+  "name": "pi-agent-platform",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Reusable Pi agent platform, project adapters, MCP/tool policy, and coding workflow harness.",
+  "keywords": [
+    "pi-package",
+    "pi-extension",
+    "pi-skill",
+    "pi-prompt",
+    "agent-harness"
+  ],
+  "bin": {
+    "pi-company-setup": "scripts/setup.sh",
+    "pi-company-install": "scripts/install-global.sh",
+    "pi-company-init": "scripts/init-project.sh",
+    "pi-company-doctor": "scripts/team-doctor.sh"
+  },
+  "pi": {
+    "extensions": [
+      "packages/pi-company-core/extensions/**/*.ts"
+    ],
+    "skills": [
+      "packages/pi-company-core/skills"
+    ],
+    "prompts": [
+      "packages/pi-company-core/prompts"
+    ]
+  },
+  "peerDependencies": {
+    "@earendil-works/pi-ai": "*",
+    "@earendil-works/pi-coding-agent": "*",
+    "typebox": "*"
+  },
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "verify": "bash scripts/verify-local.sh",
+    "setup": "bash scripts/setup.sh",
+    "bootstrap": "bash scripts/bootstrap-local.sh",
+    "install-global": "bash scripts/install-global.sh",
+    "init-project": "bash scripts/init-project.sh",
+    "doctor": "bash scripts/team-doctor.sh"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

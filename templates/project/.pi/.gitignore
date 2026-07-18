@@ -1,0 +1,10 @@
+# Pi local runtime
+company-state/
+todos/
+sessions/
+session-control/
+cache/
+npm/
+git/
+trust.json
+auth.json

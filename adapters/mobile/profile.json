@@ -1,0 +1,65 @@
+{
+  "schemaVersion": 1,
+  "projectId": "mobile-project",
+  "displayName": "Mobile Project",
+  "mode": "mobile",
+  "rootMarkers": [
+    "AGENTS.md",
+    "README.md",
+    "package.json",
+    "pubspec.yaml",
+    "android",
+    "ios"
+  ],
+  "protectedPaths": [
+    ".git/**",
+    "**/auth.json",
+    "**/.env",
+    "**/.env.*",
+    "**/*.keystore",
+    "**/*.jks",
+    "**/*.mobileprovision",
+    "**/*.p12",
+    "**/node_modules/**",
+    "**/build/**",
+    "**/.dart_tool/**"
+  ],
+  "requiredContext": [
+    "AGENTS.md",
+    ".pi/project-context.md",
+    "README.md"
+  ],
+  "taskModes": {
+    "readOnly": {
+      "tools": [
+        "read",
+        "grep",
+        "find",
+        "ls"
+      ]
+    },
+    "sourceWrite": {
+      "requiresPlan": true,
+      "requiresVerify": true
+    },
+    "releaseSigning": {
+      "requiresPlan": true,
+      "requiresVerify": true,
+      "requiresHumanGate": true
+    }
+  },
+  "verifyCommands": {
+    "docsOnly": [
+      "test -s README.md"
+    ],
+    "source": [
+      "if test -f package.json; then npm test --if-present; fi",
+      "if test -f pubspec.yaml && command -v flutter >/dev/null 2>&1; then flutter test; else echo 'flutter test skipped'; fi"
+    ]
+  },
+  "mcpCapabilities": [
+    "filesystem-readonly",
+    "github",
+    "browser"
+  ]
+}
