@@ -135,6 +135,29 @@ type FinalGateConfig = {
   requirePassingVerify?: boolean;
 };
 
+type UsageSnapshot = {
+  sessionFile?: string;
+  sessionId?: string;
+  sessionName?: string;
+  cwd: string;
+  mode: string;
+  model: string;
+  thinkingLevel: string;
+  entries: {
+    total: number;
+    branch: number;
+  };
+  contextUsage?: {
+    tokens: number | null;
+    contextWindow: number;
+    percent: number | null;
+  };
+  exactTotals: {
+    availableInCommand: false;
+    howToRead: string[];
+  };
+};
+
 type ReferenceRepo = {
   host: string;
   owner: string;
@@ -213,6 +236,7 @@ const DEFAULT_POLICY: BasePolicy = {
       "company_context_budget",
       "company_tool_policy_check",
       "company_task_gate_check",
+      "company_usage_snapshot",
       "company_memory_status",
       "company_memory_note",
       "company_memory_search",
@@ -969,6 +993,81 @@ function evaluateTaskGate(task: TaskContract | undefined, policy: BasePolicy): {
   return { decision: missing.length === 0 ? "pass" : "fail", missing, warnings };
 }
 
+function formatCount(value: number | null | undefined): string {
+  if (value === null || value === undefined || Number.isNaN(value)) return "unknown";
+  return Math.round(value).toLocaleString("en-US");
+}
+
+function formatPercent(value: number | null | undefined): string {
+  if (value === null || value === undefined || Number.isNaN(value)) return "unknown";
+  return `${value.toFixed(1)}%`;
+}
+
+function modelLabel(ctx: ExtensionContext): string {
+  const model = ctx.model as { provider?: string; id?: string; name?: string } | undefined;
+  if (!model) return "none";
+  if (model.provider && model.id) return `${model.provider}/${model.id}`;
+  return model.name ?? model.id ?? "unknown";
+}
+
+function buildUsageSnapshot(ctx: ExtensionContext): UsageSnapshot {
+  const contextUsage = ctx.getContextUsage();
+  const contextWithThinking = ctx as ExtensionContext & { getThinkingLevel?: () => string };
+  return {
+    sessionFile: ctx.sessionManager.getSessionFile(),
+    sessionId: ctx.sessionManager.getSessionId(),
+    sessionName: ctx.sessionManager.getSessionName(),
+    cwd: ctx.cwd,
+    mode: ctx.mode,
+    model: modelLabel(ctx),
+    thinkingLevel: contextWithThinking.getThinkingLevel?.() ?? "unknown",
+    entries: {
+      total: ctx.sessionManager.getEntries().length,
+      branch: ctx.sessionManager.getBranch().length
+    },
+    contextUsage: contextUsage
+      ? {
+          tokens: contextUsage.tokens,
+          contextWindow: contextUsage.contextWindow,
+          percent: contextUsage.percent
+        }
+      : undefined,
+    exactTotals: {
+      availableInCommand: false,
+      howToRead: [
+        "Inside Pi TUI: run /session for exact tokens and cost.",
+        "Outside Pi: run pi-company-usage /path/to/project or scripts/pi-session-stats.sh /path/to/project."
+      ]
+    }
+  };
+}
+
+function formatUsageSnapshot(snapshot: UsageSnapshot): string {
+  const context = snapshot.contextUsage
+    ? `${formatCount(snapshot.contextUsage.tokens)} / ${formatCount(snapshot.contextUsage.contextWindow)} tokens (${formatPercent(snapshot.contextUsage.percent)})`
+    : "unavailable";
+  return [
+    "# Company usage snapshot",
+    "",
+    `- Session: ${snapshot.sessionName ?? "unnamed"} (${snapshot.sessionId ?? "unknown"})`,
+    `- Session file: ${snapshot.sessionFile ?? "not persisted"}`,
+    `- CWD: ${snapshot.cwd}`,
+    `- Mode: ${snapshot.mode}`,
+    `- Model: ${snapshot.model}`,
+    `- Thinking: ${snapshot.thinkingLevel}`,
+    `- Entries: ${formatCount(snapshot.entries.branch)} on active branch / ${formatCount(snapshot.entries.total)} total`,
+    `- Live context: ${context}`,
+    "",
+    "Exact billed input/output/cache/cost totals are exposed by Pi via `/session` or RPC `get_session_stats`, not directly inside this command context.",
+    "",
+    "From another terminal:",
+    "",
+    "```bash",
+    "pi-company-usage /path/to/project",
+    "```"
+  ].join("\n");
+}
+
 function appendTrace(cwd: string, payload: Record<string, unknown>): void {
   ensureStateDirs(cwd);
   fs.appendFileSync(traceFilePath(cwd), `${JSON.stringify({ recordedAt: nowIso(), ...payload })}\n`);
@@ -1326,6 +1425,21 @@ export default function companyGuard(pi: ExtensionAPI) {
         `warnings: ${result.warnings.join("; ") || "none"}`
       ].join("\n");
       return { content: [{ type: "text", text }], details: { ...result, task } };
+    }
+  });
+
+  pi.registerTool({
+    name: "company_usage_snapshot",
+    label: "Company Usage Snapshot",
+    description: "Return live Pi context usage, session file, model, and instructions for exact token/cost totals.",
+    promptSnippet: "Use this when the user asks about token/context usage or wants to follow the current session.",
+    parameters: Type.Object({}),
+    async execute(_toolCallId, _params, _signal, _onUpdate, ctx) {
+      const snapshot = buildUsageSnapshot(ctx);
+      return {
+        content: [{ type: "text", text: formatUsageSnapshot(snapshot) }],
+        details: snapshot
+      };
     }
   });
 
@@ -1838,6 +1952,26 @@ export default function companyGuard(pi: ExtensionAPI) {
       pi.sendUserMessage("Use company_memory_status with detail=full and summarize the active project memory policy.", {
         deliverAs: "followUp"
       });
+    }
+  });
+
+  pi.registerCommand("company-usage", {
+    description: "Show live context usage, session file, and token/cost follow-up commands",
+    handler: async (_args, ctx) => {
+      const snapshot = buildUsageSnapshot(ctx);
+      const context = snapshot.contextUsage
+        ? `${formatCount(snapshot.contextUsage.tokens)} / ${formatCount(snapshot.contextUsage.contextWindow)} (${formatPercent(snapshot.contextUsage.percent)})`
+        : "context unavailable";
+      ctx.ui.notify(`Company usage: ${context}`, "info");
+      pi.sendMessage(
+        {
+          customType: "company-usage-snapshot",
+          content: formatUsageSnapshot(snapshot),
+          display: true,
+          details: snapshot
+        },
+        { triggerTurn: false }
+      );
     }
   });
 }

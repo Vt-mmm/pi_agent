@@ -17,6 +17,7 @@ This repository is designed for teams that want a `cd project && pi` workflow wi
   - `company_context_budget`
   - `company_tool_policy_check`
   - `company_task_gate_check`
+  - `company_usage_snapshot`
 - Parity benchmark recorder for Pi vs Codex vs Claude task comparisons.
 - Reusable workflow prompts:
   - `/platform-migration`
@@ -31,7 +32,7 @@ This repository is designed for teams that want a `cd project && pi` workflow wi
 
 ```bash
 npm install -g @earendil-works/pi-coding-agent
-pi install git:github.com/Vt-mmm/pi_agent@v0.3.0
+pi install git:github.com/Vt-mmm/pi_agent@v0.3.1
 ```
 
 Optional Herdr integration:
@@ -140,7 +141,7 @@ Most projects do not need shell init. Use this only when you want to pre-create 
 ```bash
 bash /path/to/pi_agent/scripts/setup.sh /path/to/project \
   --profile be-readonly-fe \
-  --package-source git:github.com/Vt-mmm/pi_agent@v0.3.0
+  --package-source git:github.com/Vt-mmm/pi_agent@v0.3.1
 ```
 
 ## Repository layout
@@ -176,6 +177,21 @@ bash scripts/parity-benchmark.sh /path/to/project --record \
   --verify "npm test"
 ```
 
+Usage / token follow-up:
+
+```text
+/company-usage
+/session
+```
+
+From another terminal:
+
+```bash
+pi-company-usage /path/to/project
+# or
+bash scripts/pi-session-stats.sh /path/to/project
+```
+
 ## Public safety
 
 This repository intentionally excludes:
@@ -203,6 +219,7 @@ MIT License. See [LICENSE](LICENSE).
 - [Memory policy](docs/memory-policy.md)
 - [Task implementation contract](docs/task-implementation-contract.md)
 - [Codex parity baseline](docs/codex-parity-baseline.md)
+- [Usage observability](docs/usage-observability.md)
 - [Benchmark parity guide](docs/benchmark-parity.md)
 - [Codex migration reference](docs/codex-migration-reference.md)
 - [Agent-stuff research](docs/agent-stuff-research.md)

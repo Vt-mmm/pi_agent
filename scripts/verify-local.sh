@@ -66,6 +66,7 @@ required_files=(
   "$ROOT/scripts/profile-doctor.sh"
   "$ROOT/scripts/parity-benchmark.sh"
   "$ROOT/scripts/runtime-policy-smoke.sh"
+  "$ROOT/scripts/pi-session-stats.sh"
 )
 
 for file in "${required_files[@]}"; do
@@ -130,6 +131,8 @@ grep -R "company_exec_policy_check" "$ROOT/packages/pi-company-core" "$ROOT/docs
 grep -R "company_context_budget" "$ROOT/packages/pi-company-core" "$ROOT/docs" "$ROOT/templates/project/AGENTS.md" >/dev/null
 grep -R "company_tool_policy_check" "$ROOT/packages/pi-company-core" "$ROOT/docs" "$ROOT/templates/project/AGENTS.md" >/dev/null
 grep -R "company_task_gate_check" "$ROOT/packages/pi-company-core" "$ROOT/docs" "$ROOT/templates/project/AGENTS.md" >/dev/null
+grep -R "company_usage_snapshot" "$ROOT/packages/pi-company-core" "$ROOT/docs" "$ROOT/templates/project/AGENTS.md" >/dev/null
+grep -R "/company-usage" "$ROOT/packages/pi-company-core" "$ROOT/docs" "$ROOT/README.md" >/dev/null
 grep -R "company_profile_options" "$ROOT/packages/pi-company-core" "$ROOT/docs" >/dev/null
 grep -R "company_profile_apply" "$ROOT/packages/pi-company-core" "$ROOT/docs" >/dev/null
 grep -R "company_project_onboarding_record" "$ROOT/packages/pi-company-core" "$ROOT/docs" >/dev/null
@@ -153,6 +156,7 @@ grep -R "parity-benchmark.sh" "$ROOT/README.md" "$ROOT/docs" >/dev/null
 node --check "$ROOT/packages/pi-company-core/extensions/company-guard.ts" >/dev/null
 bash -n "$ROOT/scripts/parity-benchmark.sh"
 bash -n "$ROOT/scripts/runtime-policy-smoke.sh"
+bash -n "$ROOT/scripts/pi-session-stats.sh"
 bash "$ROOT/scripts/runtime-policy-smoke.sh" >/dev/null
 
 bash "$ROOT/scripts/profile-doctor.sh" "$ROOT" "$ROOT/.pi/company-profile.json" >/dev/null

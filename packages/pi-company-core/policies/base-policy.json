@@ -88,6 +88,7 @@
       "company_context_budget",
       "company_tool_policy_check",
       "company_task_gate_check",
+      "company_usage_snapshot",
       "company_memory_status",
       "company_memory_note",
       "company_memory_search",

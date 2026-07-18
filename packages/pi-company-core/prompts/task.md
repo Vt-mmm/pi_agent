@@ -33,7 +33,8 @@ Mandatory flow:
 12. Before final answer, run the verify command mapped to the changed file class and record it with `company_verify_record`.
 13. Record handoff with `company_trace_record`.
 14. Call `company_task_gate_check`. If gate fails, final outcome is blocked/partial, not done.
-15. If verify cannot run, stop and report the exact blocker. Do not call it done.
+15. If the user asks about token/context/cost usage, call `company_usage_snapshot`; for exact token/cost totals, tell the user to run `/session` or `pi-company-usage <project-path>`.
+16. If verify cannot run, stop and report the exact blocker. Do not call it done.
 
 Output format:
 

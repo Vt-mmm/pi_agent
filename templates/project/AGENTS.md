@@ -15,10 +15,11 @@ Before implementation:
 7. Use `company_exec_policy_check` before high-impact or complex shell commands.
 8. Use `company_tool_policy_check` before non-company MCP/app tools.
 9. Use MCP/tools only when declared in profile.
-10. Record context/verify/trace with `company_context_record`, `company_verify_record`, and `company_trace_record`.
-11. Run `company_task_gate_check` before DONE.
-12. For unclear tasks, use `/discuss` first; do not implement while requirements are unresolved.
-13. For external reference repos, use `company-reference-repo` and read targeted files only.
+10. Use `company_usage_snapshot` or `/company-usage` when the user asks about token/context usage or session follow-up.
+11. Record context/verify/trace with `company_context_record`, `company_verify_record`, and `company_trace_record`.
+12. Run `company_task_gate_check` before DONE.
+13. For unclear tasks, use `/discuss` first; do not implement while requirements are unresolved.
+14. For external reference repos, use `company-reference-repo` and read targeted files only.
 
 ## Review
 
