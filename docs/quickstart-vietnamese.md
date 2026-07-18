@@ -15,7 +15,7 @@ Phần còn lại — OAuth, package, context, harness, MCP, tool-call guard —
 
 ```bash
 npm install -g @earendil-works/pi-coding-agent
-pi install git:github.com/Vt-mmm/pi_agent@v0.3.1
+pi install git:github.com/Vt-mmm/pi_agent@v0.3.2
 ```
 
 Sau bước này, project mới không cần chạy bash init profile. Chỉ cần:
@@ -64,7 +64,7 @@ File này là snapshot context cho task sau. Nếu file còn `Generated: not yet
 bash /path/to/pi_agent/scripts/setup.sh /path/to/project \
   --project-only \
   --profile auto \
-  --package-source git:github.com/Vt-mmm/pi_agent@v0.3.1
+  --package-source git:github.com/Vt-mmm/pi_agent@v0.3.2
 ```
 
 Đổi profile sau này trong Pi:
@@ -83,7 +83,7 @@ Script bash chỉ dùng khi muốn preseed config vào repo:
 ```bash
 bash /path/to/pi_agent/scripts/setup.sh /path/to/project \
   --profile be-readonly-fe \
-  --package-source git:github.com/Vt-mmm/pi_agent@v0.3.1
+  --package-source git:github.com/Vt-mmm/pi_agent@v0.3.2
 ```
 
 ## Bước 6 — chạy hằng ngày

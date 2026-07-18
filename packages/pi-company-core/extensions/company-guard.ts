@@ -1010,7 +1010,7 @@ function modelLabel(ctx: ExtensionContext): string {
   return model.name ?? model.id ?? "unknown";
 }
 
-function buildUsageSnapshot(ctx: ExtensionContext): UsageSnapshot {
+function buildUsageSnapshot(ctx: ExtensionContext, thinkingLevel?: string): UsageSnapshot {
   const contextUsage = ctx.getContextUsage();
   const contextWithThinking = ctx as ExtensionContext & { getThinkingLevel?: () => string };
   return {
@@ -1020,7 +1020,7 @@ function buildUsageSnapshot(ctx: ExtensionContext): UsageSnapshot {
     cwd: ctx.cwd,
     mode: ctx.mode,
     model: modelLabel(ctx),
-    thinkingLevel: contextWithThinking.getThinkingLevel?.() ?? "unknown",
+    thinkingLevel: thinkingLevel ?? contextWithThinking.getThinkingLevel?.() ?? "unknown",
     entries: {
       total: ctx.sessionManager.getEntries().length,
       branch: ctx.sessionManager.getBranch().length
@@ -1435,7 +1435,7 @@ export default function companyGuard(pi: ExtensionAPI) {
     promptSnippet: "Use this when the user asks about token/context usage or wants to follow the current session.",
     parameters: Type.Object({}),
     async execute(_toolCallId, _params, _signal, _onUpdate, ctx) {
-      const snapshot = buildUsageSnapshot(ctx);
+      const snapshot = buildUsageSnapshot(ctx, String(pi.getThinkingLevel()));
       return {
         content: [{ type: "text", text: formatUsageSnapshot(snapshot) }],
         details: snapshot
@@ -1958,7 +1958,7 @@ export default function companyGuard(pi: ExtensionAPI) {
   pi.registerCommand("company-usage", {
     description: "Show live context usage, session file, and token/cost follow-up commands",
     handler: async (_args, ctx) => {
-      const snapshot = buildUsageSnapshot(ctx);
+      const snapshot = buildUsageSnapshot(ctx, String(pi.getThinkingLevel()));
       const context = snapshot.contextUsage
         ? `${formatCount(snapshot.contextUsage.tokens)} / ${formatCount(snapshot.contextUsage.contextWindow)} (${formatPercent(snapshot.contextUsage.percent)})`
         : "context unavailable";
