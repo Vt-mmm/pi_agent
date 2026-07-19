@@ -20,6 +20,8 @@ Before implementation:
 12. Run `company_task_gate_check` before DONE.
 13. For unclear tasks, use `/discuss` first; do not implement while requirements are unresolved.
 14. For external reference repos, use `company-reference-repo` and read targeted files only.
+15. For medium/large tasks, auto-delegate independent read-only scout/planning/review work to `company-scout`, `company-planner`, `company-reviewer`, or `company-oracle` when `pi-subagents` is available. Do not require the user to type `/run` for normal task orchestration.
+16. Keep implementation single-writer by default. Use parallel writers only with explicit user approval or safe worktree isolation and disjoint write sets.
 
 ## Review
 

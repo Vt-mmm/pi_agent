@@ -55,6 +55,7 @@ required_files=(
   "$ROOT/templates/project/REVIEW_GUIDELINES.md"
   "$ROOT/docs/quickstart-vietnamese.md"
   "$ROOT/docs/command-reference-vietnamese.md"
+  "$ROOT/docs/auto-delegation-policy.md"
   "$ROOT/docs/project-onboarding.md"
   "$ROOT/docs/workflow-recipes.md"
   "$ROOT/docs/memory-policy.md"
@@ -157,6 +158,8 @@ grep -R "company_task_gate_check" "$ROOT/packages/pi-company-core" "$ROOT/docs" 
 grep -R "company_usage_snapshot" "$ROOT/packages/pi-company-core" "$ROOT/docs" "$ROOT/templates/project/AGENTS.md" >/dev/null
 grep -R "/company-usage" "$ROOT/packages/pi-company-core" "$ROOT/docs" "$ROOT/README.md" >/dev/null
 grep -R "/company-commands" "$ROOT/README.md" "$ROOT/docs" "$ROOT/packages/pi-company-core/prompts" >/dev/null
+grep -R "auto-delegation" "$ROOT/README.md" "$ROOT/docs" "$ROOT/packages/pi-company-core/prompts" "$ROOT/templates/project/AGENTS.md" >/dev/null
+grep -R "Subagents used/not used" "$ROOT/packages/pi-company-core/prompts" "$ROOT/docs/auto-delegation-policy.md" >/dev/null
 grep -R "company_profile_options" "$ROOT/packages/pi-company-core" "$ROOT/docs" >/dev/null
 grep -R "company_profile_apply" "$ROOT/packages/pi-company-core" "$ROOT/docs" >/dev/null
 grep -R "company_project_onboarding_record" "$ROOT/packages/pi-company-core" "$ROOT/docs" >/dev/null

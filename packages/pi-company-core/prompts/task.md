@@ -24,23 +24,30 @@ Mandatory flow:
    - required context
    - verify command
 5. Read all required context files from the profile before planning, then call `company_context_budget` for large or unfamiliar files.
-6. Record context manifest with `company_context_record`: file + reason.
-7. If the task requires shell commands beyond simple read/list/test, call `company_exec_policy_check` first.
-8. If the task requires non-company MCP/app tools, call `company_tool_policy_check` first.
-9. If the task requires source writes, make a short plan first.
-10. Do not touch protected paths.
-11. Use MCP/tools only when the profile capability allows it.
-12. Before final answer, run the verify command mapped to the changed file class and record it with `company_verify_record`.
-13. Record handoff with `company_trace_record`.
-14. Call `company_task_gate_check`. If gate fails, final outcome is blocked/partial, not done.
-15. If the user asks about token/context/cost usage, call `company_usage_snapshot`; for exact token/cost totals, tell the user to run `/session` or `pi-company-usage <project-path>`.
-16. If verify cannot run, stop and report the exact blocker. Do not call it done.
+6. Decide whether subagents are useful. If `pi-subagents`/`subagent(...)` is available, use subagents automatically for independent read-heavy scout/planning/review work instead of requiring the user to type `/run`:
+   - use `company-scout` for unfamiliar module/spec mapping;
+   - use `company-planner` for medium/high-risk implementation planning;
+   - use `company-reviewer` for final diff/test/scope review;
+   - keep implementation single-writer unless the user explicitly asks for parallel writers or worktree isolation is clearly safe;
+   - if subagents are unavailable or not useful, continue single-agent and record why.
+7. Record context manifest with `company_context_record`: file + reason.
+8. If the task requires shell commands beyond simple read/list/test, call `company_exec_policy_check` first.
+9. If the task requires non-company MCP/app tools, call `company_tool_policy_check` first.
+10. If the task requires source writes, make a short plan first.
+11. Do not touch protected paths.
+12. Use MCP/tools only when the profile capability allows it.
+13. Before final answer, run the verify command mapped to the changed file class and record it with `company_verify_record`.
+14. Record handoff with `company_trace_record`.
+15. Call `company_task_gate_check`. If gate fails, final outcome is blocked/partial, not done.
+16. If the user asks about token/context/cost usage, call `company_usage_snapshot`; for exact token/cost totals, tell the user to run `/session` or `pi-company-usage <project-path>`.
+17. If verify cannot run, stop and report the exact blocker. Do not call it done.
 
 Output format:
 
 - Changed files.
 - Verify command/result.
 - Context manifest.
+- Subagents used/not used and why.
 - Memory cited, if any.
 - Task gate result.
 - Residual risks.

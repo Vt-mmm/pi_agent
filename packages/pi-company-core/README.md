@@ -40,7 +40,7 @@ Khi cài thêm `pi-subagents`, package này expose:
 ## Cài local
 
 ```bash
-pi install git:github.com/Vt-mmm/pi_agent@v0.3.8
+pi install git:github.com/Vt-mmm/pi_agent@v0.3.9
 ```
 
 ## Project profile

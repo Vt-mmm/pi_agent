@@ -12,6 +12,7 @@ This repository is designed for teams that want a `cd project && pi` workflow wi
 - Explicit project memory via `/memory-policy` and `company_memory_*` tools.
 - MCP baseline via `pi-mcp-adapter`, `pi-company-mcp`, `.mcp.json`, and token-efficient proxy mode.
 - Multi-agent baseline via `pi-subagents`, `pi-company-subagents`, and company subagent roles.
+- Auto-delegation policy for `/task`, `/be-to-fe`, `/platform-migration`, `/plan`, and `/review` so normal tasks can spawn read-only scout/planner/reviewer agents without the user memorizing subagent commands.
 - Built-in profiles for frontend, backend, fullstack, BE-readonly/FE-write, data, DevOps, mobile, docs, Python, and Node TypeScript.
 - Guardrails for protected paths, destructive shell commands, task contracts, context manifests, verification evidence, and trace records.
 - Codex-inspired runtime policy modules:
@@ -36,7 +37,7 @@ This repository is designed for teams that want a `cd project && pi` workflow wi
 
 ```bash
 npm install -g @earendil-works/pi-coding-agent
-pi install git:github.com/Vt-mmm/pi_agent@v0.3.8
+pi install git:github.com/Vt-mmm/pi_agent@v0.3.9
 ```
 
 Optional Herdr integration:
@@ -224,6 +225,14 @@ Plain Vietnamese command guide:
 /company-commands subagents
 ```
 
+Daily task prompts can auto-delegate when useful:
+
+```text
+/task Implement <large task>
+```
+
+The agent should report `Subagents: used/not used and why` in the final handoff.
+
 Natural language also works:
 
 ```text
@@ -245,7 +254,7 @@ Most projects do not need shell init. Use this only when you want to pre-create 
 ```bash
 bash /path/to/pi_agent/scripts/setup.sh /path/to/project \
   --profile be-readonly-fe \
-  --package-source git:github.com/Vt-mmm/pi_agent@v0.3.8 \
+  --package-source git:github.com/Vt-mmm/pi_agent@v0.3.9 \
   --mcp-preset core \
   --subagents-preset safe
 ```
@@ -324,6 +333,7 @@ MIT License. See [LICENSE](LICENSE).
 - [Architecture](docs/architecture.md)
 - [MCP and tools](docs/mcp-and-tools.md)
 - [Subagents and multi-agent](docs/subagents-and-multiagent.md)
+- [Auto-delegation policy](docs/auto-delegation-policy.md)
 - [Context-window policy](docs/context-window-policy.md)
 - [Memory policy](docs/memory-policy.md)
 - [Task implementation contract](docs/task-implementation-contract.md)

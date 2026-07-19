@@ -17,9 +17,19 @@ Rules:
 4. Check protected path violations.
 5. Check missing required context.
 6. Check verify command coverage.
-7. Report findings by severity.
+7. Decide whether subagents are useful. If `pi-subagents`/`subagent(...)` is available and the diff is non-trivial, use parallel `company-reviewer` agents for independent read-only review lanes:
+   - correctness/edge cases;
+   - tests/verification;
+   - scope drift/protected paths;
+   - security/high-risk only when relevant.
+   Continue single-agent for tiny diffs or unavailable subagent tooling.
+8. Report findings by severity.
 
 Output:
 
 | Severity | File/area | Finding | Required fix |
 |---|---|---|---|
+
+Also include:
+
+- Subagents used/not used and why.

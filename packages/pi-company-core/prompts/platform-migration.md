@@ -29,19 +29,25 @@ Mandatory flow:
    - reference repo URL + commit/tag;
    - files inspected;
    - exact behavior/concept being migrated.
-6. Use `company_reference_checkout` for repo references when available.
-7. Do targeted inspection only. Do not copy large source blocks or vendor code.
-8. Before shell commands that fetch, clone, build, publish, or mutate package state, call `company_exec_policy_check`.
-9. Before non-company MCP/app tools, call `company_tool_policy_check`.
-10. Produce a migration matrix:
+6. Decide whether subagents are useful. If `pi-subagents`/`subagent(...)` is available, use automatic read-only delegation for independent research:
+   - `company-scout` inspects current platform docs/scripts;
+   - `company-scout` inspects official docs/reference repo evidence;
+   - `company-planner` builds the migration matrix and target plan;
+   - `company-reviewer` checks parity/docs/runtime behavior after changes.
+   Continue single-agent if subagents are unavailable or the migration is tiny.
+7. Use `company_reference_checkout` for repo references when available.
+8. Do targeted inspection only. Do not copy large source blocks or vendor code.
+9. Before shell commands that fetch, clone, build, publish, or mutate package state, call `company_exec_policy_check`.
+10. Before non-company MCP/app tools, call `company_tool_policy_check`.
+11. Produce a migration matrix:
 
    | Source concept | Evidence | Apply? | Target file/config | Reason |
    |---|---|---:|---|---|
 
-11. Implement only the bounded target behavior.
-12. If policy/runtime behavior changes, update docs and add/adjust a decision note when appropriate.
-13. For source-changing platform tasks, record verify evidence and trace, then call `company_task_gate_check` before final.
-14. Run platform verification before final.
+12. Implement only the bounded target behavior.
+13. If policy/runtime behavior changes, update docs and add/adjust a decision note when appropriate.
+14. For source-changing platform tasks, record verify evidence and trace, then call `company_task_gate_check` before final.
+15. Run platform verification before final.
 
 Default verification:
 
@@ -64,6 +70,7 @@ Final output:
 - What was intentionally not migrated.
 - Changed files.
 - Verify command/result.
+- Subagents used/not used and why.
 - Memory cited, if any.
 - Task gate result.
 - Residual parity gaps vs the source tool.

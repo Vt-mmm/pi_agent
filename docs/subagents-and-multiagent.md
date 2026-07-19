@@ -15,6 +15,10 @@ Pi core không có subagents built-in. Theo design của Pi, subagents là exten
 
 Từ `v0.3.7`, `scripts/setup.sh` mặc định cài `pi-subagents` và chạy config preset `safe`.
 
+Từ `v0.3.9`, workflow prompts của platform có **auto-delegation policy**: khi anh chạy `/task`, `/be-to-fe`, `/platform-migration`, `/plan`, hoặc `/review`, parent agent phải tự cân nhắc spawn subagent cho phần việc độc lập. Anh không bắt buộc phải gọi `/run` nếu chỉ muốn task hoàn chỉnh.
+
+Xem chi tiết: `docs/auto-delegation-policy.md`.
+
 ## Install/setup
 
 Một lệnh setup đầy đủ:
@@ -22,7 +26,7 @@ Một lệnh setup đầy đủ:
 ```bash
 bash /path/to/pi_agent/scripts/setup.sh . \
   --profile auto \
-  --package-source git:github.com/Vt-mmm/pi_agent@v0.3.8 \
+  --package-source git:github.com/Vt-mmm/pi_agent@v0.3.9 \
   --mcp-preset core \
   --subagents-preset safe
 ```
@@ -30,7 +34,7 @@ bash /path/to/pi_agent/scripts/setup.sh . \
 Nếu chỉ cài global:
 
 ```bash
-pi install git:github.com/Vt-mmm/pi_agent@v0.3.8
+pi install git:github.com/Vt-mmm/pi_agent@v0.3.9
 pi install npm:pi-subagents
 bash /path/to/pi_agent/scripts/configure-subagents.sh --preset safe
 ```
@@ -111,6 +115,20 @@ Use reviewer to review the current diff for correctness and tests.
 Run parallel reviewers: correctness, tests, and unnecessary complexity.
 Have worker implement this approved plan, then run reviewer.
 ```
+
+Với workflow platform, còn có thể chỉ gọi:
+
+```text
+/task Implement <task lớn>.
+```
+
+Parent agent sẽ tự quyết định:
+
+- không spawn nếu task nhỏ;
+- spawn `company-scout` nếu cần map source/spec;
+- spawn `company-planner` nếu cần plan medium/high-risk;
+- spawn `company-reviewer` trước final nếu diff không nhỏ;
+- ghi trong final `Subagents: used/not used and why`.
 
 ## Gọi bằng slash command
 
