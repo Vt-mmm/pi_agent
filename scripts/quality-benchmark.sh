@@ -4,8 +4,8 @@ set -euo pipefail
 usage() {
   cat <<'USAGE'
 Usage:
-  scripts/parity-benchmark.sh <project-path> --init
-  scripts/parity-benchmark.sh <project-path> --record --scenario <name> --agent <pi|codex|claude|other> --result <pass|fail|partial> [options]
+  scripts/quality-benchmark.sh <project-path> --init
+  scripts/quality-benchmark.sh <project-path> --record --scenario <name> --surface <name> --result <pass|fail|partial> [options]
 
 Options:
   --task-file <path>      File containing task prompt/spec.
@@ -14,9 +14,10 @@ Options:
   --cost <number>         Cost reported for the run.
   --duration <seconds>    Wall-clock duration.
   --notes <text>          Short notes or quality observations.
+  --agent <name>          Backward-compatible alias for --surface.
 
 Output:
-  <project-path>/.pi/benchmarks/parity-runs.jsonl
+  <project-path>/.pi/benchmarks/quality-runs.jsonl
 USAGE
 }
 
@@ -30,7 +31,7 @@ shift || true
 PROJECT_PATH="$(cd "$PROJECT_PATH" && pwd)"
 MODE=""
 SCENARIO=""
-AGENT=""
+SURFACE=""
 RESULT=""
 TASK_FILE=""
 VERIFY_CMD=""
@@ -53,8 +54,8 @@ while [[ $# -gt 0 ]]; do
       SCENARIO="${2:-}"
       shift 2
       ;;
-    --agent)
-      AGENT="${2:-}"
+    --surface|--agent)
+      SURFACE="${2:-}"
       shift 2
       ;;
     --result)
@@ -101,10 +102,10 @@ BENCHMARK_DIR="$PROJECT_PATH/.pi/benchmarks"
 mkdir -p "$BENCHMARK_DIR"
 
 if [[ "$MODE" == "init" ]]; then
-  cat > "$BENCHMARK_DIR/parity-scenarios.md" <<'SCENARIOS'
-# Agent parity benchmark scenarios
+  cat > "$BENCHMARK_DIR/quality-scenarios.md" <<'SCENARIOS'
+# Agent quality benchmark scenarios
 
-Use the same scenario across Pi, Codex, and Claude before claiming token/cost/quality parity.
+Use the same scenario, acceptance criteria, and verification command across approved agent surfaces before making quality, token, or cost claims.
 
 ## Scenario 1: read-only scout
 
@@ -122,11 +123,11 @@ Use the same scenario across Pi, Codex, and Claude before claiming token/cost/qu
 - Goal: scout backend/spec read-only, implement frontend mapping only.
 - Evidence: backend contract snapshot, frontend changed files, frontend verify pass.
 SCENARIOS
-  echo "Initialized benchmark scenarios: $BENCHMARK_DIR/parity-scenarios.md"
+  echo "Initialized benchmark scenarios: $BENCHMARK_DIR/quality-scenarios.md"
   exit 0
 fi
 
-if [[ "$MODE" != "record" || -z "$SCENARIO" || -z "$AGENT" || -z "$RESULT" ]]; then
+if [[ "$MODE" != "record" || -z "$SCENARIO" || -z "$SURFACE" || -z "$RESULT" ]]; then
   usage
   exit 2
 fi
@@ -141,7 +142,7 @@ esac
 
 export PI_BENCHMARK_PROJECT_PATH="$PROJECT_PATH"
 export PI_BENCHMARK_SCENARIO="$SCENARIO"
-export PI_BENCHMARK_AGENT="$AGENT"
+export PI_BENCHMARK_SURFACE="$SURFACE"
 export PI_BENCHMARK_RESULT="$RESULT"
 export PI_BENCHMARK_TASK_FILE="$TASK_FILE"
 export PI_BENCHMARK_VERIFY="$VERIFY_CMD"
@@ -155,7 +156,7 @@ import fs from "node:fs";
 import path from "node:path";
 
 const root = process.env.PI_BENCHMARK_PROJECT_PATH;
-const target = path.join(root, ".pi", "benchmarks", "parity-runs.jsonl");
+const target = path.join(root, ".pi", "benchmarks", "quality-runs.jsonl");
 const numberOrNull = (value) => {
   if (!value) return null;
   const parsed = Number(value);
@@ -165,7 +166,7 @@ const payload = {
   schemaVersion: 1,
   recordedAt: new Date().toISOString(),
   scenario: process.env.PI_BENCHMARK_SCENARIO,
-  agent: process.env.PI_BENCHMARK_AGENT,
+  surface: process.env.PI_BENCHMARK_SURFACE,
   result: process.env.PI_BENCHMARK_RESULT,
   taskFile: process.env.PI_BENCHMARK_TASK_FILE || null,
   verifyCommand: process.env.PI_BENCHMARK_VERIFY || null,

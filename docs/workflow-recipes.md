@@ -4,30 +4,30 @@
 
 Các recipe này biến những bài toán lặp lại thành workflow có tên rõ, dùng được cho project khác mà không phụ thuộc một project nội bộ cụ thể.
 
-## Recipe 1 — Platform migration
+## Recipe 1 — Platform improvement
 
-Dùng khi muốn migrate hoặc học pattern từ Pi docs, Codex CLI GitHub, Claude/Codex harness, hoặc repo tham chiếu vào Pi Company Platform.
+Dùng khi muốn cải tiến setup, prompt, MCP, model scope, memory, runtime policy, hoặc subagent workflow của Pi Agent Platform.
 
 Lệnh trong Pi:
 
 ```text
 /onboard-project
-/platform-migration Migrate <source> into <target behavior>
+/platform-improve Improve <target behavior> in <platform area>.
 ```
 
 Input tối thiểu:
 
-- source docs URL hoặc repo URL;
-- version/date/commit nếu có;
+- source docs URL hoặc repo URL nếu task cần external context;
+- version/date/commit nếu có external context;
 - target behavior cần áp dụng;
-- non-goals: cái không migrate.
+- non-goals: phần không làm trong scope này.
 
 Output mong đợi:
 
-- migration matrix;
+- implementation matrix;
 - code/docs/config thay đổi;
 - verify evidence;
-- phần không migrate và lý do.
+- phần không làm và lý do.
 
 Verify chuẩn:
 
@@ -39,9 +39,9 @@ pi list --approve
 
 Memory note:
 
-- Nếu migration tạo decision/lesson bền vững, user có thể yêu cầu `Remember: ...`.
+- Nếu task tạo decision/lesson bền vững, user có thể yêu cầu `Remember: ...`.
 - Agent dùng `company_memory_note` để ghi note explicit.
-- Không tự ghi toàn bộ transcript migration vào memory.
+- Không tự ghi toàn bộ transcript vào memory.
 
 ## Recipe 2 — Backend spec to frontend
 
@@ -81,7 +81,7 @@ Agent phải làm:
 
 | Bài toán | Profile khuyến nghị |
 |---|---|
-| Platform/package/harness migration | `platform-development` hoặc profile platform riêng |
+| Platform/package/runtime improvement | `platform-development` hoặc profile platform riêng |
 | Fullstack bình thường, FE/BE đều có thể sửa | `fullstack` |
 | BE source of truth nhưng BE không được sửa | `be-readonly-fe` |
 | Backend-only task | `backend-api` |

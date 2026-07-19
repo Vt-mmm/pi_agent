@@ -27,7 +27,7 @@ Mandatory flow:
    - `/chain` = run agents sequentially.
 5. Explain when to use `company-scout`, `company-planner`, `company-worker`, `company-reviewer`, and `company-oracle`.
 6. If a command might depend on package/provider availability, say so and tell the user to type `/` in Pi or run `pi list --approve`.
-7. Do not claim Pi saves token/cost versus Codex/Claude CLI unless benchmark evidence exists. Point to `/company-usage`, `/subagent-cost`, and `pi-company-usage <project>`.
+7. Do not claim token/cost savings unless benchmark evidence exists. Point to `/company-usage`, `/subagent-cost`, and `pi-company-usage <project>`.
 
 Output format:
 

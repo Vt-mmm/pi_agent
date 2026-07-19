@@ -1,6 +1,6 @@
 # Auto-delegation policy
 
-Mục tiêu: user không phải nhớ `/run`, `/parallel`, `/chain` cho workflow hằng ngày. Khi anh gõ `/task`, `/be-to-fe`, `/platform-migration`, `/plan`, hoặc `/review`, parent agent phải tự cân nhắc spawn subagents nếu việc đó giúp giảm nhiễu context, tăng tốc read-heavy work, hoặc tăng chất lượng review.
+Mục tiêu: user không phải nhớ `/run`, `/parallel`, `/chain` cho workflow hằng ngày. Khi anh gõ `/task`, `/be-to-fe`, `/platform-improve`, `/plan`, hoặc `/review`, parent agent phải tự cân nhắc spawn subagents nếu việc đó giúp giảm nhiễu context, tăng tốc read-heavy work, hoặc tăng chất lượng review.
 
 ## Kết luận thực tế
 
@@ -19,7 +19,7 @@ Parent nên tự spawn subagents khi có ít nhất một điều kiện:
 
 - cần scout nhiều vùng source độc lập;
 - cần map BE contract read-only trong khi FE implementation là write target;
-- cần đọc docs/reference repo và repo hiện tại song song;
+- cần đọc external source docs/repo và repo hiện tại song song;
 - cần external research có nguồn dẫn, và `pi-web-access`/web tools đang available;
 - cần tạo context handoff trước task lớn (`context-builder`);
 - cần review nhiều góc độc lập: correctness, tests, security, scope drift;
@@ -75,17 +75,17 @@ Recommended auto-delegation:
 - parent or `company-worker`: implement FE only;
 - `company-reviewer`: review diff and verify coverage.
 
-### `/platform-migration`
+### `/platform-improve`
 
 Recommended auto-delegation:
 
 - `company-scout`: inspect current platform source/docs;
 - builtin `researcher`: inspect official docs/web evidence when `pi-web-access` is installed;
-- builtin `context-builder`: create handoff context/meta-prompt for large migrations;
-- `company-scout`: inspect official docs/reference repo targeted evidence;
-- `company-planner`: produce migration matrix;
+- builtin `context-builder`: create handoff context/meta-prompt for large platform changes;
+- `company-scout`: inspect official docs/external source repo targeted evidence;
+- `company-planner`: produce implementation matrix;
 - parent or `company-worker`: implement bounded changes;
-- `company-reviewer`: review docs/runtime parity.
+- `company-reviewer`: review docs/runtime behavior.
 
 ### `/review`
 
@@ -96,7 +96,7 @@ Recommended auto-delegation:
 - parallel `company-reviewer` for scope/protected-path drift;
 - optional `company-oracle` for architecture/high-risk concerns.
 
-If the user explicitly asks for a review loop, use upstream `/review-loop` or equivalent parent-controlled loop with max rounds. Do not blindly apply all reviewer suggestions.
+If the user explicitly asks for a review loop, use `/review-loop` or an equivalent parent-controlled loop with max rounds. Do not blindly apply all reviewer suggestions.
 
 ## Prompt examples parent may use internally
 
@@ -144,7 +144,7 @@ If not used, give the reason briefly:
 
 Subagents can reduce parent context pollution, but total token usage can increase because each child does its own model/tool work. Use them for parallelizable read-heavy work and review quality, not as a blanket token-saving switch.
 
-## Upstream shortcuts worth using
+## Package shortcuts worth using
 
 | Shortcut | Use when |
 |---|---|
@@ -156,11 +156,8 @@ Subagents can reduce parent context pollution, but total token usage can increas
 | `/gather-context-and-clarify` | Need scout/research first, then ask only meaningful questions. |
 | `/parallel-cleanup` | Need post-implementation cleanup review. |
 
-See `docs/pi-subagents-upstream-review.md`.
+See `docs/subagent-orchestration-capabilities.md`.
 
-## Sources
+## Official docs
 
 - Pi pi-subagents package: https://pi.dev/packages/pi-subagents
-- Codex subagents docs: https://learn.chatgpt.com/docs/agent-configuration/subagents
-- Claude Code sub-agents docs: https://code.claude.com/docs/en/sub-agents
-- Claude Agent SDK subagents docs: https://code.claude.com/docs/en/agent-sdk/subagents

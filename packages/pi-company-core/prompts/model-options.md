@@ -55,7 +55,7 @@ Default selector scope seeded by setup:
 | Fast scout | `openai-codex/gpt-5.4-mini:low` | `anthropic/claude-haiku-4-5:low` | quick reads, simple Q&A |
 | Balanced implement | `openai-codex/gpt-5.5:medium` | `anthropic/claude-sonnet-5:medium` | normal source tasks |
 | Hard implement | `openai-codex/gpt-5.6-luna:xhigh` or `openai-codex/gpt-5.5:xhigh` | `anthropic/claude-sonnet-5:xhigh` | multi-file/debug/contract mapping |
-| Strategic/deep | `openai-codex/gpt-5.6-sol:xhigh` | `anthropic/claude-opus-4-7:max` or `anthropic/claude-opus-4-8:max` | architecture, migration, high-risk review |
+| Strategic/deep | `openai-codex/gpt-5.6-sol:xhigh` | `anthropic/claude-opus-4-7:max` or `anthropic/claude-opus-4-8:max` | architecture, large refactor, high-risk review |
 | Huge-context scout | `openai-codex/gpt-5.6-terra:xhigh` | `anthropic/claude-fable-5:max` | large repo/docs synthesis |
 
 Output:

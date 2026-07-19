@@ -98,12 +98,12 @@ Xem `contextUsage.percent`:
 
 ## Khi nào ghi benchmark
 
-Sau một task cần so sánh Pi với Codex/Claude:
+Sau một task cần so sánh workflow/model bằng số liệu:
 
 ```bash
-bash scripts/parity-benchmark.sh /path/to/project --record \
+bash scripts/quality-benchmark.sh /path/to/project --record \
   --scenario bounded-source-fix \
-  --agent pi \
+  --surface pi \
   --result pass \
   --tokens <total-from-pi-company-usage> \
   --cost <cost-from-pi-company-usage> \

@@ -31,7 +31,7 @@ Sau khi `/onboard-project` chạy xong, project có file:
 
 ## Vì sao không để bash làm bước này
 
-Bash setup chỉ biết copy template và detect marker. Nó không có model reasoning, không biết project purpose, module ownership, domain rule, hay risk boundary.
+Bash setup chỉ biết tạo template và detect marker. Nó không có model reasoning, không biết project purpose, module ownership, domain rule, hay risk boundary.
 
 `/onboard-project` phải chạy sau login/model selection để chính model sẽ dùng cho task đọc qua project, chọn/gợi ý profile, và tạo snapshot.
 

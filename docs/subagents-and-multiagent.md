@@ -2,7 +2,7 @@
 
 ## Kết luận
 
-Pi core không có subagents built-in. Theo design của Pi, subagents là extension/package. Platform này dùng `pi-subagents` làm baseline vì nó hỗ trợ:
+Pi core không có subagents built-in. Theo design của Pi, subagents là extension/package. Platform này dùng `pi-subagents` làm subagent runtime vì nó hỗ trợ:
 
 - child Pi sessions riêng context;
 - foreground/background runs;
@@ -18,11 +18,11 @@ Pi core không có subagents built-in. Theo design của Pi, subagents là exten
 
 Từ `v0.3.7`, `scripts/setup.sh` mặc định cài `pi-subagents` và chạy config preset `safe`.
 
-Từ `v0.3.10`, workflow prompts của platform có **auto-delegation policy**: khi anh chạy `/task`, `/be-to-fe`, `/platform-migration`, `/plan`, hoặc `/review`, parent agent phải tự cân nhắc spawn subagent cho phần việc độc lập. Anh không bắt buộc phải gọi `/run` nếu chỉ muốn task hoàn chỉnh.
+Từ `v0.3.11`, workflow prompts của platform có **auto-delegation policy**: khi anh chạy `/task`, `/be-to-fe`, `/platform-improve`, `/plan`, hoặc `/review`, parent agent phải tự cân nhắc spawn subagent cho phần việc độc lập. Anh không bắt buộc phải gọi `/run` nếu chỉ muốn task hoàn chỉnh.
 
 Xem chi tiết: `docs/auto-delegation-policy.md`.
 
-Upstream review chi tiết: `docs/pi-subagents-upstream-review.md`.
+Capability notes chi tiết: `docs/subagent-orchestration-capabilities.md`.
 
 ## Install/setup
 
@@ -31,7 +31,7 @@ Một lệnh setup đầy đủ:
 ```bash
 bash /path/to/pi_agent/scripts/setup.sh . \
   --profile auto \
-  --package-source git:github.com/Vt-mmm/pi_agent@v0.3.10 \
+  --package-source git:github.com/Vt-mmm/pi_agent@v0.3.11 \
   --mcp-preset core \
   --subagents-preset safe
 ```
@@ -39,7 +39,7 @@ bash /path/to/pi_agent/scripts/setup.sh . \
 Nếu chỉ cài global:
 
 ```bash
-pi install git:github.com/Vt-mmm/pi_agent@v0.3.10
+pi install git:github.com/Vt-mmm/pi_agent@v0.3.11
 pi install npm:pi-subagents
 bash /path/to/pi_agent/scripts/configure-subagents.sh --preset safe
 ```
@@ -75,7 +75,7 @@ Nội dung chính:
 - `maxSubagentSpawnsPerSession: 32`;
 - async completion batching bật.
 
-Không ép `subagents.modelScope` mặc định. Anh chọn model parent bằng `/model`; builtin subagents sẽ inherit model nếu không override. Nếu muốn ép chỉ Codex/Claude:
+Không ép `subagents.modelScope` mặc định. Anh chọn model parent bằng `/model`; builtin subagents sẽ inherit model nếu không override. Nếu muốn ép chỉ provider:
 
 ```bash
 bash /path/to/pi_agent/scripts/configure-subagents.sh --preset safe --model-scope company
@@ -154,7 +154,7 @@ Parent agent sẽ tự quyết định:
 - dùng builtin `context-builder` nếu task lớn cần handoff context;
 - ghi trong final `Subagents: used/not used and why`.
 
-## Upstream prompt shortcuts nên biết
+## Package prompt shortcuts nên biết
 
 | Prompt | Dùng khi nào |
 |---|---|

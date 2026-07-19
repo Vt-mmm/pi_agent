@@ -56,7 +56,7 @@ Pi settings template dùng:
 
 - Nếu task là read-only, không mở write-capable prompt.
 - Nếu task là source-write, phải biết verify command trước khi sửa.
-- Nếu context vượt budget, tạo summary theo module thay vì copy full files.
+- Nếu context vượt budget, tạo summary theo module thay vì nhồi full files.
 - File context vượt hard cap phải được summarize hoặc đọc targeted slices, không inject full.
 - Memory chỉ là hint. Phải verify bằng source hiện tại trước khi sửa code.
 

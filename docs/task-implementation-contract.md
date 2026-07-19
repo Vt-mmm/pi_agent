@@ -101,7 +101,7 @@ If verify cannot run, final outcome is blocked/partial, not done.
 | Profile + prompt | profile có rule, prompt đọc profile | Trung bình |
 | Extension guard | tool_call block protected/destructive | Khá |
 | Runtime task tools | task_start/context_record/verify_record/trace | Cao |
-| Runtime parity tools | exec_policy/context_budget/tool_policy/task_gate | Cao |
+| Runtime quality tools | exec_policy/context_budget/tool_policy/task_gate | Cao |
 | Final gate | trace completion block khi `finalGate=enforce`; hard assistant stop-hook khi Pi API hỗ trợ | Cao nhất |
 
 Hiện platform đang ở mức “P3-baseline runtime policy”:
@@ -121,7 +121,7 @@ Hiện platform đang ở mức “P3-baseline runtime policy”:
 
 ## Named implementation recipes
 
-- `/platform-migration`: dùng cho task migrate Pi docs/Codex CLI/repo pattern vào platform.
+- `/platform-improve`: dùng cho task cải tiến setup, docs, prompt, MCP, model, memory, runtime policy, hoặc subagent workflow của platform.
 - `/be-to-fe`: dùng cho task scout BE contract read-only rồi implement FE.
 - `/memory-policy`: dùng cho task kiểm tra/ghi nhớ explicit project memory.
 

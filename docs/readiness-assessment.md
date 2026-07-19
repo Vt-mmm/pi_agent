@@ -5,16 +5,16 @@
 `pi-company-platform` hiện đủ để:
 
 - cài Pi global
-- dùng OAuth Codex trong Pi
+- dùng provider OAuth trong Pi
 - dùng global package core
 - link project adapter
 - chạy read-only/guarded pilot
 - giảm noise bằng `--no-approve` + `PI_COMPANY_PROFILE`
 - chạy source task nhỏ với runtime task/context/verify/trace record
 - kiểm tra exec/context/tool/task gate bằng các runtime tools `company_*`
-- ghi benchmark parity Pi/Codex/Claude bằng script chuẩn hóa
+- ghi quality benchmark provider and model bằng script chuẩn hóa
 
-Chưa đủ để tuyên bố thay thế Codex/Claude CLI cho mọi high-risk task nếu chưa có benchmark project-specific và chưa xác nhận hard final hook/sandbox/network/env ở runtime Pi.
+Chưa đủ để áp dụng mặc định cho mọi high-risk task nếu chưa có benchmark project-specific và chưa xác nhận hard final hook/sandbox/network/env ở runtime Pi.
 
 ## Gap list
 
@@ -23,10 +23,10 @@ Chưa đủ để tuyên bố thay thế Codex/Claude CLI cho mọi high-risk ta
 | Final assistant hard stop hook chưa được chứng minh | P3 | `company_trace_record` có gate, nhưng assistant vẫn có thể nói DONE nếu không follow prompt/API chưa có stop hook | Test Pi final hook hoặc giữ `company_task_gate_check` bắt buộc. |
 | Chưa có lock/GC cho task state | P3 | Nhiều session cùng sửa task có thể ghi đè | File lock + cleanup giống todo pattern. |
 | Tool registry mặc định còn advisory | P3 | Có thể warn nhưng chưa block mọi tool lạ | Bật `toolRegistry=enforce` sau khi map tool names ổn định. |
-| Benchmark parity mới có recorder, chưa có số liệu | P3 | Chưa chứng minh tiết kiệm token/quality parity | Chạy Pi vs Codex vs Claude trên scenario thật. |
+| Quality benchmark mới có recorder, chưa có số liệu | P3 | Chưa chứng minh tiết kiệm token/chất lượng | Chạy các approved surfaces/models trên scenario thật. |
 | Chưa có package security review | P3 | Third-party package có full system access | Allowlist + source review. |
 | Chưa có subagent/worktree isolation | P3 | Task lớn dễ overlap write set | Herdr/worktree/subagent policy. |
-| Chưa có sandbox/env/network layer riêng nếu Pi không cung cấp | P3 | Guard chưa ngang Codex sandbox/env isolation | Container/VM hoặc Pi sandbox validation. |
+| Chưa có sandbox/env/network layer riêng nếu Pi không cung cấp | P3 | Guard chưa thay thế process/filesystem/network isolation ngoài runtime | Container/VM hoặc Pi sandbox validation. |
 
 ## Maturity gates
 
@@ -38,11 +38,11 @@ Chưa đủ để tuyên bố thay thế Codex/Claude CLI cho mọi high-risk ta
 | G3 guarded write | protected path write is blocked in a sandbox test. |
 | G4 verify | task prompt produces command output evidence before final. |
 | G5 runtime policy | exec/context/tool/task gate checks pass. |
-| G6 parity | same task compared against Codex/Claude baseline for quality/token/cost. |
+| G6 benchmark | same task compared across approved surfaces/models for quality/token/cost. |
 
 ## Decision
 
-Trạng thái hiện tại: P3-baseline after Codex-inspired exec/context/tool/final gate modules.
+Trạng thái hiện tại: P3 after runtime policy exec/context/tool/final gate modules.
 
 Quyền dùng khuyến nghị:
 

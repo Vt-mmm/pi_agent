@@ -22,7 +22,7 @@ Rules:
    - tests/verification;
    - scope drift/protected paths;
    - security/high-risk only when relevant.
-   If the user asks for a loop, use upstream `/review-loop` semantics or equivalent parent-controlled max-round loop. Continue single-agent for tiny diffs or unavailable subagent tooling.
+   If the user asks for a loop, use `/review-loop` semantics or equivalent parent-controlled max-round loop. Continue single-agent for tiny diffs or unavailable subagent tooling.
 8. Report findings by severity.
 
 Output:

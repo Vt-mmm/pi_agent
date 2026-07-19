@@ -75,7 +75,7 @@ for (const rel of [
   "packages/pi-company-core/prompts/onboard-project.md",
   "packages/pi-company-core/prompts/profiles.md",
   "packages/pi-company-core/prompts/memory-policy.md",
-  "packages/pi-company-core/prompts/platform-migration.md",
+  "packages/pi-company-core/prompts/platform-improve.md",
   "packages/pi-company-core/prompts/be-to-fe.md",
   "packages/pi-company-core/prompts/task.md",
   "packages/pi-company-core/prompts/discuss.md",
@@ -218,7 +218,7 @@ if (strictShare) {
     "docs/publishing-for-teams.md",
     "templates/project/.pi/settings.json",
     "templates/global/settings.json",
-    "packages/pi-company-core/skills/company-reference-repo/SKILL.md"
+    "packages/pi-company-core/skills/company-source-cache/SKILL.md"
   ];
   const forbidden = [
     /\/Users\/[^/\s]+\/Documents\/Working\b/,

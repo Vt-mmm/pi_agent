@@ -245,7 +245,7 @@ const DEFAULT_POLICY: BasePolicy = {
       "company_profile_apply",
       "company_project_onboarding_record",
       "company_task_start",
-      "company_reference_checkout",
+      "company_source_checkout",
       "company_context_record",
       "company_verify_record",
       "company_trace_record"
@@ -1712,12 +1712,12 @@ export default function companyGuard(pi: ExtensionAPI) {
   });
 
   pi.registerTool({
-    name: "company_reference_checkout",
-    label: "Company Reference Checkout",
+    name: "company_source_checkout",
+    label: "Company Source Checkout",
     description: "Cache and refresh an external Git repository for targeted local inspection.",
-    promptSnippet: "Use this before reading an external reference repository.",
+    promptSnippet: "Use this before reading a user-provided external source repository.",
     promptGuidelines: [
-      "Use for GitHub/GitLab/Bitbucket reference repos.",
+      "Use for GitHub/GitLab/Bitbucket source repositories supplied by the user.",
       "Read targeted files from the returned checkout path; do not edit the shared cache."
     ],
     parameters: Type.Object({
@@ -1728,7 +1728,7 @@ export default function companyGuard(pi: ExtensionAPI) {
       try {
         const repo = checkoutReferenceRepo(params.repoRef, params.forceUpdate === true);
         const text = [
-          "Reference repo ready:",
+          "Source cache ready:",
           `path: ${repo.checkoutPath}`,
           `url: ${repo.cloneUrl}`,
           `commit: ${repo.commit ?? "unknown"}`,
@@ -1741,7 +1741,7 @@ export default function companyGuard(pi: ExtensionAPI) {
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
         return {
-          content: [{ type: "text", text: `Reference checkout failed: ${message}` }],
+          content: [{ type: "text", text: `Source checkout failed: ${message}` }],
           isError: true
         };
       }

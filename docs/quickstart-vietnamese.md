@@ -15,7 +15,7 @@ Phần còn lại — OAuth, package, context, harness, MCP, tool-call guard —
 
 ```bash
 npm install -g @earendil-works/pi-coding-agent
-pi install git:github.com/Vt-mmm/pi_agent@v0.3.10
+pi install git:github.com/Vt-mmm/pi_agent@v0.3.11
 ```
 
 Sau bước này, project mới không cần chạy bash init profile. Chỉ cần:
@@ -48,7 +48,7 @@ Sau khi login và chọn model intended cho project understanding:
 /memory-policy
 ```
 
-Global setup đã config sẵn `enabledModels` cho Codex + Claude. Anh đổi model bằng selector/hotkey:
+Global setup đã config sẵn `enabledModels` cho các provider model families. Anh đổi model bằng selector/hotkey:
 
 ```text
 Ctrl+L       # model selector
@@ -109,7 +109,7 @@ File này là snapshot context cho task sau. Nếu file còn `Generated: not yet
 bash /path/to/pi_agent/scripts/setup.sh /path/to/project \
   --project-only \
   --profile auto \
-  --package-source git:github.com/Vt-mmm/pi_agent@v0.3.10 \
+  --package-source git:github.com/Vt-mmm/pi_agent@v0.3.11 \
   --mcp-preset core \
   --subagents-preset safe
 ```
@@ -130,7 +130,7 @@ Script bash chỉ dùng khi muốn preseed config vào repo:
 ```bash
 bash /path/to/pi_agent/scripts/setup.sh /path/to/project \
   --profile be-readonly-fe \
-  --package-source git:github.com/Vt-mmm/pi_agent@v0.3.10 \
+  --package-source git:github.com/Vt-mmm/pi_agent@v0.3.11 \
   --mcp-preset core \
   --subagents-preset safe
 ```
@@ -146,7 +146,7 @@ pi
 Prompt mẫu khi requirement chưa rõ:
 
 ```text
-/discuss Từ repo https://github.com/mitsuhiko/agent-stuff, nghiên cứu pattern nào nên đưa vào project này.
+/discuss Cải tiến workflow onboarding cho team mới. Chưa implement, chỉ hỏi lại phần còn thiếu và đề xuất plan.
 ```
 
 Prompt mẫu khi đã rõ task:
@@ -155,9 +155,9 @@ Prompt mẫu khi đã rõ task:
 /task Implement this request. Use company_context, company_task_start, company_context_budget, company_exec_policy_check when shell is needed, company_verify_record, company_trace_record, and company_task_gate_check before done.
 ```
 
-Từ `v0.3.10`, `/task` có auto-delegation policy. Với task đủ lớn, parent agent phải tự cân nhắc dùng `company-scout`, `company-planner`, hoặc `company-reviewer`; anh không cần tự gọi `/run` nếu không muốn ép orchestration.
+Từ `v0.3.11`, `/task` có auto-delegation policy. Với task đủ lớn, parent agent phải tự cân nhắc dùng `company-scout`, `company-planner`, hoặc `company-reviewer`; anh không cần tự gọi `/run` nếu không muốn ép orchestration.
 
-Các workflow upstream đáng dùng khi muốn ép rõ shape:
+Các workflow package đáng dùng khi muốn ép rõ shape:
 
 ```text
 /parallel-review current diff
@@ -170,17 +170,17 @@ Prompt mẫu cho 2 recipe hay gặp:
 
 ```text
 /company-commands subagents
-/platform-migration Migrate selected Pi docs and Codex CLI GitHub concepts into this platform.
+/platform-improve Improve model selection, MCP setup, and onboarding docs for a public team package.
 /be-to-fe Implement FE from BE spec <endpoint/spec>. Backend read-only.
 /memory-policy Show project memory policy and safe remember workflow.
 /run company-scout "Map target area read-only before planning."
 /run company-reviewer "Review current diff before final handoff."
 ```
 
-Cache repo tham chiếu để đọc targeted trong Pi:
+Cache external source repo để đọc targeted trong Pi:
 
 ```text
-Use company_reference_checkout for mitsuhiko/agent-stuff, inspect only relevant files, then summarize applicable patterns.
+Use company_source_checkout for github.com/org/repo, inspect only relevant files, then summarize applicable patterns.
 ```
 
 Runtime gate tools có sẵn:
@@ -196,8 +196,8 @@ Fallback bằng shell nếu cần:
 
 ```bash
 PI_COMPANY_PLATFORM_HOME=/path/to/pi_agent
-bash "$PI_COMPANY_PLATFORM_HOME/packages/pi-company-core/skills/company-reference-repo/checkout-reference-repo.sh" \
-  mitsuhiko/agent-stuff \
+bash "$PI_COMPANY_PLATFORM_HOME/packages/pi-company-core/skills/company-source-cache/checkout-source-repo.sh" \
+  github.com/org/repo \
   --path-only
 ```
 
@@ -212,7 +212,7 @@ bash "$PI_COMPANY_PLATFORM_HOME/packages/pi-company-core/skills/company-referenc
 
 Các việc này là credential/trust boundary, không nên automation mù.
 
-## Nguồn chính
+## Tài liệu chính
 
 - Command reference: `docs/command-reference-vietnamese.md`
 - Pi packages: https://pi.dev/docs/latest/packages
@@ -220,4 +220,3 @@ Các việc này là credential/trust boundary, không nên automation mù.
 - Pi providers/OAuth: https://pi.dev/docs/latest/providers
 - Pi settings/trust: https://pi.dev/docs/latest/settings
 - Pi MCP adapter: https://pi.dev/packages/pi-mcp-adapter
-- Codex CLI GitHub: https://github.com/openai/codex

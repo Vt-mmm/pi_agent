@@ -1,15 +1,15 @@
 ---
-name: company-reference-repo
-description: Cache and inspect external Git repositories used as implementation reference.
+name: company-source-cache
+description: Cache and inspect user-provided external Git repositories.
 ---
 
-# Company Reference Repo
+# Company Source Cache
 
-Use this skill when the user provides a GitHub/GitLab/Bitbucket repository as a reference source.
+Use this skill when the user provides a GitHub/GitLab/Bitbucket repository as source context for a task.
 
 ## Goal
 
-Keep remote reference repositories:
+Keep external source repositories:
 
 - stable: predictable cache path;
 - fresh: throttled fetch;
@@ -21,20 +21,20 @@ Keep remote reference repositories:
 1. Prefer the runtime tool if available:
 
    ```text
-   company_reference_checkout(repoRef="owner/repo")
+   company_source_checkout(repoRef="owner/repo")
    ```
 
 2. If the runtime tool is unavailable, resolve the repo into a local checkout from a platform clone:
 
    ```bash
    PI_COMPANY_PLATFORM_HOME=/path/to/pi-company-platform
-   bash "$PI_COMPANY_PLATFORM_HOME/packages/pi-company-core/skills/company-reference-repo/checkout-reference-repo.sh" <repo-ref> --path-only
+   bash "$PI_COMPANY_PLATFORM_HOME/packages/pi-company-core/skills/company-source-cache/checkout-source-repo.sh" <repo-ref> --path-only
    ```
 
 3. Use the printed path for targeted `rg`, `sed`, and file reads.
 4. Read only files relevant to the user request.
 5. If edits are needed, create a separate project/worktree; do not edit the cache.
-6. Cite the upstream URL in reports.
+6. Cite the source URL in reports when needed.
 
 ## Supported refs
 
@@ -55,5 +55,5 @@ Override:
 
 ```bash
 PI_COMPANY_PLATFORM_HOME=/path/to/pi-company-platform
-PI_COMPANY_CHECKOUT_CACHE=/path/to/cache bash "$PI_COMPANY_PLATFORM_HOME/packages/pi-company-core/skills/company-reference-repo/checkout-reference-repo.sh" owner/repo --path-only
+PI_COMPANY_CHECKOUT_CACHE=/path/to/cache bash "$PI_COMPANY_PLATFORM_HOME/packages/pi-company-core/skills/company-source-cache/checkout-source-repo.sh" owner/repo --path-only
 ```

@@ -4,15 +4,15 @@ set -euo pipefail
 usage() {
   cat <<'USAGE'
 Usage:
-  scripts/install-global.sh [--package-source <source>] [--with-mcp] [--mcp-preset <preset>] [--with-subagents] [--subagents-preset <preset>] [--with-web-access] [--with-herdr] [--with-codex-herdr] [--model-scope <preset>]
+  scripts/install-global.sh [--package-source <source>] [--with-mcp] [--mcp-preset <preset>] [--with-subagents] [--subagents-preset <preset>] [--with-web-access] [--with-herdr] [--model-scope <preset>]
 
 Purpose:
   Install the company Pi package into the current user's global Pi settings.
 
 Package source examples:
-  git:github.com/Vt-mmm/pi_agent@v0.3.10
+  git:github.com/Vt-mmm/pi_agent@v0.3.11
   https://github.com/Vt-mmm/pi_agent
-  npm:@company/pi_agent@0.3.10
+  npm:@company/pi_agent@0.3.11
   /absolute/path/to/pi_agent
 
 Notes:
@@ -34,7 +34,6 @@ SUBAGENTS_PRESET="safe"
 SUBAGENTS_MODEL_SCOPE="none"
 WITH_WEB_ACCESS=false
 WITH_HERDR=false
-WITH_CODEX_HERDR=false
 CONFIGURE_MODEL_SCOPE=true
 MODEL_SCOPE_PRESET="full"
 DEFAULT_MODEL="openai-codex/gpt-5.5:xhigh"
@@ -75,11 +74,6 @@ while [[ $# -gt 0 ]]; do
       ;;
     --with-herdr)
       WITH_HERDR=true
-      shift
-      ;;
-    --with-codex-herdr)
-      WITH_HERDR=true
-      WITH_CODEX_HERDR=true
       shift
       ;;
     --model-scope)
@@ -166,9 +160,6 @@ if [[ "$WITH_HERDR" == true ]]; then
     PI_AGENT_DIR="${PI_CODING_AGENT_DIR:-"${HOME}/.pi/agent"}"
     mkdir -p "$PI_AGENT_DIR/extensions"
     herdr integration install pi
-    if [[ "$WITH_CODEX_HERDR" == true ]] && command -v codex >/dev/null 2>&1; then
-      herdr integration install codex
-    fi
   fi
 fi
 
@@ -180,7 +171,7 @@ echo
 echo "Next:"
 echo "  pi"
 echo "  /login"
-echo "  /model          # or Ctrl+L: select Codex/Claude model from Pi selector"
+echo "  /model          # or Ctrl+L: select provider/model from Pi selector"
 echo "  /scoped-models  # optional: edit Ctrl+P model cycle scope"
 echo "  /mcp            # inspect MCP servers; authenticate Figma/GitHub only when needed"
 echo "  /subagents-doctor"

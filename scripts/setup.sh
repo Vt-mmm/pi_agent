@@ -32,7 +32,6 @@ Options:
                                   Optional subagent model allowlist (default: none)
   --with-web-access               Install pi-web-access for builtin `researcher` subagent (default: skip)
   --with-herdr / --no-herdr      Install/skip Herdr Pi integration if herdr exists (default: install)
-  --with-codex-herdr             Also install Herdr Codex integration if codex exists
   --model-scope <full|codex|claude>
                                   Configure Pi enabledModels for selector/cycling (default: full)
   --default-model <provider/model[:thinking]>
@@ -48,13 +47,13 @@ Options:
   -h, --help
 
 Package source examples:
-  git:github.com/Vt-mmm/pi_agent@v0.3.10
+  git:github.com/Vt-mmm/pi_agent@v0.3.11
   https://github.com/Vt-mmm/pi_agent
-  npm:@company/pi_agent@0.3.10
+  npm:@company/pi_agent@0.3.11
   /absolute/path/to/pi_agent
 
 One-command team setup example:
-  bash /path/to/pi_agent/scripts/setup.sh . --profile auto --package-source git:github.com/Vt-mmm/pi_agent@v0.3.10
+  bash /path/to/pi_agent/scripts/setup.sh . --profile auto --package-source git:github.com/Vt-mmm/pi_agent@v0.3.11
 USAGE
 }
 
@@ -71,7 +70,6 @@ SUBAGENTS_PRESET="safe"
 SUBAGENTS_MODEL_SCOPE="none"
 WITH_WEB_ACCESS=false
 WITH_HERDR=true
-WITH_CODEX_HERDR=false
 CONFIGURE_MODEL_SCOPE=true
 MODEL_SCOPE_PRESET="full"
 DEFAULT_MODEL="openai-codex/gpt-5.5:xhigh"
@@ -150,11 +148,6 @@ while [[ $# -gt 0 ]]; do
       ;;
     --no-herdr)
       WITH_HERDR=false
-      shift
-      ;;
-    --with-codex-herdr)
-      WITH_HERDR=true
-      WITH_CODEX_HERDR=true
       shift
       ;;
     --model-scope)
@@ -324,9 +317,7 @@ if [[ "$DO_GLOBAL" == true ]]; then
   if [[ "$WITH_WEB_ACCESS" == true ]]; then
     install_args+=("--with-web-access")
   fi
-  if [[ "$WITH_CODEX_HERDR" == true ]]; then
-    install_args+=("--with-codex-herdr")
-  elif [[ "$WITH_HERDR" == true ]]; then
+  if [[ "$WITH_HERDR" == true ]]; then
     install_args+=("--with-herdr")
   fi
   if [[ "$CONFIGURE_MODEL_SCOPE" == true ]]; then

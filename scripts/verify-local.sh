@@ -19,15 +19,15 @@ required_files=(
   "$ROOT/packages/pi-company-core/prompts/profiles.md"
   "$ROOT/packages/pi-company-core/prompts/model-options.md"
   "$ROOT/packages/pi-company-core/prompts/memory-policy.md"
-  "$ROOT/packages/pi-company-core/prompts/platform-migration.md"
+  "$ROOT/packages/pi-company-core/prompts/platform-improve.md"
   "$ROOT/packages/pi-company-core/prompts/be-to-fe.md"
   "$ROOT/packages/pi-company-core/prompts/task.md"
   "$ROOT/packages/pi-company-core/prompts/discuss.md"
   "$ROOT/packages/pi-company-core/prompts/plan.md"
   "$ROOT/packages/pi-company-core/prompts/review.md"
   "$ROOT/packages/pi-company-core/skills/company-ops/SKILL.md"
-  "$ROOT/packages/pi-company-core/skills/company-reference-repo/SKILL.md"
-  "$ROOT/packages/pi-company-core/skills/company-reference-repo/checkout-reference-repo.sh"
+  "$ROOT/packages/pi-company-core/skills/company-source-cache/SKILL.md"
+  "$ROOT/packages/pi-company-core/skills/company-source-cache/checkout-source-repo.sh"
   "$ROOT/packages/pi-company-core/subagents/company-scout.md"
   "$ROOT/packages/pi-company-core/subagents/company-planner.md"
   "$ROOT/packages/pi-company-core/subagents/company-worker.md"
@@ -56,19 +56,23 @@ required_files=(
   "$ROOT/docs/quickstart-vietnamese.md"
   "$ROOT/docs/command-reference-vietnamese.md"
   "$ROOT/docs/auto-delegation-policy.md"
-  "$ROOT/docs/pi-subagents-upstream-review.md"
+  "$ROOT/docs/subagent-orchestration-capabilities.md"
   "$ROOT/docs/project-onboarding.md"
   "$ROOT/docs/workflow-recipes.md"
   "$ROOT/docs/memory-policy.md"
   "$ROOT/docs/model-options.md"
+  "$ROOT/docs/oauth-providers.md"
   "$ROOT/docs/subagents-and-multiagent.md"
-  "$ROOT/docs/harness-migration-standard.md"
+  "$ROOT/docs/distribution-standard.md"
+  "$ROOT/docs/publishing-for-teams.md"
+  "$ROOT/docs/herdr-workflow.md"
+  "$ROOT/docs/runtime-harness-standard.md"
   "$ROOT/docs/task-implementation-contract.md"
-  "$ROOT/docs/codex-parity-baseline.md"
-  "$ROOT/docs/benchmark-parity.md"
+  "$ROOT/docs/runtime-quality-baseline.md"
+  "$ROOT/docs/quality-benchmark.md"
   "$ROOT/docs/readiness-assessment.md"
-  "$ROOT/docs/agent-stuff-research.md"
-  "$ROOT/docs/codex-migration-reference.md"
+  "$ROOT/docs/package-architecture-notes.md"
+  "$ROOT/docs/runtime-policy-design.md"
   "$ROOT/schemas/project-profile.schema.json"
   "$ROOT/schemas/task-contract.schema.json"
   "$ROOT/templates/project/.pi/task-contract.template.json"
@@ -78,7 +82,7 @@ required_files=(
   "$ROOT/scripts/team-doctor.sh"
   "$ROOT/scripts/link-project.sh"
   "$ROOT/scripts/profile-doctor.sh"
-  "$ROOT/scripts/parity-benchmark.sh"
+  "$ROOT/scripts/quality-benchmark.sh"
   "$ROOT/scripts/runtime-policy-smoke.sh"
   "$ROOT/scripts/pi-session-stats.sh"
   "$ROOT/scripts/pi-model-catalog.sh"
@@ -161,7 +165,7 @@ grep -R "/company-usage" "$ROOT/packages/pi-company-core" "$ROOT/docs" "$ROOT/RE
 grep -R "/company-commands" "$ROOT/README.md" "$ROOT/docs" "$ROOT/packages/pi-company-core/prompts" >/dev/null
 grep -R "auto-delegation" "$ROOT/README.md" "$ROOT/docs" "$ROOT/packages/pi-company-core/prompts" "$ROOT/templates/project/AGENTS.md" >/dev/null
 grep -R "Subagents used/not used" "$ROOT/packages/pi-company-core/prompts" "$ROOT/docs/auto-delegation-policy.md" >/dev/null
-grep -R "pi-subagents upstream" "$ROOT/README.md" "$ROOT/docs/pi-subagents-upstream-review.md" >/dev/null
+grep -R "Subagent orchestration capabilities" "$ROOT/README.md" "$ROOT/docs/subagent-orchestration-capabilities.md" >/dev/null
 grep -R "pi-web-access" "$ROOT/README.md" "$ROOT/docs" "$ROOT/scripts/install-global.sh" "$ROOT/scripts/setup.sh" >/dev/null
 grep -R "parallel-review" "$ROOT/docs" "$ROOT/README.md" >/dev/null
 grep -R "intercomBridge" "$ROOT/scripts/configure-subagents.sh" "$ROOT/docs/subagents-and-multiagent.md" >/dev/null
@@ -192,20 +196,55 @@ grep -R "@upstash/context7-mcp" "$ROOT/scripts/configure-mcp.sh" "$ROOT/docs/mcp
 grep -R "https://mcp.figma.com/mcp" "$ROOT/scripts/configure-mcp.sh" "$ROOT/docs/mcp-and-tools.md" >/dev/null
 grep -R "ghcr.io/github/github-mcp-server" "$ROOT/scripts/configure-mcp.sh" "$ROOT/docs/mcp-and-tools.md" >/dev/null
 grep -R "Ctrl+L" "$ROOT/README.md" "$ROOT/docs/model-options.md" "$ROOT/docs/team-onboarding.md" "$ROOT/docs/quickstart-vietnamese.md" >/dev/null
-grep -R "/platform-migration" "$ROOT/packages/pi-company-core/prompts" "$ROOT/docs" >/dev/null
+grep -R "/platform-improve" "$ROOT/packages/pi-company-core/prompts" "$ROOT/docs" >/dev/null
 grep -R "/be-to-fe" "$ROOT/packages/pi-company-core/prompts" "$ROOT/docs" >/dev/null
-grep -R "Codex CLI" "$ROOT/docs/codex-migration-reference.md" >/dev/null
 grep -R "Task Implementation Contract" "$ROOT/docs" "$ROOT/packages/pi-company-core/prompts" >/dev/null
 grep -R "company-task-trace" "$ROOT/packages/pi-company-core/extensions/company-guard.ts" "$ROOT/docs" >/dev/null
-grep -R "mitsuhiko/agent-stuff" "$ROOT/docs/agent-stuff-research.md" "$ROOT/README.md" >/dev/null
-grep -R "company-reference-repo" "$ROOT/packages/pi-company-core/skills" "$ROOT/templates/project/AGENTS.md" >/dev/null
-grep -R "company_reference_checkout" "$ROOT/packages/pi-company-core" >/dev/null
+grep -R "company-source-cache" "$ROOT/packages/pi-company-core/skills" "$ROOT/templates/project/AGENTS.md" >/dev/null
+grep -R "company_source_checkout" "$ROOT/packages/pi-company-core" >/dev/null
 grep -R "scripts/setup.sh" "$ROOT/README.md" "$ROOT/docs" >/dev/null
-grep -R "parity-benchmark.sh" "$ROOT/README.md" "$ROOT/docs" >/dev/null
+grep -R "quality-benchmark.sh" "$ROOT/README.md" "$ROOT/docs" >/dev/null
 grep -R ".pi-subagents/" "$ROOT/.gitignore" "$ROOT/docs/subagents-and-multiagent.md" "$ROOT/docs/distribution-standard.md" "$ROOT/scripts/init-project.sh" >/dev/null
 
+public_wording_pattern="$(
+  node --input-type=module <<'NODE'
+const terms = [
+  ["platform-", "mig", "ration"].join(""),
+  ["codex-", "mig", "ration"].join(""),
+  ["codex-", "par", "ity"].join(""),
+  ["benchmark-", "par", "ity"].join(""),
+  ["harness-", "mig", "ration"].join(""),
+  ["agent-", "stuff"].join(""),
+  ["mit", "suhiko"].join(""),
+  ["Cod", "ex CLI"].join(""),
+  ["Claude", " CLI"].join(""),
+  ["Cod", "ex-inspired"].join(""),
+  ["Cod", "ex-grade"].join(""),
+  ["Pi vs ", "Codex"].join(""),
+  ["vs ", "Claude"].join(""),
+  ["reference ", "repo"].join(""),
+  ["repo ", "tham ", "khảo"].join(""),
+  ["nguồn ", "tham ", "khảo"].join(""),
+  ["tham ", "khảo"].join("")
+];
+const escapeRegex = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+console.log(terms.map(escapeRegex).join("|"));
+NODE
+)"
+
+if grep -R -E -i \
+  "$public_wording_pattern" \
+  "$ROOT/README.md" \
+  "$ROOT/docs" \
+  "$ROOT/packages/pi-company-core/README.md" \
+  "$ROOT/packages/pi-company-core/prompts" \
+  "$ROOT/templates/project/AGENTS.md" >/dev/null; then
+  echo "Public docs contain non-neutral platform wording"
+  exit 1
+fi
+
 node --check "$ROOT/packages/pi-company-core/extensions/company-guard.ts" >/dev/null
-bash -n "$ROOT/scripts/parity-benchmark.sh"
+bash -n "$ROOT/scripts/quality-benchmark.sh"
 bash -n "$ROOT/scripts/runtime-policy-smoke.sh"
 bash -n "$ROOT/scripts/pi-session-stats.sh"
 bash -n "$ROOT/scripts/pi-model-catalog.sh"

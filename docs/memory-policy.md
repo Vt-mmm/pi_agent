@@ -147,7 +147,7 @@ Nếu dùng external package, set profile:
 }
 ```
 
-## Source tham khảo
+## Tài liệu chính
 
 - Pi memory explainer: https://tuyenhx.com/docs/memory-explainer.html
 - Pi extensions docs: https://pi.dev/docs/latest/extensions

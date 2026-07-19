@@ -137,7 +137,7 @@ fi
 if [[ "$PATH_ONLY" == true ]]; then
   printf '%s\n' "$TARGET"
 else
-  echo "Reference repo ready:"
+  echo "Source cache ready:"
   echo "  ref: $REPO_REF"
   echo "  url: $CLONE_URL"
   echo "  path: $TARGET"

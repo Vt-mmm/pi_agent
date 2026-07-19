@@ -6,7 +6,7 @@ Một thành viên mới không cần biết local path của maintainer. Luồn
 
 ```bash
 npm install -g @earendil-works/pi-coding-agent
-pi install git:github.com/Vt-mmm/pi_agent@v0.3.10
+pi install git:github.com/Vt-mmm/pi_agent@v0.3.11
 cd /path/to/project
 pi
 /login
@@ -31,14 +31,14 @@ Khuyến nghị dùng tag cố định:
 
 ```bash
 npm install -g @earendil-works/pi-coding-agent
-pi install git:github.com/Vt-mmm/pi_agent@v0.3.10
+pi install git:github.com/Vt-mmm/pi_agent@v0.3.11
 ```
 
 Nếu team publish npm private:
 
 ```bash
 npm install -g @earendil-works/pi-coding-agent
-pi install npm:@company/pi_agent@0.3.10
+pi install npm:@company/pi_agent@0.3.11
 ```
 
 Không cần chạy bash để set profile cho từng project.
@@ -107,7 +107,7 @@ Các script setup/init vẫn tồn tại cho case preseed config vào repo hoặ
 ```bash
 bash /path/to/pi_agent/scripts/setup.sh /path/to/project \
   --profile be-readonly-fe \
-  --package-source git:github.com/Vt-mmm/pi_agent@v0.3.10 \
+  --package-source git:github.com/Vt-mmm/pi_agent@v0.3.11 \
   --mcp-preset core \
   --subagents-preset safe
 ```
@@ -115,7 +115,7 @@ bash /path/to/pi_agent/scripts/setup.sh /path/to/project \
 Nếu cần override profile:
 
 ```bash
-bash /path/to/pi_agent/scripts/setup.sh /path/to/project --project-only --profile backend-api --package-source git:github.com/Vt-mmm/pi_agent@v0.3.10 --mcp-preset core --subagents-preset safe
+bash /path/to/pi_agent/scripts/setup.sh /path/to/project --project-only --profile backend-api --package-source git:github.com/Vt-mmm/pi_agent@v0.3.11 --mcp-preset core --subagents-preset safe
 ```
 
 Profile built-in trong Pi:
@@ -178,10 +178,10 @@ company_tool_policy_check
 company_task_gate_check
 ```
 
-Task migration platform:
+Task cải tiến platform:
 
 ```text
-/platform-migration Migrate Pi package docs and Codex CLI reference behavior into the company platform setup.
+/platform-improve Improve onboarding, model scope, MCP setup, and verification docs for team usage.
 ```
 
 Task BE spec lên FE:
@@ -197,10 +197,10 @@ Project memory:
 Remember: this repo uses pnpm, never npm.
 ```
 
-Repo ngoài làm reference:
+External source repo:
 
 ```text
-Use company_reference_checkout for github.com/org/repo, inspect only relevant files, then summarize applicable patterns.
+Use company_source_checkout for github.com/org/repo, inspect only relevant files, then summarize applicable patterns.
 ```
 
 ## Doctor
@@ -216,7 +216,7 @@ Chạy trên project:
 ```bash
 bash /path/to/pi_agent/scripts/profile-doctor.sh /path/to/project
 bash /path/to/pi_agent/scripts/team-doctor.sh /path/to/project --strict-share
-bash /path/to/pi_agent/scripts/parity-benchmark.sh /path/to/project --init
+bash /path/to/pi_agent/scripts/quality-benchmark.sh /path/to/project --init
 ```
 
 Nếu doctor cảnh báo `project onboarding snapshot is still pending`, mở Pi trong project và chạy `/onboard-project`.
@@ -234,7 +234,7 @@ Nếu doctor cảnh báo `project onboarding snapshot is still pending`, mở Pi
 - `.env`
 - token/API key
 
-## References
+## Official docs
 
 - Pi packages: https://pi.dev/docs/latest/packages
 - Pi project trust/settings: https://pi.dev/docs/latest/settings

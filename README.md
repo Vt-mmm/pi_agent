@@ -1,44 +1,39 @@
 # Pi Agent Platform
 
-A reusable Pi package for project onboarding, profile-based coding workflows, guarded tool usage, and task verification.
+Reusable Pi package for project onboarding, profile-based coding workflows, guarded tool usage, multi-agent orchestration, MCP setup, memory policy, and task verification.
 
-This repository is designed for teams that want a `cd project && pi` workflow without copying large prompt files or hand-maintaining agent rules in every project.
+The goal is a simple daily flow:
+
+```bash
+cd /path/to/project
+pi
+```
+
+From there, Pi can onboard the project, select an operating profile, use the right tools, record task evidence, and hand off verified implementation work.
 
 ## What it provides
 
-- Global Pi package with prompts, skills, and guard extensions.
-- Runtime project onboarding via `/onboard-project`.
-- Runtime profile selection via `/profiles`.
+- Global Pi package with prompts, skills, guard extensions, and company subagents.
+- Runtime onboarding via `/onboard-project`.
+- Runtime profile selection via `/profiles`; no shell profile switch is required for daily use.
 - Explicit project memory via `/memory-policy` and `company_memory_*` tools.
-- MCP baseline via `pi-mcp-adapter`, `pi-company-mcp`, `.mcp.json`, and token-efficient proxy mode.
-- Multi-agent baseline via `pi-subagents`, `pi-company-subagents`, and company subagent roles.
-- Auto-delegation policy for `/task`, `/be-to-fe`, `/platform-migration`, `/plan`, and `/review` so normal tasks can spawn read-only scout/planner/reviewer agents without the user memorizing subagent commands.
-- Upstream `pi-subagents` integration notes for bundled orchestration skill, review loops, parallel research, context-builder handoffs, watchdog opt-in, supervisor channel, and model profiles.
-- Built-in profiles for frontend, backend, fullstack, BE-readonly/FE-write, data, DevOps, mobile, docs, Python, and Node TypeScript.
-- Guardrails for protected paths, destructive shell commands, task contracts, context manifests, verification evidence, and trace records.
-- Codex-inspired runtime policy modules:
+- MCP setup helpers for Context7, Chrome DevTools, GitHub, Playwright, and Figma.
+- Subagent setup helpers for read-only scouting, planning, implementation, review, and risk challenge.
+- Runtime policy tools:
   - `company_exec_policy_check`
   - `company_context_budget`
   - `company_tool_policy_check`
   - `company_task_gate_check`
   - `company_usage_snapshot`
-- Parity benchmark recorder for Pi vs Codex vs Claude task comparisons.
-- Reusable workflow prompts:
-  - `/company-commands`
-  - `/platform-migration`
-  - `/be-to-fe`
-  - `/model-options`
-  - `/memory-policy`
-  - `/task`
-  - `/plan`
-  - `/discuss`
-  - `/review`
+- Guardrails for protected paths, destructive shell commands, task contracts, context manifests, verification evidence, and trace records.
+- Quality benchmark recorder for comparing approved agent surfaces, models, and workflow presets on the same task scenarios.
+- Built-in profiles for frontend, backend, fullstack, BE-readonly/FE-write, data, DevOps, mobile, docs, Python, and Node TypeScript.
 
 ## Install once
 
 ```bash
 npm install -g @earendil-works/pi-coding-agent
-pi install git:github.com/Vt-mmm/pi_agent@v0.3.10
+pi install git:github.com/Vt-mmm/pi_agent@v0.3.11
 ```
 
 Optional Herdr integration:
@@ -58,24 +53,20 @@ First run inside a project:
 
 ```text
 /login
-/model          # or Ctrl+L: select OpenAI Codex / Claude from Pi's native selector
-/scoped-models  # optional: edit Ctrl+P cycle list
+/model
+/scoped-models      # optional: customize Ctrl+P model cycle
 /company-commands
-/mcp            # inspect MCP servers
-/subagents-doctor  # subagent health check
+/mcp                # inspect MCP servers
+/subagents-doctor   # health check
 /onboard-project
 /memory-policy
 ```
 
-`/onboard-project` will:
+`/onboard-project` will inspect the repository with bounded context, recommend a profile, explain tradeoffs, ask before applying, then write:
 
-- inspect the repository with bounded context;
-- recommend a project profile;
-- show profile options and tradeoffs;
-- apply a profile only after user approval;
-- write `.pi/company-profile.json`;
-- write `.pi/project-context.md`;
-- initialize/read `.pi/memory/` policy when needed.
+- `.pi/company-profile.json`
+- `.pi/project-context.md`
+- `.pi/memory/*`
 
 Switch profiles later:
 
@@ -103,24 +94,7 @@ Switch profiles later:
 | `mobile` | React Native or Flutter |
 | `docs` | Documentation portal/manual |
 
-## Workflow prompts
-
-### Platform migration
-
-Use when migrating selected ideas from Pi docs, Codex CLI, Claude/Codex harnesses, or external reference repositories.
-
-```text
-/platform-migration Migrate selected Pi docs and Codex CLI GitHub concepts into this platform.
-```
-
-### Backend spec to frontend
-
-Use when backend must be scouted read-only and the implementation target is frontend.
-
-```text
-/profiles apply be-readonly-fe
-/be-to-fe Implement frontend support for <backend endpoint/spec>. Backend is read-only.
-```
+## Main workflows
 
 ### General implementation
 
@@ -128,37 +102,55 @@ Use when backend must be scouted read-only and the implementation target is fron
 /task Implement <bounded task>. Follow profile, required context, protected paths, verify commands, and trace.
 ```
 
-### Project memory
+Use `/task` when the requirement is clear enough to implement.
 
-Use when you want Pi to inspect memory policy or remember durable project facts explicitly.
+### Project improvement
 
 ```text
-/memory-policy
-Remember: this repo uses pnpm, never npm.
+/platform-improve Improve <platform/setup/workflow behavior>. Update docs and verification.
 ```
 
-### Model options
+Use `/platform-improve` for package-level work such as setup, MCP, model scope, memory, runtime policy, prompts, skills, or subagent workflows.
 
-Model selection is native Pi UI, not an agent recommendation flow.
+### Backend spec to frontend
+
+```text
+/profiles apply be-readonly-fe
+/be-to-fe Implement frontend support for <backend endpoint/spec>. Backend is read-only.
+```
+
+Use `/be-to-fe` when the backend/spec must be inspected read-only and the implementation target is frontend.
+
+### Planning and clarification
+
+```text
+/discuss <rough request>
+/plan <goal>
+/review current diff
+```
+
+## Model selection
+
+Model selection is handled by Pi’s native UI.
 
 ```text
 /model          # selector
 Ctrl+L          # selector hotkey
-/scoped-models  # edit cycle scope
+/scoped-models  # edit model cycle scope
 Ctrl+P          # cycle scoped models
-Shift+Tab       # cycle thinking level
+Shift+Tab       # cycle thinking level when supported by the selected model
 ```
 
-Global setup configures `enabledModels` for Codex + Claude. To inspect or re-apply:
+Global setup can seed `enabledModels`. To inspect or re-apply:
 
 ```bash
 pi-company-models
 pi-company-model-scope --preset full
 ```
 
-### MCP and external tools
+## MCP setup
 
-Global setup installs `pi-mcp-adapter` and seeds the `core` MCP preset unless you pass `--no-mcp`.
+Global setup installs `pi-mcp-adapter` and seeds the `core` MCP preset unless disabled.
 
 ```bash
 pi-company-mcp --preset core --scope global
@@ -167,7 +159,7 @@ pi-company-mcp --preset design --scope project --project /path/to/project
 pi-company-mcp --list
 ```
 
-If the repo is cloned from Git and npm bins are not linked yet, use:
+If the repo is cloned from Git and npm bins are not linked yet:
 
 ```bash
 bash /path/to/pi_agent/scripts/configure-mcp.sh --preset core --scope global
@@ -181,98 +173,56 @@ Preset summary:
 | `popular` | core + Playwright + Figma remote |
 | `all` | popular + Figma desktop/local |
 
-In Pi:
-
-```text
-/mcp
-/mcp setup
-/mcp tools
-/mcp reconnect
-```
-
-Keep secrets in environment variables, never in `.mcp.json`:
+Keep secrets in environment variables, never in committed config:
 
 ```bash
 export CONTEXT7_API_KEY=ctx7sk_...
 export GITHUB_PERSONAL_ACCESS_TOKEN=github_pat_...
 ```
 
-### Subagents and multi-agent workflows
+## Subagents
 
-Global setup installs `pi-subagents` and configures the `safe` preset unless you pass `--no-subagents`.
+Global setup installs `pi-subagents` and applies the `safe` preset unless disabled.
 
 ```bash
 pi-company-subagents --preset safe
-# fallback when cloned from Git without npm bins:
+```
+
+Fallback when cloned from Git without npm bins:
+
+```bash
 bash /path/to/pi_agent/scripts/configure-subagents.sh --preset safe
 ```
 
-Optional for builtin `researcher` web/docs research:
-
-```bash
-pi install npm:pi-web-access
-# or during setup:
-bash /path/to/pi_agent/scripts/setup.sh . --with-web-access
-```
-
-In Pi:
+Common Pi commands:
 
 ```text
-/subagents-doctor   # health check package/config/agents
-/subagents-models   # model/thinking routing map for subagents
-/subagents-fleet    # dashboard of active/done child runs
-/subagent-cost      # token/cost usage for subagent runs
+/subagents-doctor
+/subagents-models
+/subagents-fleet
+/subagent-cost
 /run company-scout "Map the auth flow. Read-only."
 /run company-planner "Plan implementation from context.md."
 /run company-worker "Implement the approved plan."
 /run company-reviewer "Review current diff."
 ```
 
-Plain Vietnamese command guide:
+Daily task prompts can auto-delegate when useful. The final handoff should state whether subagents were used and why.
 
-```text
-/company-commands subagents
-```
+Optional web/docs research support:
 
-Daily task prompts can auto-delegate when useful:
-
-```text
-/task Implement <large task>
-```
-
-The agent should report `Subagents: used/not used and why` in the final handoff.
-
-Useful upstream workflow shortcuts:
-
-```text
-/parallel-review current diff
-/review-loop current diff max 3 rounds
-/parallel-research <question>
-/parallel-context-build <large task>
-```
-
-Natural language also works:
-
-```text
-Use company-scout to map this module, then have company-planner produce an implementation plan.
-Run parallel company-reviewers for correctness, tests, and scope drift.
-```
-
-### Planning and clarification
-
-```text
-/discuss <rough request>
-/plan <goal>
+```bash
+pi install npm:pi-web-access
 ```
 
 ## Optional preseed setup
 
-Most projects do not need shell init. Use this only when you want to pre-create `.pi` files in a repo or bootstrap CI/team templates:
+Most projects do not need shell init. Use this only when you want to pre-create `.pi` files in a repo or bootstrap team templates:
 
 ```bash
 bash /path/to/pi_agent/scripts/setup.sh /path/to/project \
   --profile be-readonly-fe \
-  --package-source git:github.com/Vt-mmm/pi_agent@v0.3.10 \
+  --package-source git:github.com/Vt-mmm/pi_agent@v0.3.11 \
   --mcp-preset core \
   --subagents-preset safe
 ```
@@ -282,12 +232,12 @@ bash /path/to/pi_agent/scripts/setup.sh /path/to/project \
 ```text
 pi_agent/
 ├─ adapters/                         reusable project profiles
-├─ docs/                             Vietnamese and reference documentation
+├─ docs/                             Vietnamese documentation and operating notes
 ├─ packages/
 │  └─ pi-company-core/               Pi package: extensions, prompts, skills
 ├─ schemas/                          JSON schemas
 ├─ scripts/                          setup, doctor, verification helpers
-└─ templates/                        files copied into projects when preseeded
+└─ templates/                        project/global templates
 ```
 
 ## Verification
@@ -298,13 +248,13 @@ bash scripts/team-doctor.sh . --strict-share
 pi list --approve
 ```
 
-Benchmark parity:
+Quality benchmark:
 
 ```bash
-bash scripts/parity-benchmark.sh /path/to/project --init
-bash scripts/parity-benchmark.sh /path/to/project --record \
+bash scripts/quality-benchmark.sh /path/to/project --init
+bash scripts/quality-benchmark.sh /path/to/project --record \
   --scenario bounded-source-fix \
-  --agent pi \
+  --surface pi \
   --result pass \
   --tokens 12345 \
   --verify "npm test"
@@ -321,7 +271,6 @@ From another terminal:
 
 ```bash
 pi-company-usage /path/to/project
-# or
 bash scripts/pi-session-stats.sh /path/to/project
 ```
 
@@ -336,10 +285,6 @@ This repository intentionally excludes:
 - project-private data dumps;
 - local machine paths.
 
-## License
-
-MIT License. See [LICENSE](LICENSE).
-
 ## Documentation
 
 - [Quickstart tiếng Việt](docs/quickstart-vietnamese.md)
@@ -349,38 +294,46 @@ MIT License. See [LICENSE](LICENSE).
 - [Workflow recipes](docs/workflow-recipes.md)
 - [Project adapters](docs/project-adapters.md)
 - [Architecture](docs/architecture.md)
+- [Distribution standard](docs/distribution-standard.md)
+- [Publishing for teams](docs/publishing-for-teams.md)
+- [OAuth providers](docs/oauth-providers.md)
+- [Herdr workflow](docs/herdr-workflow.md)
 - [MCP and tools](docs/mcp-and-tools.md)
 - [Subagents and multi-agent](docs/subagents-and-multiagent.md)
 - [Auto-delegation policy](docs/auto-delegation-policy.md)
-- [pi-subagents upstream review](docs/pi-subagents-upstream-review.md)
+- [Subagent orchestration capabilities](docs/subagent-orchestration-capabilities.md)
 - [Context-window policy](docs/context-window-policy.md)
 - [Memory policy](docs/memory-policy.md)
 - [Task implementation contract](docs/task-implementation-contract.md)
-- [Codex parity baseline](docs/codex-parity-baseline.md)
+- [Runtime quality baseline](docs/runtime-quality-baseline.md)
 - [Usage observability](docs/usage-observability.md)
 - [Model options](docs/model-options.md)
-- [Benchmark parity guide](docs/benchmark-parity.md)
-- [Codex migration reference](docs/codex-migration-reference.md)
-- [Agent-stuff research](docs/agent-stuff-research.md)
+- [Quality benchmark guide](docs/quality-benchmark.md)
+- [Runtime policy design](docs/runtime-policy-design.md)
+- [Package architecture notes](docs/package-architecture-notes.md)
 
 ## Maturity
 
-Current maturity: `P3-baseline`.
+Current release: `v0.3.11`.
 
-Good for:
+Ready for:
 
 - global Pi setup;
 - project onboarding;
-- profile-driven guarded pilot tasks;
-- read-only scouting;
-- small or normal source tasks with clear verification;
-- Codex-inspired exec/context/tool/task gate checks;
-- bounded subagent scouting/planning/review workflows;
-- collecting Pi vs Codex vs Claude benchmark evidence.
+- profile-driven guarded implementation tasks;
+- read-only scouting and planning;
+- backend-readonly/frontend-write workflows;
+- bounded subagent scouting, planning, implementation, and review;
+- runtime checks for exec policy, context budget, tool policy, task gate, and usage snapshot;
+- project-level quality/token/cost benchmarking.
 
-Not yet proven for:
+Still requires project-specific validation for:
 
-- replacing Codex/Claude CLI on high-risk tasks without project-specific benchmark evidence;
-- true final assistant stop-hook enforcement when Pi does not expose a hard final hook;
-- Codex-grade filesystem/network/env sandbox if Pi/host runtime does not provide it;
-- complex multi-agent worktree isolation without project-specific dry runs.
+- high-risk production changes;
+- provider/model changes with materially different behavior;
+- complex parallel writer workflows;
+- environments requiring hard filesystem, network, or process sandboxing outside Pi.
+
+## License
+
+MIT License. See [LICENSE](LICENSE).

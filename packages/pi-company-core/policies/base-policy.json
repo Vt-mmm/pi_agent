@@ -97,7 +97,7 @@
       "company_profile_apply",
       "company_project_onboarding_record",
       "company_task_start",
-      "company_reference_checkout",
+      "company_source_checkout",
       "company_context_record",
       "company_verify_record",
       "company_trace_record"

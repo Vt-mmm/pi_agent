@@ -19,12 +19,12 @@ cat > "$PROJECT/AGENTS.md" <<'AGENTS'
 Use project profile and verify before done.
 AGENTS
 
-bash "$ROOT/scripts/init-project.sh" "$PROJECT" --profile generic --package-source "git:github.com/Vt-mmm/pi_agent@v0.3.10" >/dev/null
+bash "$ROOT/scripts/init-project.sh" "$PROJECT" --profile generic --package-source "git:github.com/Vt-mmm/pi_agent@v0.3.11" >/dev/null
 bash "$ROOT/scripts/profile-doctor.sh" "$PROJECT" >/dev/null
-bash "$ROOT/scripts/parity-benchmark.sh" "$PROJECT" --init >/dev/null
-bash "$ROOT/scripts/parity-benchmark.sh" "$PROJECT" --record --scenario smoke --agent pi --result pass --tokens 1 --verify "test -s README.md" >/dev/null
+bash "$ROOT/scripts/quality-benchmark.sh" "$PROJECT" --init >/dev/null
+bash "$ROOT/scripts/quality-benchmark.sh" "$PROJECT" --record --scenario smoke --surface pi --result pass --tokens 1 --verify "test -s README.md" >/dev/null
 
-node --input-type=module - "$PROJECT/.pi/company-profile.json" "$PROJECT/.pi/benchmarks/parity-runs.jsonl" <<'NODE'
+node --input-type=module - "$PROJECT/.pi/company-profile.json" "$PROJECT/.pi/benchmarks/quality-runs.jsonl" <<'NODE'
 import fs from "node:fs";
 
 const [profilePath, benchmarkPath] = process.argv.slice(2);
@@ -39,7 +39,7 @@ for (const key of ["execPolicy", "contextBudget", "toolRegistry", "finalGate"]) 
   if (!runtimePolicy[key]) throw new Error(`missing runtimePolicy.${key}`);
 }
 const runs = fs.readFileSync(benchmarkPath, "utf8").trim().split(/\n+/).map((line) => JSON.parse(line));
-if (runs.length !== 1 || runs[0].scenario !== "smoke" || runs[0].result !== "pass") {
+if (runs.length !== 1 || runs[0].scenario !== "smoke" || runs[0].surface !== "pi" || runs[0].result !== "pass") {
   throw new Error("benchmark smoke record is invalid");
 }
 NODE
