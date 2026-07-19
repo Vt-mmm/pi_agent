@@ -22,6 +22,7 @@ This repository is designed for teams that want a `cd project && pi` workflow wi
   - `company_usage_snapshot`
 - Parity benchmark recorder for Pi vs Codex vs Claude task comparisons.
 - Reusable workflow prompts:
+  - `/company-commands`
   - `/platform-migration`
   - `/be-to-fe`
   - `/model-options`
@@ -35,7 +36,7 @@ This repository is designed for teams that want a `cd project && pi` workflow wi
 
 ```bash
 npm install -g @earendil-works/pi-coding-agent
-pi install git:github.com/Vt-mmm/pi_agent@v0.3.7
+pi install git:github.com/Vt-mmm/pi_agent@v0.3.8
 ```
 
 Optional Herdr integration:
@@ -57,8 +58,9 @@ First run inside a project:
 /login
 /model          # or Ctrl+L: select OpenAI Codex / Claude from Pi's native selector
 /scoped-models  # optional: edit Ctrl+P cycle list
+/company-commands
 /mcp            # inspect MCP servers
-/subagents-doctor
+/subagents-doctor  # subagent health check
 /onboard-project
 /memory-policy
 ```
@@ -206,14 +208,20 @@ bash /path/to/pi_agent/scripts/configure-subagents.sh --preset safe
 In Pi:
 
 ```text
-/subagents-doctor
-/subagents-models
-/subagents-fleet
-/subagent-cost
+/subagents-doctor   # health check package/config/agents
+/subagents-models   # model/thinking routing map for subagents
+/subagents-fleet    # dashboard of active/done child runs
+/subagent-cost      # token/cost usage for subagent runs
 /run company-scout "Map the auth flow. Read-only."
 /run company-planner "Plan implementation from context.md."
 /run company-worker "Implement the approved plan."
 /run company-reviewer "Review current diff."
+```
+
+Plain Vietnamese command guide:
+
+```text
+/company-commands subagents
 ```
 
 Natural language also works:
@@ -237,7 +245,7 @@ Most projects do not need shell init. Use this only when you want to pre-create 
 ```bash
 bash /path/to/pi_agent/scripts/setup.sh /path/to/project \
   --profile be-readonly-fe \
-  --package-source git:github.com/Vt-mmm/pi_agent@v0.3.7 \
+  --package-source git:github.com/Vt-mmm/pi_agent@v0.3.8 \
   --mcp-preset core \
   --subagents-preset safe
 ```
@@ -308,6 +316,7 @@ MIT License. See [LICENSE](LICENSE).
 ## Documentation
 
 - [Quickstart tiếng Việt](docs/quickstart-vietnamese.md)
+- [Command reference tiếng Việt](docs/command-reference-vietnamese.md)
 - [Team onboarding](docs/team-onboarding.md)
 - [Project onboarding](docs/project-onboarding.md)
 - [Workflow recipes](docs/workflow-recipes.md)

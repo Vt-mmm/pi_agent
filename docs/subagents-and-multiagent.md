@@ -22,7 +22,7 @@ Một lệnh setup đầy đủ:
 ```bash
 bash /path/to/pi_agent/scripts/setup.sh . \
   --profile auto \
-  --package-source git:github.com/Vt-mmm/pi_agent@v0.3.7 \
+  --package-source git:github.com/Vt-mmm/pi_agent@v0.3.8 \
   --mcp-preset core \
   --subagents-preset safe
 ```
@@ -30,7 +30,7 @@ bash /path/to/pi_agent/scripts/setup.sh . \
 Nếu chỉ cài global:
 
 ```bash
-pi install git:github.com/Vt-mmm/pi_agent@v0.3.7
+pi install git:github.com/Vt-mmm/pi_agent@v0.3.8
 pi install npm:pi-subagents
 bash /path/to/pi_agent/scripts/configure-subagents.sh --preset safe
 ```
@@ -80,6 +80,25 @@ Sau khi mở session mới hoặc `/reload`:
 ```
 
 `/subagents-doctor` là lệnh đầu tiên nên chạy nếu không thấy tool/agent.
+
+Giải nghĩa nhanh:
+
+| Command | Nghĩa đơn giản | Khi dùng |
+|---|---|---|
+| `/subagents-doctor` | Health check subagent | Kiểm package/config/agent files/runtime readiness. |
+| `/subagents-models` | Bản đồ model/thinking của subagents | Xem agent nào inherit model parent, agent nào override. |
+| `/subagents` | Catalog/admin agents | Xem builtin agents và `company-*` agents. |
+| `/subagents-fleet` | Dashboard đội child sessions | Follow background/parallel runs, xem active/done/result. |
+| `/subagent-cost` | Token/cost subagents | Xem usage của child runs nếu package/provider expose stats. |
+| `/run` | Chạy một agent | Dùng cho scout/planner/worker/reviewer riêng context. |
+| `/parallel` | Chạy nhiều agent độc lập | Tốt cho read-only scout/review/test-gap analysis. |
+| `/chain` | Chạy tuần tự | Output agent trước làm input agent sau qua `{previous}`. |
+
+Nếu cần bản tổng hợp cho team mới:
+
+```text
+/company-commands subagents
+```
 
 ## Gọi subagent tự nhiên
 
@@ -218,4 +237,3 @@ Recommended token policy:
 - Pi SDK docs: https://pi.dev/docs/latest/sdk
 - pi-subagents package: https://pi.dev/packages/pi-subagents
 - pi-subagents GitHub: https://github.com/nicobailon/pi-subagents
-

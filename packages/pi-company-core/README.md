@@ -19,6 +19,7 @@ Pi package dùng chung cho nhiều project.
 
 ## Prompt recipes
 
+- `/company-commands`: explain all terminal/Pi/subagent/MCP commands in Vietnamese.
 - `/onboard-project`: first-run project context snapshot sau login/model selection.
 - `/profiles`: show/switch profile trong Pi, không cần shell init.
 - `/memory-policy`: inspect project memory policy and explicit remember workflow.
@@ -39,7 +40,7 @@ Khi cài thêm `pi-subagents`, package này expose:
 ## Cài local
 
 ```bash
-pi install git:github.com/Vt-mmm/pi_agent@v0.3.7
+pi install git:github.com/Vt-mmm/pi_agent@v0.3.8
 ```
 
 ## Project profile

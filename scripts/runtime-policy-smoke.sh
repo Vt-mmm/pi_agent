@@ -19,7 +19,7 @@ cat > "$PROJECT/AGENTS.md" <<'AGENTS'
 Use project profile and verify before done.
 AGENTS
 
-bash "$ROOT/scripts/init-project.sh" "$PROJECT" --profile generic --package-source "git:github.com/Vt-mmm/pi_agent@v0.3.7" >/dev/null
+bash "$ROOT/scripts/init-project.sh" "$PROJECT" --profile generic --package-source "git:github.com/Vt-mmm/pi_agent@v0.3.8" >/dev/null
 bash "$ROOT/scripts/profile-doctor.sh" "$PROJECT" >/dev/null
 bash "$ROOT/scripts/parity-benchmark.sh" "$PROJECT" --init >/dev/null
 bash "$ROOT/scripts/parity-benchmark.sh" "$PROJECT" --record --scenario smoke --agent pi --result pass --tokens 1 --verify "test -s README.md" >/dev/null

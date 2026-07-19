@@ -15,6 +15,7 @@ required_files=(
   "$ROOT/packages/pi-company-core/package.json"
   "$ROOT/packages/pi-company-core/extensions/company-guard.ts"
   "$ROOT/packages/pi-company-core/prompts/onboard-project.md"
+  "$ROOT/packages/pi-company-core/prompts/company-commands.md"
   "$ROOT/packages/pi-company-core/prompts/profiles.md"
   "$ROOT/packages/pi-company-core/prompts/model-options.md"
   "$ROOT/packages/pi-company-core/prompts/memory-policy.md"
@@ -53,6 +54,7 @@ required_files=(
   "$ROOT/templates/project/.pi/.gitignore"
   "$ROOT/templates/project/REVIEW_GUIDELINES.md"
   "$ROOT/docs/quickstart-vietnamese.md"
+  "$ROOT/docs/command-reference-vietnamese.md"
   "$ROOT/docs/project-onboarding.md"
   "$ROOT/docs/workflow-recipes.md"
   "$ROOT/docs/memory-policy.md"
@@ -154,6 +156,7 @@ grep -R "company_tool_policy_check" "$ROOT/packages/pi-company-core" "$ROOT/docs
 grep -R "company_task_gate_check" "$ROOT/packages/pi-company-core" "$ROOT/docs" "$ROOT/templates/project/AGENTS.md" >/dev/null
 grep -R "company_usage_snapshot" "$ROOT/packages/pi-company-core" "$ROOT/docs" "$ROOT/templates/project/AGENTS.md" >/dev/null
 grep -R "/company-usage" "$ROOT/packages/pi-company-core" "$ROOT/docs" "$ROOT/README.md" >/dev/null
+grep -R "/company-commands" "$ROOT/README.md" "$ROOT/docs" "$ROOT/packages/pi-company-core/prompts" >/dev/null
 grep -R "company_profile_options" "$ROOT/packages/pi-company-core" "$ROOT/docs" >/dev/null
 grep -R "company_profile_apply" "$ROOT/packages/pi-company-core" "$ROOT/docs" >/dev/null
 grep -R "company_project_onboarding_record" "$ROOT/packages/pi-company-core" "$ROOT/docs" >/dev/null
@@ -172,6 +175,8 @@ grep -R "enabledModels" "$ROOT/templates/global/settings.json" "$ROOT/docs/model
 grep -R "pi-company-mcp" "$ROOT/README.md" "$ROOT/docs/mcp-and-tools.md" "$ROOT/scripts/configure-mcp.sh" >/dev/null
 grep -R "pi-mcp-adapter" "$ROOT/README.md" "$ROOT/docs/mcp-and-tools.md" "$ROOT/scripts/install-global.sh" >/dev/null
 grep -R "pi-company-subagents" "$ROOT/README.md" "$ROOT/docs/subagents-and-multiagent.md" "$ROOT/scripts/configure-subagents.sh" >/dev/null
+grep -R "subagents-fleet" "$ROOT/docs/command-reference-vietnamese.md" "$ROOT/docs/subagents-and-multiagent.md" "$ROOT/README.md" >/dev/null
+grep -R "health check" "$ROOT/docs/command-reference-vietnamese.md" "$ROOT/docs/subagents-and-multiagent.md" "$ROOT/README.md" >/dev/null
 grep -R "pi-subagents" "$ROOT/README.md" "$ROOT/docs/subagents-and-multiagent.md" "$ROOT/scripts/install-global.sh" "$ROOT/scripts/setup.sh" >/dev/null
 grep -R "company-scout" "$ROOT/README.md" "$ROOT/docs/subagents-and-multiagent.md" "$ROOT/packages/pi-company-core/subagents" >/dev/null
 grep -R "@upstash/context7-mcp" "$ROOT/scripts/configure-mcp.sh" "$ROOT/docs/mcp-and-tools.md" >/dev/null

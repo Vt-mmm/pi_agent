@@ -15,7 +15,7 @@ Phần còn lại — OAuth, package, context, harness, MCP, tool-call guard —
 
 ```bash
 npm install -g @earendil-works/pi-coding-agent
-pi install git:github.com/Vt-mmm/pi_agent@v0.3.7
+pi install git:github.com/Vt-mmm/pi_agent@v0.3.8
 ```
 
 Sau bước này, project mới không cần chạy bash init profile. Chỉ cần:
@@ -41,8 +41,9 @@ Sau khi login và chọn model intended cho project understanding:
 ```text
 /model          # hoặc Ctrl+L để chọn model bằng selector của Pi
 /scoped-models  # optional, chỉnh danh sách Ctrl+P cycle
+/company-commands
 /mcp            # kiểm tra MCP adapter/server
-/subagents-doctor
+/subagents-doctor  # health check subagent setup
 /onboard-project
 /memory-policy
 ```
@@ -100,7 +101,7 @@ File này là snapshot context cho task sau. Nếu file còn `Generated: not yet
 bash /path/to/pi_agent/scripts/setup.sh /path/to/project \
   --project-only \
   --profile auto \
-  --package-source git:github.com/Vt-mmm/pi_agent@v0.3.7 \
+  --package-source git:github.com/Vt-mmm/pi_agent@v0.3.8 \
   --mcp-preset core \
   --subagents-preset safe
 ```
@@ -121,7 +122,7 @@ Script bash chỉ dùng khi muốn preseed config vào repo:
 ```bash
 bash /path/to/pi_agent/scripts/setup.sh /path/to/project \
   --profile be-readonly-fe \
-  --package-source git:github.com/Vt-mmm/pi_agent@v0.3.7 \
+  --package-source git:github.com/Vt-mmm/pi_agent@v0.3.8 \
   --mcp-preset core \
   --subagents-preset safe
 ```
@@ -149,6 +150,7 @@ Prompt mẫu khi đã rõ task:
 Prompt mẫu cho 2 recipe hay gặp:
 
 ```text
+/company-commands subagents
 /platform-migration Migrate selected Pi docs and Codex CLI GitHub concepts into this platform.
 /be-to-fe Implement FE from BE spec <endpoint/spec>. Backend read-only.
 /memory-policy Show project memory policy and safe remember workflow.
@@ -193,6 +195,7 @@ Các việc này là credential/trust boundary, không nên automation mù.
 
 ## Nguồn chính
 
+- Command reference: `docs/command-reference-vietnamese.md`
 - Pi packages: https://pi.dev/docs/latest/packages
 - Pi extensions: https://pi.dev/docs/latest/extensions
 - Pi providers/OAuth: https://pi.dev/docs/latest/providers
