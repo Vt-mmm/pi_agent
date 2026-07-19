@@ -14,6 +14,7 @@ Adapter mô tả project cho Pi core. Core không biết domain/project cụ th�
   "mode": "web-frontend",
   "rootMarkers": ["AGENTS.md", "package.json"],
   "protectedPaths": [".git/**", "**/auth.json"],
+  "shellProtectedPaths": [".git/**", "**/auth.json"],
   "requiredContext": ["AGENTS.md", "docs/architecture.md"],
   "taskModes": {
     "readOnly": { "tools": ["read", "grep", "find", "ls"] },

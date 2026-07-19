@@ -47,6 +47,14 @@
         "minLength": 1
       }
     },
+    "shellProtectedPaths": {
+      "type": "array",
+      "description": "Optional bash-specific protected path globs. If omitted, project protectedPaths also apply to bash path extraction.",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
     "requiredContext": {
       "type": "array",
       "items": {

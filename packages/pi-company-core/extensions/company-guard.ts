@@ -17,6 +17,7 @@ type ProjectProfile = {
   displayName?: string;
   mode?: string;
   protectedPaths?: string[];
+  shellProtectedPaths?: string[];
   requiredContext?: string[];
   verifyCommands?: Record<string, string[]>;
   mcpCapabilities?: string[];
@@ -94,6 +95,7 @@ type TaskContract = {
 
 type BasePolicy = {
   protectedPaths: string[];
+  shellProtectedPaths?: string[];
   blockedCommandPatterns: string[];
   requireConfirmationPatterns: string[];
   defaultRequiredContext: string[];
@@ -204,6 +206,7 @@ const SECRET_PATTERNS = [
 
 const DEFAULT_POLICY: BasePolicy = {
   protectedPaths: [".git/**", "**/auth.json", "**/.env", "**/.env.*"],
+  shellProtectedPaths: [".git/**", "**/auth.json", "**/.env", "**/.env.*"],
   blockedCommandPatterns: ["rm -rf /", "rm -rf ~", "rm -rf $HOME", "git reset --hard", "git clean -fd"],
   requireConfirmationPatterns: ["deploy", "release", "publish", "migration", "gh pr merge", "git push"],
   defaultRequiredContext: ["AGENTS.md", "README.md"],
@@ -1085,6 +1088,10 @@ export default function companyGuard(pi: ExtensionAPI) {
       ...policy.protectedPaths,
       ...(profile.protectedPaths ?? [])
     ];
+    const shellProtectedPaths = [
+      ...(policy.shellProtectedPaths ?? policy.protectedPaths),
+      ...((profile.shellProtectedPaths ?? profile.protectedPaths) ?? [])
+    ];
     const toolDecision = evaluateToolPolicy(event.toolName, profile, policy);
     if (toolDecision.decision === "block") {
       return { block: true, reason: `Tool registry blocked ${event.toolName}: ${toolDecision.reason}` };
@@ -1097,7 +1104,7 @@ export default function companyGuard(pi: ExtensionAPI) {
         return { block: true, reason: execDecision.reasons.join("; ") };
       }
 
-      const protectedHit = findProtectedPathInCommand(command, protectedPaths);
+      const protectedHit = findProtectedPathInCommand(command, shellProtectedPaths);
       if (protectedHit) {
         return { block: true, reason: `Command touches protected path: ${protectedHit.candidate} matches ${protectedHit.pattern}` };
       }
@@ -1166,6 +1173,7 @@ export default function companyGuard(pi: ExtensionAPI) {
           exists: fs.existsSync(projectContextFilePath(ctx.cwd))
         },
         protectedPaths: profile.protectedPaths ?? [],
+        shellProtectedPaths: profile.shellProtectedPaths ?? profile.protectedPaths ?? [],
         requiredContext: Array.from(new Set(requiredContext)),
         verifyCommands: profile.verifyCommands ?? {},
         mcpCapabilities: profile.mcpCapabilities ?? [],

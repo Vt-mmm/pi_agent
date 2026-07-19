@@ -2,7 +2,7 @@
 
 ## Mục tiêu
 
-`v0.3.12` định nghĩa bộ kiểm soát runtime để Pi Agent Platform có thể chạy task một cách có kỷ luật cho solo, internal team, và public package.
+`v0.3.13` định nghĩa bộ kiểm soát runtime để Pi Agent Platform có thể chạy task một cách có kỷ luật cho solo, internal team, và public package.
 
 Các module chính:
 
@@ -27,6 +27,8 @@ Runtime behavior:
 
 - phân tích shell command trước khi chạy lệnh rủi ro;
 - block destructive patterns;
+- đệ quy vào shell wrapper phổ biến như `sudo`, `env`, `bash -c`, subshell, command substitution, và backtick;
+- check `shellProtectedPaths` cho bash, mặc định bảo vệ `.git`, `auth.json`, `.env`, `.env.*`;
 - cảnh báo broad command prefix như `bash`, `python`, `node`, `git`, `sudo`;
 - áp dụng policy rule `allow | prompt | forbid`;
 - ghi lý do để agent/human đánh giá trước khi tiếp tục.
@@ -37,7 +39,7 @@ Config:
 packages/pi-company-core/policies/base-policy.json
 ```
 
-Mục tiêu không phải cấm mọi command mạnh. Mục tiêu là không để agent tự ý chạy lệnh có rủi ro cao mà thiếu policy/human gate.
+Mục tiêu không phải cấm mọi command mạnh hoặc thay thế sandbox OS. Đây là lớp phanh chống tai nạn: giảm rủi ro agent tự ý chạy lệnh có tác động cao, đọc secret, hoặc đụng protected path mà thiếu policy/human gate.
 
 ## 2. Context budget
 
@@ -132,7 +134,7 @@ pi list --approve
 - package manifests;
 - JSON parse;
 - required docs/scripts/prompts;
-- protected-path and exec-policy regression tests;
+- protected-path, shell protected path, and exec-policy regression tests;
 - profile doctor;
 - team doctor;
 - TypeScript syntax for extension;

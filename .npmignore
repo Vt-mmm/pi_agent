@@ -1,0 +1,9 @@
+# Local platform runtime state is not part of the published package.
+/.mcp.json
+/.pi/
+
+# Repository automation and local verification assets are useful in git,
+# but not required for a Pi package install.
+/.github/
+/tests/
+*.tsbuildinfo

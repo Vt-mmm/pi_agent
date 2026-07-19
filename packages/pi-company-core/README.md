@@ -9,7 +9,7 @@ Shared Pi package for reusable project workflows.
 - `skills/company-ops/SKILL.md`: operating guidance for implementation tasks.
 - `skills/company-source-cache/`: local cache for user-provided external source repositories.
 - `subagents/*.md`: company roles for `pi-subagents`.
-- `policies/base-policy.json`: default runtime policy.
+- `policies/base-policy.json`: default runtime policy, including protected path and shell protected path defaults.
 
 ## Runtime quality tools
 
@@ -58,7 +58,7 @@ When `pi-subagents` is installed, this package exposes:
 ## Install
 
 ```bash
-pi install git:github.com/Vt-mmm/pi_agent@v0.3.12
+pi install git:github.com/Vt-mmm/pi_agent@v0.3.13
 ```
 
 ## Project profile
