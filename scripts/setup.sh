@@ -22,6 +22,8 @@ Options:
   --project-only, --no-global    Only initialize project, skip global install
   --no-project                   Skip project initialization
   --with-mcp / --no-mcp          Install/skip Pi MCP adapter during global install (default: install)
+  --mcp-preset <minimal|core|popular|all|docs|browser|github|design|design-local|web>
+                                  Configure shared global MCP baseline when --with-mcp is enabled (default: core)
   --with-herdr / --no-herdr      Install/skip Herdr Pi integration if herdr exists (default: install)
   --with-codex-herdr             Also install Herdr Codex integration if codex exists
   --model-scope <full|codex|claude>
@@ -39,13 +41,13 @@ Options:
   -h, --help
 
 Package source examples:
-  git:github.com/Vt-mmm/pi_agent@v0.3.5
+  git:github.com/Vt-mmm/pi_agent@v0.3.6
   https://github.com/Vt-mmm/pi_agent
-  npm:@company/pi_agent@0.3.5
+  npm:@company/pi_agent@0.3.6
   /absolute/path/to/pi_agent
 
 One-command team setup example:
-  bash /path/to/pi_agent/scripts/setup.sh . --profile auto --package-source git:github.com/Vt-mmm/pi_agent@v0.3.5
+  bash /path/to/pi_agent/scripts/setup.sh . --profile auto --package-source git:github.com/Vt-mmm/pi_agent@v0.3.6
 USAGE
 }
 
@@ -56,6 +58,7 @@ PACKAGE_SOURCE="${PI_COMPANY_PACKAGE_SOURCE:-}"
 DO_GLOBAL=true
 DO_PROJECT=true
 WITH_MCP=true
+MCP_PRESET="core"
 WITH_HERDR=true
 WITH_CODEX_HERDR=false
 CONFIGURE_MODEL_SCOPE=true
@@ -105,6 +108,10 @@ while [[ $# -gt 0 ]]; do
     --no-mcp)
       WITH_MCP=false
       shift
+      ;;
+    --mcp-preset)
+      MCP_PRESET="${2:-}"
+      shift 2
       ;;
     --with-herdr)
       WITH_HERDR=true
@@ -278,7 +285,7 @@ if [[ "$DO_GLOBAL" == true ]]; then
   ensure_pi_cli
   install_args=("$PLATFORM_ROOT/scripts/install-global.sh" "--package-source" "$PACKAGE_SOURCE")
   if [[ "$WITH_MCP" == true ]]; then
-    install_args+=("--with-mcp")
+    install_args+=("--with-mcp" "--mcp-preset" "$MCP_PRESET")
   fi
   if [[ "$WITH_CODEX_HERDR" == true ]]; then
     install_args+=("--with-codex-herdr")
@@ -321,6 +328,7 @@ echo "  /login             # first time only"
 if [[ "$DO_PROJECT" == true ]]; then
   echo "  /model             # or Ctrl+L: select provider/model from Pi selector"
   echo "  /scoped-models     # optional: edit Ctrl+P model cycle scope"
+  echo "  /mcp               # inspect MCP servers; run /mcp setup for guided changes"
   echo "  /onboard-project   # first project-read snapshot before implementation"
   echo "  /memory-policy     # inspect project memory policy when needed"
 fi

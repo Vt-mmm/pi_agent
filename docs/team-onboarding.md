@@ -6,11 +6,12 @@ Một thành viên mới không cần biết local path của maintainer. Luồn
 
 ```bash
 npm install -g @earendil-works/pi-coding-agent
-pi install git:github.com/Vt-mmm/pi_agent@v0.3.5
+pi install git:github.com/Vt-mmm/pi_agent@v0.3.6
 cd /path/to/project
 pi
 /login
 <select provider/model>
+/mcp
 /onboard-project
 /memory-policy
 ```
@@ -29,14 +30,14 @@ Khuyến nghị dùng tag cố định:
 
 ```bash
 npm install -g @earendil-works/pi-coding-agent
-pi install git:github.com/Vt-mmm/pi_agent@v0.3.5
+pi install git:github.com/Vt-mmm/pi_agent@v0.3.6
 ```
 
 Nếu team publish npm private:
 
 ```bash
 npm install -g @earendil-works/pi-coding-agent
-pi install npm:@company/pi_agent@0.3.5
+pi install npm:@company/pi_agent@0.3.6
 ```
 
 Không cần chạy bash để set profile cho từng project.
@@ -70,6 +71,7 @@ Shift+Tab    # cycle thinking level
 Rồi chạy:
 
 ```text
+/mcp
 /onboard-project
 ```
 
@@ -103,13 +105,14 @@ Các script setup/init vẫn tồn tại cho case preseed config vào repo hoặ
 ```bash
 bash /path/to/pi_agent/scripts/setup.sh /path/to/project \
   --profile be-readonly-fe \
-  --package-source git:github.com/Vt-mmm/pi_agent@v0.3.5
+  --package-source git:github.com/Vt-mmm/pi_agent@v0.3.6 \
+  --mcp-preset core
 ```
 
 Nếu cần override profile:
 
 ```bash
-bash /path/to/pi_agent/scripts/setup.sh /path/to/project --project-only --profile backend-api --package-source git:github.com/Vt-mmm/pi_agent@v0.3.5
+bash /path/to/pi_agent/scripts/setup.sh /path/to/project --project-only --profile backend-api --package-source git:github.com/Vt-mmm/pi_agent@v0.3.6 --mcp-preset core
 ```
 
 Profile built-in trong Pi:
@@ -131,6 +134,7 @@ Project init tạo:
 
 - `.pi/settings.json`
 - `.pi/company-profile.json`
+- `.mcp.json`
 - `.pi/mcp.json`
 - `.pi/memory/memory_summary.md`
 - `.pi/memory/MEMORY.md`

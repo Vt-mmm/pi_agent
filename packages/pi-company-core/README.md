@@ -9,6 +9,7 @@ Pi package dùng chung cho nhiều project.
 - `skills/company-ops/SKILL.md`: operating skill cho agent.
 - `skills/company-reference-repo/`: cache repo tham chiếu để nghiên cứu Codex/Pi/package ngoài.
 - `policies/base-policy.json`: policy mặc định.
+- MCP/tool policy: dùng `company_tool_policy_check`; MCP server thật được cấu hình ở `.mcp.json` / `.pi/mcp.json`.
 - Runtime parity tools:
   - `company_exec_policy_check`
   - `company_context_budget`
@@ -27,7 +28,7 @@ Pi package dùng chung cho nhiều project.
 ## Cài local
 
 ```bash
-pi install git:github.com/Vt-mmm/pi_agent@v0.3.5
+pi install git:github.com/Vt-mmm/pi_agent@v0.3.6
 ```
 
 ## Project profile

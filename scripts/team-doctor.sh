@@ -9,6 +9,7 @@ Usage:
 Checks:
   - Pi/Herdr availability
   - Root package Pi manifest
+  - MCP adapter/baseline visibility
   - Project .pi/settings.json package source
   - Project company profile
   - No local-machine paths in share-critical files when --strict-share is used
@@ -79,10 +80,13 @@ for (const rel of [
   "packages/pi-company-core/prompts/discuss.md",
   "templates/project/.pi/settings.json",
   "templates/project/.pi/company-profile.json",
+  "templates/project/.mcp.json",
+  "templates/project/.pi/mcp.json",
   "templates/project/.pi/project-context.md",
   "templates/project/.pi/memory/memory_summary.md",
   "templates/project/.pi/memory/MEMORY.md",
-  "scripts/setup.sh"
+  "scripts/setup.sh",
+  "scripts/configure-mcp.sh"
 ]) {
   if (!exists(rel)) errors.push(`missing platform file: ${rel}`);
 }
@@ -94,6 +98,45 @@ if (!rootPackage.pi?.prompts?.length) errors.push("root package.json missing pi.
 
 if (!commandExists("pi")) warnings.push("pi is not on PATH");
 if (!commandExists("herdr")) warnings.push("herdr is not on PATH; Herdr integration optional");
+
+function readJsonIfPresent(file) {
+  if (!fs.existsSync(file)) return null;
+  try {
+    return JSON.parse(fs.readFileSync(file, "utf8"));
+  } catch (error) {
+    warnings.push(`cannot parse JSON: ${file}`);
+    return null;
+  }
+}
+
+function mcpSummary(file) {
+  const json = readJsonIfPresent(file);
+  if (!json) return { file, exists: fs.existsSync(file), serverCount: 0, servers: [] };
+  const mcpServers = json.mcpServers && typeof json.mcpServers === "object" && !Array.isArray(json.mcpServers)
+    ? json.mcpServers
+    : {};
+  return { file, exists: true, serverCount: Object.keys(mcpServers).length, servers: Object.keys(mcpServers).sort() };
+}
+
+let piHasMcpAdapter = false;
+if (commandExists("pi")) {
+  const piList = spawnSync("pi", ["list"], { encoding: "utf8" });
+  const combined = `${piList.stdout ?? ""}\n${piList.stderr ?? ""}`;
+  piHasMcpAdapter = combined.includes("pi-mcp-adapter");
+  if (!piHasMcpAdapter) warnings.push("Pi MCP adapter not found in `pi list`; run setup with --with-mcp or `pi install npm:pi-mcp-adapter`");
+}
+
+const mcpFiles = [
+  path.join(process.env.XDG_CONFIG_HOME || path.join(process.env.HOME || "", ".config"), "mcp", "mcp.json"),
+  path.join(process.env.PI_CODING_AGENT_DIR || path.join(process.env.HOME || "", ".pi", "agent"), "mcp.json"),
+  path.join(projectPath, ".mcp.json"),
+  path.join(projectPath, ".pi", "mcp.json")
+];
+const mcp = mcpFiles.map(mcpSummary);
+const totalMcpServers = mcp.reduce((sum, item) => sum + item.serverCount, 0);
+if (piHasMcpAdapter && totalMcpServers === 0) {
+  warnings.push("Pi MCP adapter is installed but no MCP servers are configured; run `pi-company-mcp --preset core --scope global` or `/mcp setup`");
+}
 
 const projectSettingsPath = path.join(projectPath, ".pi", "settings.json");
 if (fs.existsSync(projectSettingsPath)) {
@@ -179,6 +222,8 @@ const report = {
   strictShare,
   piOnPath: commandExists("pi"),
   herdrOnPath: commandExists("herdr"),
+  piHasMcpAdapter,
+  mcp,
   rootPiManifest: rootPackage.pi,
   warnings,
   errors

@@ -4,27 +4,29 @@ set -euo pipefail
 usage() {
   cat <<'USAGE'
 Usage:
-  scripts/install-global.sh [--package-source <source>] [--with-mcp] [--with-herdr] [--with-codex-herdr] [--model-scope <preset>]
+  scripts/install-global.sh [--package-source <source>] [--with-mcp] [--mcp-preset <preset>] [--with-herdr] [--with-codex-herdr] [--model-scope <preset>]
 
 Purpose:
   Install the company Pi package into the current user's global Pi settings.
 
 Package source examples:
-  git:github.com/Vt-mmm/pi_agent@v0.3.5
+  git:github.com/Vt-mmm/pi_agent@v0.3.6
   https://github.com/Vt-mmm/pi_agent
-  npm:@company/pi_agent@0.3.5
+  npm:@company/pi_agent@0.3.6
   /absolute/path/to/pi_agent
 
 Notes:
   - OAuth is intentionally not automated. Run `pi` then `/login`.
   - Model scope is configured with Pi's native `enabledModels` so users choose via `/model`, Ctrl+L, `/scoped-models`, and Ctrl+P.
   - Herdr integration is optional and modifies user-level Herdr/Pi config.
+  - MCP preset defaults to core: Context7 docs, Chrome DevTools, GitHub.
 USAGE
 }
 
 PLATFORM_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 PACKAGE_SOURCE="${PI_COMPANY_PACKAGE_SOURCE:-}"
 WITH_MCP=false
+MCP_PRESET="core"
 WITH_HERDR=false
 WITH_CODEX_HERDR=false
 CONFIGURE_MODEL_SCOPE=true
@@ -44,6 +46,10 @@ while [[ $# -gt 0 ]]; do
     --with-mcp)
       WITH_MCP=true
       shift
+      ;;
+    --mcp-preset)
+      MCP_PRESET="${2:-}"
+      shift 2
       ;;
     --with-herdr)
       WITH_HERDR=true
@@ -110,6 +116,8 @@ if [[ "$WITH_MCP" == true ]]; then
   if command -v pi-mcp-adapter >/dev/null 2>&1; then
     pi-mcp-adapter init || true
   fi
+  echo "Configuring shared global MCP baseline:"
+  bash "$PLATFORM_ROOT/scripts/configure-mcp.sh" --scope global --preset "$MCP_PRESET"
 fi
 
 if [[ "$CONFIGURE_MODEL_SCOPE" == true ]]; then
@@ -140,3 +148,4 @@ echo "  pi"
 echo "  /login"
 echo "  /model          # or Ctrl+L: select Codex/Claude model from Pi selector"
 echo "  /scoped-models  # optional: edit Ctrl+P model cycle scope"
+echo "  /mcp            # inspect MCP servers; authenticate Figma/GitHub only when needed"

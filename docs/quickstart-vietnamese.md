@@ -15,7 +15,7 @@ Phần còn lại — OAuth, package, context, harness, MCP, tool-call guard —
 
 ```bash
 npm install -g @earendil-works/pi-coding-agent
-pi install git:github.com/Vt-mmm/pi_agent@v0.3.5
+pi install git:github.com/Vt-mmm/pi_agent@v0.3.6
 ```
 
 Sau bước này, project mới không cần chạy bash init profile. Chỉ cần:
@@ -41,6 +41,7 @@ Sau khi login và chọn model intended cho project understanding:
 ```text
 /model          # hoặc Ctrl+L để chọn model bằng selector của Pi
 /scoped-models  # optional, chỉnh danh sách Ctrl+P cycle
+/mcp            # kiểm tra MCP adapter/server
 /onboard-project
 /memory-policy
 ```
@@ -54,6 +55,20 @@ Shift+Tab    # đổi thinking
 ```
 
 Nếu muốn xem/re-apply model scope từ terminal: `pi-company-models` và `pi-company-model-scope --preset full`.
+
+Nếu muốn xem/re-apply MCP baseline từ terminal:
+
+```bash
+pi-company-mcp --preset core --scope global
+pi-company-mcp --preset popular --scope global
+pi-company-mcp --list
+```
+
+Nếu clone repo GitHub và chưa link npm bin, dùng fallback:
+
+```bash
+bash /path/to/pi_agent/scripts/configure-mcp.sh --preset core --scope global
+```
 
 Lệnh này yêu cầu model đọc qua project theo phạm vi có kiểm soát, rồi ghi:
 
@@ -76,7 +91,8 @@ File này là snapshot context cho task sau. Nếu file còn `Generated: not yet
 bash /path/to/pi_agent/scripts/setup.sh /path/to/project \
   --project-only \
   --profile auto \
-  --package-source git:github.com/Vt-mmm/pi_agent@v0.3.5
+  --package-source git:github.com/Vt-mmm/pi_agent@v0.3.6 \
+  --mcp-preset core
 ```
 
 Đổi profile sau này trong Pi:
@@ -95,7 +111,8 @@ Script bash chỉ dùng khi muốn preseed config vào repo:
 ```bash
 bash /path/to/pi_agent/scripts/setup.sh /path/to/project \
   --profile be-readonly-fe \
-  --package-source git:github.com/Vt-mmm/pi_agent@v0.3.5
+  --package-source git:github.com/Vt-mmm/pi_agent@v0.3.6 \
+  --mcp-preset core
 ```
 
 ## Bước 6 — chạy hằng ngày

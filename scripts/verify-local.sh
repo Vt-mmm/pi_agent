@@ -40,6 +40,8 @@ required_files=(
   "$ROOT/adapters/web-frontend/profile.json"
   "$ROOT/templates/project/.pi/settings.json"
   "$ROOT/templates/project/.pi/company-profile.json"
+  "$ROOT/templates/project/.mcp.json"
+  "$ROOT/templates/project/.pi/mcp.json"
   "$ROOT/templates/project/.pi/project-context.md"
   "$ROOT/templates/project/.pi/memory/memory_summary.md"
   "$ROOT/templates/project/.pi/memory/MEMORY.md"
@@ -71,6 +73,7 @@ required_files=(
   "$ROOT/scripts/pi-session-stats.sh"
   "$ROOT/scripts/pi-model-catalog.sh"
   "$ROOT/scripts/configure-model-scope.sh"
+  "$ROOT/scripts/configure-mcp.sh"
 )
 
 for file in "${required_files[@]}"; do
@@ -105,6 +108,7 @@ const jsonFiles = [
   "adapters/web-frontend/profile.json",
   "templates/project/.pi/settings.json",
   "templates/project/.pi/company-profile.json",
+  "templates/project/.mcp.json",
   "templates/project/.pi/task-contract.template.json",
   "templates/project/.pi/mcp.json",
   "templates/global/settings.json",
@@ -152,6 +156,11 @@ grep -R "gpt-5.6" "$ROOT/README.md" "$ROOT/docs/model-options.md" "$ROOT/package
 grep -R "claude-fable-5" "$ROOT/README.md" "$ROOT/docs/model-options.md" "$ROOT/packages/pi-company-core/prompts/model-options.md" >/dev/null
 grep -R "pi-company-models" "$ROOT/README.md" "$ROOT/docs/model-options.md" >/dev/null
 grep -R "enabledModels" "$ROOT/templates/global/settings.json" "$ROOT/docs/model-options.md" "$ROOT/scripts/configure-model-scope.sh" >/dev/null
+grep -R "pi-company-mcp" "$ROOT/README.md" "$ROOT/docs/mcp-and-tools.md" "$ROOT/scripts/configure-mcp.sh" >/dev/null
+grep -R "pi-mcp-adapter" "$ROOT/README.md" "$ROOT/docs/mcp-and-tools.md" "$ROOT/scripts/install-global.sh" >/dev/null
+grep -R "@upstash/context7-mcp" "$ROOT/scripts/configure-mcp.sh" "$ROOT/docs/mcp-and-tools.md" >/dev/null
+grep -R "https://mcp.figma.com/mcp" "$ROOT/scripts/configure-mcp.sh" "$ROOT/docs/mcp-and-tools.md" >/dev/null
+grep -R "ghcr.io/github/github-mcp-server" "$ROOT/scripts/configure-mcp.sh" "$ROOT/docs/mcp-and-tools.md" >/dev/null
 grep -R "Ctrl+L" "$ROOT/README.md" "$ROOT/docs/model-options.md" "$ROOT/docs/team-onboarding.md" "$ROOT/docs/quickstart-vietnamese.md" >/dev/null
 grep -R "/platform-migration" "$ROOT/packages/pi-company-core/prompts" "$ROOT/docs" >/dev/null
 grep -R "/be-to-fe" "$ROOT/packages/pi-company-core/prompts" "$ROOT/docs" >/dev/null
@@ -170,8 +179,11 @@ bash -n "$ROOT/scripts/runtime-policy-smoke.sh"
 bash -n "$ROOT/scripts/pi-session-stats.sh"
 bash -n "$ROOT/scripts/pi-model-catalog.sh"
 bash -n "$ROOT/scripts/configure-model-scope.sh"
+bash -n "$ROOT/scripts/configure-mcp.sh"
 bash "$ROOT/scripts/pi-model-catalog.sh" --json >/dev/null
 bash "$ROOT/scripts/configure-model-scope.sh" --dry-run --preset full --default-model openai-codex/gpt-5.5:xhigh >/dev/null
+bash "$ROOT/scripts/configure-mcp.sh" --list >/dev/null
+bash "$ROOT/scripts/configure-mcp.sh" --dry-run --preset popular --scope project --project "$ROOT" >/dev/null
 bash "$ROOT/scripts/runtime-policy-smoke.sh" >/dev/null
 
 bash "$ROOT/scripts/profile-doctor.sh" "$ROOT" "$ROOT/.pi/company-profile.json" >/dev/null

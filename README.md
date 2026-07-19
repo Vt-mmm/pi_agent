@@ -10,6 +10,7 @@ This repository is designed for teams that want a `cd project && pi` workflow wi
 - Runtime project onboarding via `/onboard-project`.
 - Runtime profile selection via `/profiles`.
 - Explicit project memory via `/memory-policy` and `company_memory_*` tools.
+- MCP baseline via `pi-mcp-adapter`, `pi-company-mcp`, `.mcp.json`, and token-efficient proxy mode.
 - Built-in profiles for frontend, backend, fullstack, BE-readonly/FE-write, data, DevOps, mobile, docs, Python, and Node TypeScript.
 - Guardrails for protected paths, destructive shell commands, task contracts, context manifests, verification evidence, and trace records.
 - Codex-inspired runtime policy modules:
@@ -33,7 +34,7 @@ This repository is designed for teams that want a `cd project && pi` workflow wi
 
 ```bash
 npm install -g @earendil-works/pi-coding-agent
-pi install git:github.com/Vt-mmm/pi_agent@v0.3.5
+pi install git:github.com/Vt-mmm/pi_agent@v0.3.6
 ```
 
 Optional Herdr integration:
@@ -55,6 +56,7 @@ First run inside a project:
 /login
 /model          # or Ctrl+L: select OpenAI Codex / Claude from Pi's native selector
 /scoped-models  # optional: edit Ctrl+P cycle list
+/mcp            # inspect MCP servers
 /onboard-project
 /memory-policy
 ```
@@ -148,6 +150,47 @@ pi-company-models
 pi-company-model-scope --preset full
 ```
 
+### MCP and external tools
+
+Global setup installs `pi-mcp-adapter` and seeds the `core` MCP preset unless you pass `--no-mcp`.
+
+```bash
+pi-company-mcp --preset core --scope global
+pi-company-mcp --preset popular --scope global
+pi-company-mcp --preset design --scope project --project /path/to/project
+pi-company-mcp --list
+```
+
+If the repo is cloned from Git and npm bins are not linked yet, use:
+
+```bash
+bash /path/to/pi_agent/scripts/configure-mcp.sh --preset core --scope global
+```
+
+Preset summary:
+
+| Preset | Includes |
+|---|---|
+| `core` | Context7, Chrome DevTools, GitHub |
+| `popular` | core + Playwright + Figma remote |
+| `all` | popular + Figma desktop/local |
+
+In Pi:
+
+```text
+/mcp
+/mcp setup
+/mcp tools
+/mcp reconnect
+```
+
+Keep secrets in environment variables, never in `.mcp.json`:
+
+```bash
+export CONTEXT7_API_KEY=ctx7sk_...
+export GITHUB_PERSONAL_ACCESS_TOKEN=github_pat_...
+```
+
 ### Planning and clarification
 
 ```text
@@ -162,7 +205,8 @@ Most projects do not need shell init. Use this only when you want to pre-create 
 ```bash
 bash /path/to/pi_agent/scripts/setup.sh /path/to/project \
   --profile be-readonly-fe \
-  --package-source git:github.com/Vt-mmm/pi_agent@v0.3.5
+  --package-source git:github.com/Vt-mmm/pi_agent@v0.3.6 \
+  --mcp-preset core
 ```
 
 ## Repository layout
@@ -219,6 +263,7 @@ This repository intentionally excludes:
 
 - OAuth tokens and `auth.json`;
 - `.env` files;
+- MCP API keys and provider tokens;
 - Pi sessions, todos, caches, and local trust files;
 - project-private data dumps;
 - local machine paths.

@@ -14,12 +14,12 @@ echo "pi agent dir: $PI_AGENT_DIR"
 echo
 echo "Run these commands when ready:"
 echo
-echo "  bash \"$PLATFORM_ROOT/scripts/install-global.sh\" --package-source \"$PLATFORM_ROOT\" --with-mcp --with-herdr"
+echo "  bash \"$PLATFORM_ROOT/scripts/install-global.sh\" --package-source \"$PLATFORM_ROOT\" --with-mcp --mcp-preset core --with-herdr"
 echo "  pi"
 echo "  /login"
 echo
 echo "Then link a project:"
 echo
-echo "  bash \"$PLATFORM_ROOT/scripts/init-project.sh\" /path/to/project --profile generic --package-source git:github.com/Vt-mmm/pi_agent@v0.3.5"
+echo "  bash \"$PLATFORM_ROOT/scripts/init-project.sh\" /path/to/project --profile generic --package-source git:github.com/Vt-mmm/pi_agent@v0.3.6"
 echo "  cd /path/to/project"
 echo "  pi"

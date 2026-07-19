@@ -16,9 +16,9 @@ Options:
   -h, --help
 
 Package source examples:
-  git:github.com/Vt-mmm/pi_agent@v0.3.5
+  git:github.com/Vt-mmm/pi_agent@v0.3.6
   https://github.com/Vt-mmm/pi_agent
-  npm:@company/pi_agent@0.3.5
+  npm:@company/pi_agent@0.3.6
 
 Default package source:
   1. --package-source
@@ -238,6 +238,10 @@ PROFILE_PATH="$(resolve_profile_path "$PROFILE_INPUT")"
 PACKAGE_SOURCE="$(resolve_package_source)"
 
 mkdir -p "$PROJECT_PATH/.pi"
+
+if [[ ! -f "$PROJECT_PATH/.mcp.json" ]]; then
+  cp "$PLATFORM_ROOT/templates/project/.mcp.json" "$PROJECT_PATH/.mcp.json"
+fi
 
 SETTINGS_PATH="$PROJECT_PATH/.pi/settings.json"
 if [[ "$FORCE_SETTINGS" == true || ! -f "$SETTINGS_PATH" ]]; then
