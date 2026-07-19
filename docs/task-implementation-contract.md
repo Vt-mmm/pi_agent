@@ -21,7 +21,7 @@
 | `memoryCitations` | no | Memory file dùng làm advisory context, nếu có. |
 | `mcpCapabilities` | no | Tool/MCP được phép. |
 | `verifyCommands` | yes | Command phải chạy trước DONE. |
-| `verifyEvidence` | yes before done | Output/result command. |
+| `verifyEvidence` | yes before done | Observed command result. Passing gate requires exact match with `verifyCommands`. |
 | `changedFiles` | yes before done | File đã sửa. |
 | `trace` | yes before done | Handoff/audit record. |
 
@@ -67,7 +67,15 @@
   "verifyCommands": [
     "npm run test"
   ],
-  "verifyEvidence": [],
+  "verifyEvidence": [
+    {
+      "command": "npm run test",
+      "exitCode": 0,
+      "summary": "Unit test suite passed.",
+      "observed": true,
+      "matchedProfileCommand": true
+    }
+  ],
   "changedFiles": [],
   "trace": {
     "outcome": "pending"
@@ -88,7 +96,7 @@ Check large context with company_context_budget.
 Check complex/high-impact shell with company_exec_policy_check.
 Check non-company tools with company_tool_policy_check.
 Do not edit before scope + verify command are known.
-Before final, run the verify command through Pi bash, record observed verify evidence, and trace.
+Before final, run the exact verify command from task.verifyCommands through Pi bash, record observed verify evidence, and trace.
 Call company_task_gate_check before DONE.
 If verify cannot run, final outcome is blocked/partial, not done.
 ```
@@ -114,10 +122,30 @@ Hiện platform đang ở mức “P3-baseline runtime policy”:
 - `company_verify_record`
 - `company_trace_record`
 - `company_task_gate_check`
-- local trace trong `.pi/company-state/`
+- local task/trace/observed-bash state trong `.pi/company-state/`
 - session trace qua Pi custom entry `company-task-trace`
 
 `company_trace_record` có thể block completion nếu profile bật `finalGate=enforce`. Nếu Pi runtime chưa expose hard final assistant stop hook, agent vẫn phải gọi `company_task_gate_check` và final phải nêu gate result.
+
+## Verify evidence rules
+
+`company_verify_record` is not a free-form self-report. It accepts evidence only when the same normalized command was observed through a Pi `bash` `tool_result` after `task.createdAt`.
+
+Observed bash results are persisted to:
+
+```text
+.pi/company-state/observed-bash.jsonl
+```
+
+This lets parent agents validate verify commands executed by guarded subagent processes in the same cwd.
+
+Final-gate pass requires:
+
+- `observed=true`;
+- `matchedProfileCommand=true`;
+- `exitCode=0`.
+
+Exact command identity matters. If the task profile says `npm test`, record `npm test`. `npm  test`, `npm test 2>&1`, `npm test || true`, `true`, and `echo ok` are different commands and will not satisfy the passing gate unless explicitly present in `task.verifyCommands`.
 
 ## Named implementation recipes
 

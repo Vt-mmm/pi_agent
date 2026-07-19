@@ -25,7 +25,7 @@ Project cụ thể chỉ cần adapter/profile riêng. Core package giữ lifecy
 | Risk lane | `riskLane` + profile `hardGates` | Chặn auth, release, provider config, destructive action, database migration. |
 | Intake | `company_task_start` | Mỗi task có scope, output, acceptance criteria trước khi edit. |
 | Context rules | `/onboard-project`, `.pi/project-context.md`, `requiredContext`, context manifest | Giảm token và tránh đọc toàn repo. |
-| Test matrix | `verifyCommands` + observed verify evidence | DONE phải có command thực chạy qua Pi bash hoặc `N/A` rõ lý do. |
+| Test matrix | `verifyCommands` + observed verify evidence | DONE phải có exact verify command thực chạy qua Pi bash hoặc `N/A` rõ lý do. |
 | Trace | `company_trace_record`, `.pi/company-state/traces.jsonl`, session entry | Có audit trail cho task. |
 | Protected paths | `protectedPaths` trong profile + extension guard | Mỗi project có vùng cấm riêng. |
 | Tool registry | `mcpCapabilities` + `.mcp.json` | Không tự đoán tool/MCP. |
@@ -79,7 +79,7 @@ Project cụ thể chỉ cần adapter/profile riêng. Core package giữ lifecy
    - avoid protected paths
 
 5. Verify
-   - run mapped verify command
+   - run exact mapped verify command
    - store evidence
    - if verify unavailable: not DONE
 
@@ -112,7 +112,7 @@ Một Pi task chỉ DONE khi có đủ:
 - context manifest exists;
 - plan exists for source write;
 - changed files listed;
-- verify command ran and passed, hoặc explicitly `N/A` với reason;
+- exact verify command ran and passed, hoặc explicitly `N/A` với reason;
 - trace/handoff recorded;
 - no secrets touched;
 - no protected path writes.

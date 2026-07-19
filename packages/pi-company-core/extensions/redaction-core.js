@@ -16,6 +16,7 @@ const TOKEN_PATTERNS = [
 const CONNECTION_URL_PATTERN = /\b((?:postgres(?:ql)?|mysql|mariadb|mongodb(?:\+srv)?|redis):\/\/[^:\s/"']+:)([^@\s/"']+)(@[^\s"'<>]+)/gi;
 const BEARER_PATTERN = /\b(Bearer\s+)([A-Za-z0-9._~+/=-]{20,})\b/gi;
 const SECRET_ASSIGNMENT_PATTERN = /(^|[\s{[,(;])((?:"|')?(?:[A-Za-z0-9_]*_)?(?:api[_-]?key|token|password|passwd|pwd|secret|credential|client_secret|access[_-]?token|refresh[_-]?token|secret_access_key|aws_secret_access_key)(?:"|')?\s*)(:|=(?!=))\s*(["']?)([^"'\s,;}]+)/gim;
+const WHITESPACE_SECRET_ASSIGNMENT_PATTERN = /(^|[\s{[,(;])((?:"|')?(?:aws_)?secret_access_key(?:"|')?\s+)(["']?)([A-Za-z0-9/+=]{20,})/gim;
 
 function normalizeSecretValue(value) {
   return String(value ?? "")
@@ -38,10 +39,20 @@ function keyRequiresLowerThreshold(key) {
   return /password|passwd|pwd|secret|credential/i.test(key);
 }
 
+function valueLooksPlaceholder(value) {
+  const clean = normalizeSecretValue(value);
+  if (!clean) return true;
+  if (/^(?:null|undefined|none|false|true|0|""|'')$/i.test(clean)) return true;
+  if (/^<[^>\n]{1,80}>$/.test(clean)) return true;
+  if (/^(?:not-set|unset|placeholder|example|changeme|change-me|redacted|xxx|\*{3,})$/i.test(clean)) return true;
+  if (/^your[-_][a-z0-9][a-z0-9_-]*$/i.test(clean)) return true;
+  return false;
+}
+
 function valueLooksSensitive(key, value) {
   const clean = normalizeSecretValue(value);
   if (!clean) return false;
-  if (/^(?:null|undefined|none|false|true|0|""|'')$/i.test(clean)) return false;
+  if (valueLooksPlaceholder(clean)) return false;
   if (looksLikeKnownSecret(clean)) return true;
   if (keyRequiresLowerThreshold(key)) return clean.length >= 8;
   return clean.length >= 12 && /[A-Za-z]/.test(clean) && /[0-9_\-+/=]/.test(clean);
@@ -61,6 +72,11 @@ export function redactSensitiveText(input) {
   text = text.replace(SECRET_ASSIGNMENT_PATTERN, (match, prefix, key, separator, quote, value) => {
     if (!valueLooksSensitive(key, value)) return match;
     return `${prefix}${key}${separator} ${quote}${REDACTION}`;
+  });
+
+  text = text.replace(WHITESPACE_SECRET_ASSIGNMENT_PATTERN, (match, prefix, key, quote, value) => {
+    if (!valueLooksSensitive(key, value)) return match;
+    return `${prefix}${key}${quote}${REDACTION}`;
   });
 
   return { text, redacted: text !== input };

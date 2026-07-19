@@ -18,7 +18,7 @@ Global install mặc định sẽ cài adapter và seed preset `core` nếu dùn
 ```bash
 bash /path/to/pi_agent/scripts/setup.sh . \
   --profile auto \
-  --package-source git:github.com/Vt-mmm/pi_agent@v0.3.14 \
+  --package-source git:github.com/Vt-mmm/pi_agent@v0.3.15 \
   --mcp-preset core
 ```
 
@@ -260,7 +260,7 @@ Default `toolRegistry=advisory`: agent nhận warning khi tool chưa map capabil
 | `company_memory_citation_record` | Record memory evidence in task contract. |
 | `company_task_start` | Create Task Implementation Contract. |
 | `company_context_record` | Record context manifest for task. |
-| `company_verify_record` | Record verify evidence only when it matches an observed Pi bash result. |
+| `company_verify_record` | Record verify evidence only when it matches an observed Pi bash result after task start. Passing gate also requires exact match with `task.verifyCommands`. |
 | `company_trace_record` | Record handoff/final trace. |
 
 ## Core capabilities

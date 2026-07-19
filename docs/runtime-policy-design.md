@@ -23,7 +23,7 @@ Runtime policy là lớp kiểm soát cách agent đọc context, gọi tool, s�
 | Tool registry | `company_tool_policy_check` | Check external tool capability against profile. |
 | Task contract | `company_task_start` | Persist scope, acceptance criteria, risk lane, and verify plan. |
 | Context manifest | `company_context_record` | Record files read for a task. |
-| Verify evidence | `company_verify_record` | Record command result only after matching an observed Pi `bash` tool result. |
+| Verify evidence | `company_verify_record` | Record command result only after matching an observed Pi `bash` tool result after task start. |
 | Final gate | `company_task_gate_check` | Validate readiness before final handoff. |
 | Trace | `company_trace_record` | Persist changed files, outcome, and handoff state. |
 | Usage | `company_usage_snapshot` | Show session/context/token usage when available. |
@@ -71,6 +71,26 @@ intake
 ```
 
 This lifecycle is intentionally explicit. It makes task quality auditable and avoids relying on a long prompt as the only control layer.
+
+## Verify evidence ledger
+
+Pi `bash` results are observed through the runtime `tool_result` hook and appended to:
+
+```text
+.pi/company-state/observed-bash.jsonl
+```
+
+The ledger stores cwd, timestamp, status, a hash of the normalized command, and redacted command text for audit. It does not need the raw command text to validate a later `company_verify_record` call.
+
+This file-based ledger is intentionally shared by parent and subagent processes that run in the same project cwd. If a worker subagent runs `npm test`, the parent can later record that exact verify command without depending on process-local memory.
+
+Final-gate semantics are stricter than simple observation:
+
+- `observed=true`: Pi actually saw a matching bash result after `task.createdAt`;
+- `matchedProfileCommand=true`: the command exactly matches one entry in `task.verifyCommands`;
+- passing final gate: requires `observed=true`, `matchedProfileCommand=true`, and `exitCode=0`.
+
+Ad-hoc commands can still be recorded for traceability, but they do not satisfy the passing verify gate unless they are part of the task verify plan. Exact matching is deliberate; if the task says `npm test`, record `npm test`, not `npm test || true` or `npm  test`.
 
 ## Benchmark discipline
 

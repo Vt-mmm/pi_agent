@@ -1,13 +1,22 @@
 import assert from "node:assert/strict";
+import fs from "node:fs";
+import os from "node:os";
+import path from "node:path";
 import { describe, it } from "node:test";
 import {
+  appendObservedBashResult,
   claimedExitMatchesObserved,
+  commandMatchesVerifyPlan,
   createBashResultLedger,
+  findMatchingObservedBashResult,
   normalizeEvidenceCommand,
-  observedBashResultFromToolResultEvent
+  observedBashResultFromToolResultEvent,
+  readObservedBashResults
 } from "../packages/pi-company-core/extensions/runtime-evidence.js";
 
 describe("runtime verify evidence ledger", () => {
+  const joined = (...parts) => parts.join("");
+
   it("normalizes command edges but preserves command identity", () => {
     assert.equal(normalizeEvidenceCommand(" npm test \r\n"), "npm test");
     assert.notEqual(normalizeEvidenceCommand("npm  test"), "npm test");
@@ -109,5 +118,101 @@ describe("runtime verify evidence ledger", () => {
     assert.equal(observed.normalizedCommand, "npm test");
     assert.equal(observed.cwd, "/repo");
     assert.equal(observed.recordedAt, "2026-07-19T01:00:01.000Z");
+  });
+
+  it("matches verify evidence written by another process through persisted JSONL", () => {
+    const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "pi-ledger-"));
+    const file = path.join(tmp, "observed-bash.jsonl");
+
+    appendObservedBashResult(file, {
+      cwd: "/repo",
+      command: "npm test",
+      redactedCommand: "npm test",
+      isError: false,
+      recordedAtMs: Date.parse("2026-07-19T01:00:01.000Z")
+    });
+
+    const parentProcessLedger = createBashResultLedger();
+    const result = findMatchingObservedBashResult([
+      ...readObservedBashResults(file),
+      ...parentProcessLedger.list()
+    ], {
+      cwd: "/repo",
+      command: "npm test",
+      notBefore: "2026-07-19T01:00:00.000Z",
+      exitCode: 0
+    });
+
+    assert.equal(result.ok, true);
+    assert.equal(result.entry.cwd, "/repo");
+  });
+
+  it("does not evict persisted evidence after more than 300 later bash results", () => {
+    const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "pi-ledger-"));
+    const file = path.join(tmp, "observed-bash.jsonl");
+
+    appendObservedBashResult(file, {
+      cwd: "/repo",
+      command: "npm test",
+      redactedCommand: "npm test",
+      isError: false,
+      recordedAtMs: Date.parse("2026-07-19T01:00:01.000Z")
+    });
+
+    for (let index = 0; index < 350; index += 1) {
+      appendObservedBashResult(file, {
+        cwd: "/repo",
+        command: `echo ${index}`,
+        redactedCommand: `echo ${index}`,
+        isError: false,
+        recordedAtMs: Date.parse("2026-07-19T01:00:02.000Z") + index
+      });
+    }
+
+    const result = findMatchingObservedBashResult(readObservedBashResults(file, { maxEntries: 1000 }), {
+      cwd: "/repo",
+      command: "npm test",
+      notBefore: "2026-07-19T01:00:00.000Z",
+      exitCode: 0
+    });
+
+    assert.equal(result.ok, true);
+  });
+
+  it("persists command hashes while keeping redacted command text for audit", () => {
+    const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "pi-ledger-"));
+    const file = path.join(tmp, "observed-bash.jsonl");
+    const rawCommand = joined("DATABASE", "_PASSWORD", "=", "CorrectHorse42", " npm test");
+
+    appendObservedBashResult(file, {
+      cwd: "/repo",
+      command: rawCommand,
+      redactedCommand: joined("DATABASE", "_PASSWORD", "= [REDACTED_SECRET] npm test"),
+      isError: false,
+      recordedAtMs: Date.parse("2026-07-19T01:00:01.000Z")
+    });
+
+    const raw = fs.readFileSync(file, "utf8");
+    assert.equal(raw.includes("CorrectHorse42"), false);
+    assert.match(raw, /commandHash/);
+
+    const result = findMatchingObservedBashResult(readObservedBashResults(file), {
+      cwd: "/repo",
+      command: rawCommand,
+      notBefore: "2026-07-19T01:00:00.000Z",
+      exitCode: 0
+    });
+
+    assert.equal(result.ok, true);
+  });
+
+  it("requires exact verify-plan command match for final-gate evidence", () => {
+    const verifyCommands = ["npm test", "npm run lint"];
+
+    assert.equal(commandMatchesVerifyPlan(" npm test ", verifyCommands), true);
+    assert.equal(commandMatchesVerifyPlan("npm  test", verifyCommands), false);
+    assert.equal(commandMatchesVerifyPlan("npm test || true", verifyCommands), false);
+    assert.equal(commandMatchesVerifyPlan("true", verifyCommands), false);
+    assert.equal(commandMatchesVerifyPlan("echo ok", verifyCommands), false);
   });
 });

@@ -2,7 +2,7 @@
 
 ## Mục tiêu
 
-`v0.3.14` định nghĩa bộ kiểm soát runtime để Pi Agent Platform có thể chạy task một cách có kỷ luật cho solo, internal team, và public package.
+`v0.3.15` định nghĩa bộ kiểm soát runtime để Pi Agent Platform có thể chạy task một cách có kỷ luật cho solo, internal team, và public package.
 
 Các module chính:
 
@@ -112,12 +112,19 @@ Runtime behavior:
 - kiểm tra task contract;
 - kiểm tra context manifest;
 - kiểm tra verify evidence đã đối chiếu với Pi `bash` `tool_result` thật;
-- yêu cầu observed passing verify khi task có source changes;
+- yêu cầu observed passing verify khớp exact `task.verifyCommands` khi task có source changes;
 - block `company_trace_record completed` nếu final gate đang enforce và proof chưa đủ.
 
 Agent vẫn phải gọi `company_task_gate_check` trước final handoff.
 
-`company_verify_record` không còn tin `exitCode` tự khai báo. Lệnh verify phải khớp một bash tool result đã quan sát sau `task.createdAt`, và claimed `exitCode` phải khớp trạng thái `isError` của Pi.
+`company_verify_record` không còn tin `exitCode` tự khai báo. Lệnh verify phải khớp một bash tool result đã quan sát sau `task.createdAt`, và claimed `exitCode` phải khớp trạng thái `isError` của Pi. Observed result được ghi vào `.pi/company-state/observed-bash.jsonl` để parent/subagent process có thể share evidence trong cùng project cwd.
+
+Gate phân biệt hai mức:
+
+- observed evidence: command thật sự đã chạy qua Pi bash;
+- profile-matched evidence: command đó exact-match một dòng trong `task.verifyCommands`.
+
+`true`, `echo ok`, hoặc `npm test || true` có thể được ghi trace nếu đã chạy thật, nhưng không đủ để pass final gate trừ khi profile/task verify plan khai đúng command đó.
 
 ## 5. Local verification
 
@@ -136,7 +143,7 @@ pi list --approve
 - package manifests;
 - JSON parse;
 - required docs/scripts/prompts;
-- protected-path, shell protected path, exec-policy, observed-verify, and redaction regression tests;
+- protected-path, shell protected path, exec-policy, observed-verify, cross-process ledger, profile verify-command matching, and redaction regression tests;
 - profile doctor;
 - team doctor;
 - TypeScript syntax for extension;

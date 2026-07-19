@@ -11,7 +11,11 @@ import {
   matchesAnyPath
 } from "./policy-core.js";
 import {
+  appendObservedBashResult,
+  commandMatchesVerifyPlan,
   createBashResultLedger,
+  findMatchingObservedBashResult,
+  readObservedBashResults,
   observedBashResultFromToolResultEvent
 } from "./runtime-evidence.js";
 import {
@@ -90,7 +94,16 @@ type TaskContract = {
   mcpCapabilities: string[];
   verifyCommands: string[];
   changedFiles: string[];
-  verifyEvidence: Array<{ command: string; exitCode: number; summary: string; recordedAt: string; observed?: boolean; observedAt?: string; isError?: boolean }>;
+  verifyEvidence: Array<{
+    command: string;
+    exitCode: number;
+    summary: string;
+    recordedAt: string;
+    observed?: boolean;
+    observedAt?: string;
+    isError?: boolean;
+    matchedProfileCommand?: boolean;
+  }>;
   trace: {
     outcome: "pending" | "completed" | "blocked" | "partial" | "failed";
     friction?: string;
@@ -442,6 +455,10 @@ function onboardingStateFilePath(cwd: string): string {
 
 function traceFilePath(cwd: string): string {
   return path.join(stateRoot(cwd), "traces.jsonl");
+}
+
+function observedBashLedgerPath(cwd: string): string {
+  return path.join(stateRoot(cwd), "observed-bash.jsonl");
 }
 
 function safeTaskId(taskId: string): string {
@@ -886,8 +903,11 @@ function evaluateTaskGate(task: TaskContract | undefined, policy: BasePolicy): {
   if (task.verifyEvidence.some((evidence) => evidence.observed !== true)) {
     warnings.push("Unobserved verify evidence is ignored by the passing verify gate.");
   }
-  if (finalGate.requirePassingVerify && task.verifyEvidence.length > 0 && !task.verifyEvidence.some((evidence) => evidence.exitCode === 0 && evidence.observed === true)) {
-    missing.push("observed passing verify evidence");
+  if (task.verifyEvidence.some((evidence) => evidence.observed === true && evidence.matchedProfileCommand !== true)) {
+    warnings.push("Observed verify evidence that does not exactly match task verifyCommands is advisory only.");
+  }
+  if (finalGate.requirePassingVerify && task.verifyEvidence.length > 0 && !task.verifyEvidence.some((evidence) => evidence.exitCode === 0 && evidence.observed === true && evidence.matchedProfileCommand === true)) {
+    missing.push("observed passing profile verify evidence");
   }
   if (finalGate.requireTrace && task.trace.outcome === "pending") missing.push("final trace");
   if (task.changedFiles.length === 0 && task.trace.outcome === "completed") warnings.push("Trace is completed but changedFiles is empty.");
@@ -1119,7 +1139,18 @@ export default function companyGuard(pi: ExtensionAPI) {
 
   pi.on("tool_result", async (event, ctx) => {
     const observed = observedBashResultFromToolResultEvent(event, ctx.cwd);
-    if (observed) bashResults.record(observed);
+    if (observed) {
+      bashResults.record(observed);
+      try {
+        appendObservedBashResult(observedBashLedgerPath(ctx.cwd), {
+          ...observed,
+          redactedCommand: redactText(observed.command)
+        });
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        ctx.ui.notify(`Company Pi guard could not persist bash evidence ledger: ${message}`, "warn");
+      }
+    }
   });
 
   pi.on("tool_call", async (event, ctx) => {
@@ -1736,7 +1767,11 @@ export default function companyGuard(pi: ExtensionAPI) {
         return { content: [{ type: "text", text: `Task not found: ${params.taskId}` }], isError: true };
       }
 
-      const observed = bashResults.findMatching({
+      const observedEntries = [
+        ...readObservedBashResults(observedBashLedgerPath(ctx.cwd), { maxEntries: 10000 }),
+        ...bashResults.list()
+      ];
+      const observed = findMatchingObservedBashResult(observedEntries, {
         cwd: ctx.cwd,
         command: params.command,
         notBefore: task.createdAt,
@@ -1752,6 +1787,7 @@ export default function companyGuard(pi: ExtensionAPI) {
 
       const safeCommand = redactText(params.command);
       const safeSummary = redactText(params.summary);
+      const matchedProfileCommand = commandMatchesVerifyPlan(params.command, task.verifyCommands);
       task.verifyEvidence.push({
         command: safeCommand,
         exitCode: params.exitCode,
@@ -1759,15 +1795,17 @@ export default function companyGuard(pi: ExtensionAPI) {
         recordedAt: nowIso(),
         observed: true,
         observedAt: observed.entry.recordedAt,
-        isError: observed.entry.isError
+        isError: observed.entry.isError,
+        matchedProfileCommand
       });
       writeTask(ctx.cwd, task);
-      appendTrace(ctx.cwd, { taskId: task.taskId, event: "verify_record", command: safeCommand, exitCode: params.exitCode, observedAt: observed.entry.recordedAt });
-      appendSessionTrace(pi, { taskId: task.taskId, event: "verify_record", command: safeCommand, exitCode: params.exitCode, observedAt: observed.entry.recordedAt });
+      appendTrace(ctx.cwd, { taskId: task.taskId, event: "verify_record", command: safeCommand, exitCode: params.exitCode, observedAt: observed.entry.recordedAt, matchedProfileCommand });
+      appendSessionTrace(pi, { taskId: task.taskId, event: "verify_record", command: safeCommand, exitCode: params.exitCode, observedAt: observed.entry.recordedAt, matchedProfileCommand });
 
+      const advisorySuffix = matchedProfileCommand ? "" : " Advisory only: command does not exactly match task verifyCommands and will not satisfy the passing final gate.";
       return {
-        content: [{ type: "text", text: `Verify evidence recorded for ${task.taskId}: observed exit ${params.exitCode}` }],
-        details: { task, observation: redactForStorage(observed.entry) }
+        content: [{ type: "text", text: `Verify evidence recorded for ${task.taskId}: observed exit ${params.exitCode}.${advisorySuffix}` }],
+        details: { task, observation: redactForStorage(observed.entry), matchedProfileCommand }
       };
     }
   });

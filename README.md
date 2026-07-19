@@ -33,7 +33,7 @@ From there, Pi can onboard the project, select an operating profile, use the rig
 
 ```bash
 npm install -g @earendil-works/pi-coding-agent
-pi install git:github.com/Vt-mmm/pi_agent@v0.3.14
+pi install git:github.com/Vt-mmm/pi_agent@v0.3.15
 ```
 
 Optional Herdr integration:
@@ -222,7 +222,7 @@ Most projects do not need shell init. Use this only when you want to pre-create 
 ```bash
 bash /path/to/pi_agent/scripts/setup.sh /path/to/project \
   --profile be-readonly-fe \
-  --package-source git:github.com/Vt-mmm/pi_agent@v0.3.14 \
+  --package-source git:github.com/Vt-mmm/pi_agent@v0.3.15 \
   --mcp-preset core \
   --subagents-preset safe
 ```
@@ -317,7 +317,7 @@ This repository intentionally excludes:
 
 ## Maturity
 
-Current release: `v0.3.14`.
+Current release: `v0.3.15`.
 
 Ready for:
 
@@ -333,7 +333,8 @@ Ready for:
 Security boundary:
 
 - The guard extension is an accident-prevention layer for agent mistakes and common prompt-injection patterns.
-- Verify evidence is accepted only when it matches an observed Pi bash tool result in the active session after task start.
+- Verify evidence is accepted only when it matches an observed Pi bash tool result after task start. The observed ledger is persisted under `.pi/company-state/observed-bash.jsonl`, so parent agents can validate bash results produced by guarded subagent processes.
+- Passing final gates require an observed exit `0` command that exactly matches one of the task/profile `verifyCommands`; ad-hoc commands such as `true`, `echo ok`, or `npm test || true` are advisory only.
 - Project memory files are private-by-default in generated projects; opt in to shared memory only after review/redaction.
 - It is not an OS sandbox. For untrusted code, untrusted prompts, or adversarial workloads, run Pi inside an isolated container/VM with filesystem, process, network, and credential boundaries.
 

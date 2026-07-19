@@ -10,18 +10,19 @@ describe("sensitive text redaction", () => {
   const dashJoined = (...parts) => parts.join("-");
   const underscoreJoined = (...parts) => parts.join("_");
   const leakedSecrets = [
-    ["AWS secret access key", "AWS_SECRET_ACCESS_KEY=wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY"],
+    ["AWS secret access key", joined("AWS_SECRET_ACCESS_KEY=", "wJalrXUtnFEMI/", "K7MDENG/bPxRfiCYEXAMPLEKEY")],
+    ["AWS secret access key with whitespace separator", joined("aws_secret_access_key ", "wJalrXUtnFEMI/", "K7MDENG/bPxRfiCYEXAMPLEKEY")],
     ["Postgres connection string", "postgres://app:supersecretpass@db.example.com:5432/prod"],
     ["GitHub fine-grained PAT", joined("github_pat_", "11AAAAAAA0", "abcdefghijklmnopqrstuvwxyz")],
     ["Stripe live key", underscoreJoined("sk", "live", "51NxTExampleSecretValue123456")],
     ["Slack bot token", dashJoined("xoxb", "123456789012", "123456789012", "AbCdEfGhIjKlMnOp")],
-    ["database password", "DATABASE_PASSWORD=CorrectHorse42"],
+    ["database password", joined("DATABASE", "_PASSWORD", "=", "CorrectHorse42")],
     ["Google API key", joined("AIza", "SyDExampleKeyWithEnoughLength123456")],
     ["JSON api_key", `{"api_key":"${joined("AIza", "SyDExampleKeyWithEnoughLength123456")}"}`],
-    ["Bearer token", "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.payloadSignature123"],
+    ["Bearer token", joined("Authorization: Bearer ", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9", ".payloadSignature123")],
     ["JWT token", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIn0.signature123456"],
     ["OpenAI style key", dashJoined("sk", "abcdefghijklmnopqrstuvwxyz1234567890")],
-    ["PEM block", "-----BEGIN PRIVATE KEY-----\nabc123\n-----END PRIVATE KEY-----"]
+    ["PEM block", joined("-----BEGIN ", "PRIVATE KEY-----\nabc123\n-----END PRIVATE KEY-----")]
   ];
 
   for (const [name, text] of leakedSecrets) {
@@ -50,7 +51,9 @@ describe("sensitive text redaction", () => {
     "token: null",
     "if (token === undefined) return;",
     "api_key: placeholder",
-    "password: short"
+    "password: short",
+    "password: <not-set>",
+    "Set api_key = your-key-here in the config"
   ];
 
   for (const text of benignTexts) {
@@ -63,11 +66,11 @@ describe("sensitive text redaction", () => {
 
   it("recursively redacts storage payloads", () => {
     const result = redactForStorage({
-      summary: "DATABASE_PASSWORD=CorrectHorse42",
+      summary: joined("DATABASE", "_PASSWORD", "=", "CorrectHorse42"),
       nested: ["token: null", joined("github_pat_", "11AAAAAAA0", "abcdefghijklmnopqrstuvwxyz")]
     });
     assert.deepEqual(result, {
-      summary: "DATABASE_PASSWORD= [REDACTED_SECRET]",
+      summary: joined("DATABASE", "_PASSWORD", "= [REDACTED_SECRET]"),
       nested: ["token: null", "[REDACTED_SECRET]"]
     });
   });

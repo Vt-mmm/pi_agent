@@ -17,8 +17,9 @@ Use this skill for every implementation, review, planning, MCP, or tooling task 
 6. Check non-company MCP/app tools with `company_tool_policy_check`.
 7. Use MCP only when capability is declared.
 8. Prefer small diffs with explicit verification.
-9. Record context, verify, and trace with `company_context_record`, `company_verify_record`, and `company_trace_record`.
-10. Before DONE, call `company_task_gate_check`.
+9. Run the exact command from `task.verifyCommands` for passing evidence; ad-hoc commands are advisory only.
+10. Record context, verify, and trace with `company_context_record`, `company_verify_record`, and `company_trace_record`.
+11. Before DONE, call `company_task_gate_check`.
 
 ## Risk gates
 

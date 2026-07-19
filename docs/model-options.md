@@ -68,7 +68,7 @@ pi --thinking medium
 
 ## Current latest-family catalog
 
-Đừng giới hạn vào vài ví dụ. Sau `pi update --models`, kiểm tra catalog local bằng `pi-company-models`. Tại thời điểm `v0.3.14`, các family/presets chính cần nhớ:
+Đừng giới hạn vào vài ví dụ. Sau `pi update --models`, kiểm tra catalog local bằng `pi-company-models`. Tại thời điểm `v0.3.15`, các family/presets chính cần nhớ:
 
 ### OpenAI Codex
 

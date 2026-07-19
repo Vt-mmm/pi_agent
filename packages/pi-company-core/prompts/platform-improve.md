@@ -40,7 +40,7 @@ Mandatory flow:
 
 11. Implement only the bounded target behavior.
 12. If runtime behavior changes, update README/docs and add/adjust a decision note when appropriate.
-13. For source-changing tasks, run verify through Pi bash, record observed verify evidence, trace, then call `company_task_gate_check` before final.
+13. For source-changing tasks, run the exact verify command from `task.verifyCommands` through Pi bash, record observed verify evidence, trace, then call `company_task_gate_check` before final.
 
 Default verification:
 
@@ -53,7 +53,7 @@ pi list --approve
 If setup/init behavior changed, also verify with a disposable fixture:
 
 ```bash
-bash scripts/setup.sh /tmp/pi-fixture --project-only --profile auto --package-source git:github.com/Vt-mmm/pi_agent@v0.3.14
+bash scripts/setup.sh /tmp/pi-fixture --project-only --profile auto --package-source git:github.com/Vt-mmm/pi_agent@v0.3.15
 ```
 
 Final output:
