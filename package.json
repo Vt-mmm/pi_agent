@@ -1,6 +1,6 @@
 {
   "name": "pi-agent-platform",
-  "version": "0.3.11",
+  "version": "0.3.12",
   "private": true,
   "license": "MIT",
   "type": "module",
@@ -45,11 +45,18 @@
     "@earendil-works/pi-coding-agent": "*",
     "typebox": "*"
   },
+  "devDependencies": {
+    "@types/node": "^22.13.14",
+    "typescript": "^5.8.3"
+  },
   "workspaces": [
     "packages/*"
   ],
   "scripts": {
     "verify": "bash scripts/verify-local.sh",
+    "test": "node --test tests/*.test.mjs",
+    "test:policy": "node --test tests/policy-core.test.mjs",
+    "typecheck": "tsc --noEmit",
     "setup": "bash scripts/setup.sh",
     "bootstrap": "bash scripts/bootstrap-local.sh",
     "install-global": "bash scripts/install-global.sh",

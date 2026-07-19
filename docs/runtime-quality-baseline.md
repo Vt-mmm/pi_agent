@@ -2,7 +2,7 @@
 
 ## Mục tiêu
 
-`v0.3.11` định nghĩa bộ kiểm soát runtime để Pi Agent Platform có thể chạy task một cách có kỷ luật cho solo, internal team, và public package.
+`v0.3.12` định nghĩa bộ kiểm soát runtime để Pi Agent Platform có thể chạy task một cách có kỷ luật cho solo, internal team, và public package.
 
 Các module chính:
 
@@ -120,6 +120,8 @@ Agent vẫn phải gọi `company_task_gate_check` trước final handoff.
 Platform verification:
 
 ```bash
+npm run typecheck
+npm test
 bash scripts/verify-local.sh
 bash scripts/team-doctor.sh . --strict-share
 pi list --approve
@@ -130,6 +132,7 @@ pi list --approve
 - package manifests;
 - JSON parse;
 - required docs/scripts/prompts;
+- protected-path and exec-policy regression tests;
 - profile doctor;
 - team doctor;
 - TypeScript syntax for extension;

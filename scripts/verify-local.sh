@@ -7,6 +7,10 @@ required_files=(
   "$ROOT/README.md"
   "$ROOT/AGENTS.md"
   "$ROOT/package.json"
+  "$ROOT/package-lock.json"
+  "$ROOT/tsconfig.json"
+  "$ROOT/.github/workflows/verify.yml"
+  "$ROOT/types/pi-runtime-shims.d.ts"
   "$ROOT/.pi/settings.json"
   "$ROOT/.pi/company-profile.json"
   "$ROOT/.pi/project-context.md"
@@ -14,6 +18,7 @@ required_files=(
   "$ROOT/.pi/memory/MEMORY.md"
   "$ROOT/packages/pi-company-core/package.json"
   "$ROOT/packages/pi-company-core/extensions/company-guard.ts"
+  "$ROOT/packages/pi-company-core/extensions/policy-core.js"
   "$ROOT/packages/pi-company-core/prompts/onboard-project.md"
   "$ROOT/packages/pi-company-core/prompts/company-commands.md"
   "$ROOT/packages/pi-company-core/prompts/profiles.md"
@@ -89,6 +94,7 @@ required_files=(
   "$ROOT/scripts/configure-model-scope.sh"
   "$ROOT/scripts/configure-mcp.sh"
   "$ROOT/scripts/configure-subagents.sh"
+  "$ROOT/tests/policy-core.test.mjs"
 )
 
 for file in "${required_files[@]}"; do
@@ -205,6 +211,7 @@ grep -R "company_source_checkout" "$ROOT/packages/pi-company-core" >/dev/null
 grep -R "scripts/setup.sh" "$ROOT/README.md" "$ROOT/docs" >/dev/null
 grep -R "quality-benchmark.sh" "$ROOT/README.md" "$ROOT/docs" >/dev/null
 grep -R ".pi-subagents/" "$ROOT/.gitignore" "$ROOT/docs/subagents-and-multiagent.md" "$ROOT/docs/distribution-standard.md" "$ROOT/scripts/init-project.sh" >/dev/null
+test -s "$ROOT/tests/policy-core.test.mjs"
 
 public_wording_pattern="$(
   node --input-type=module <<'NODE'
@@ -244,6 +251,11 @@ if grep -R -E -i \
 fi
 
 node --check "$ROOT/packages/pi-company-core/extensions/company-guard.ts" >/dev/null
+node --check "$ROOT/packages/pi-company-core/extensions/policy-core.js" >/dev/null
+node --test "$ROOT/tests/policy-core.test.mjs" >/dev/null
+if [[ -x "$ROOT/node_modules/.bin/tsc" ]]; then
+  (cd "$ROOT" && npm run typecheck) >/dev/null
+fi
 bash -n "$ROOT/scripts/quality-benchmark.sh"
 bash -n "$ROOT/scripts/runtime-policy-smoke.sh"
 bash -n "$ROOT/scripts/pi-session-stats.sh"

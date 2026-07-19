@@ -5,6 +5,11 @@ import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-a
 import { isToolCallEventType } from "@earendil-works/pi-coding-agent";
 import { StringEnum } from "@earendil-works/pi-ai";
 import { Type } from "typebox";
+import {
+  evaluateExecPolicyCore,
+  findProtectedPathInCommand,
+  matchesAnyPath
+} from "./policy-core.js";
 
 type ProjectProfile = {
   schemaVersion?: number;
@@ -360,120 +365,6 @@ function projectProfilePath(cwd: string): string {
   return path.join(cwd, ".pi", "company-profile.json");
 }
 
-function globToRegExp(glob: string): RegExp {
-  const escaped = glob
-    .replace(/[.+^${}()|[\]\\]/g, "\\$&")
-    .replace(/\*\*/g, "\u0000")
-    .replace(/\*/g, "[^/]*")
-    .replace(/\u0000/g, ".*");
-  return new RegExp(`^${escaped}$`);
-}
-
-function matchesAny(candidate: string, patterns: string[]): string | undefined {
-  return patterns.find((pattern) => globToRegExp(pattern).test(candidate));
-}
-
-function commandIncludes(command: string, patterns: string[]): string | undefined {
-  const normalized = command.toLowerCase();
-  return patterns.find((pattern) => normalized.includes(pattern.toLowerCase()));
-}
-
-function splitShellSegments(command: string): string[] {
-  const segments: string[] = [];
-  let current = "";
-  let quote: "'" | "\"" | undefined;
-  let escaped = false;
-  for (let index = 0; index < command.length; index += 1) {
-    const char = command[index];
-    const next = command[index + 1];
-    if (escaped) {
-      current += char;
-      escaped = false;
-      continue;
-    }
-    if (char === "\\") {
-      current += char;
-      escaped = true;
-      continue;
-    }
-    if ((char === "'" || char === "\"") && !quote) {
-      quote = char;
-      current += char;
-      continue;
-    }
-    if (quote === char) {
-      quote = undefined;
-      current += char;
-      continue;
-    }
-    if (!quote && (char === ";" || char === "|" || (char === "&" && next === "&"))) {
-      const segment = current.trim();
-      if (segment) segments.push(segment);
-      current = "";
-      if ((char === "&" && next === "&") || (char === "|" && next === "|")) index += 1;
-      continue;
-    }
-    current += char;
-  }
-  const tail = current.trim();
-  if (tail) segments.push(tail);
-  return segments.length ? segments : [command.trim()].filter(Boolean);
-}
-
-function shellWords(segment: string): string[] {
-  const words: string[] = [];
-  let current = "";
-  let quote: "'" | "\"" | undefined;
-  let escaped = false;
-  for (const char of segment.trim()) {
-    if (escaped) {
-      current += char;
-      escaped = false;
-      continue;
-    }
-    if (char === "\\") {
-      escaped = true;
-      continue;
-    }
-    if ((char === "'" || char === "\"") && !quote) {
-      quote = char;
-      continue;
-    }
-    if (quote === char) {
-      quote = undefined;
-      continue;
-    }
-    if (!quote && /\s/.test(char)) {
-      if (current) {
-        words.push(current);
-        current = "";
-      }
-      continue;
-    }
-    current += char;
-  }
-  if (current) words.push(current);
-  return words;
-}
-
-function arrayStartsWith<T>(items: T[], prefix: T[]): boolean {
-  return prefix.length > 0 && prefix.every((item, index) => items[index] === item);
-}
-
-function commandRuleMatches(rule: CommandRule, segment: string, words: string[]): boolean {
-  if (rule.match === "prefix") {
-    const prefix = Array.isArray(rule.value) ? rule.value : shellWords(rule.value);
-    return arrayStartsWith(words, prefix);
-  }
-  const raw = Array.isArray(rule.value) ? rule.value.join(" ") : rule.value;
-  if (rule.match === "contains") return segment.toLowerCase().includes(raw.toLowerCase());
-  try {
-    return new RegExp(raw, "i").test(segment);
-  } catch {
-    return false;
-  }
-}
-
 function evaluateExecPolicy(command: string, profile: ProjectProfile, policy: BasePolicy): {
   mode: RuntimePolicySettings["execPolicy"];
   decision: "allow" | "prompt" | "forbid";
@@ -483,37 +374,11 @@ function evaluateExecPolicy(command: string, profile: ProjectProfile, policy: Ba
   const runtime = resolveRuntimePolicy(profile);
   const execPolicy = execPolicyConfig(policy);
   const mode = runtime.execPolicy === "off" ? "off" : runtime.execPolicy ?? execPolicy.defaultMode;
-  const reasons: string[] = [];
-  const segments = splitShellSegments(command).map((segment) => {
-    const words = shellWords(segment);
-    const matches: string[] = [];
-    const warnings: string[] = [];
-    for (const prefix of execPolicy.bannedPrefixSuggestions) {
-      if (arrayStartsWith(words, prefix)) {
-        warnings.push(`Do not persist broad approval prefix: ${prefix.join(" ")}`);
-      }
-    }
-    for (const rule of execPolicy.rules) {
-      if (!commandRuleMatches(rule, segment, words)) continue;
-      matches.push(`${rule.action}:${rule.id}`);
-      if (rule.action === "forbid") reasons.push(`Forbidden by exec policy ${rule.id}: ${rule.reason}`);
-      if (rule.action === "prompt") reasons.push(`Prompt required by exec policy ${rule.id}: ${rule.reason}`);
-    }
-    return { command: segment, words, matches, warnings };
-  });
-
-  const legacyBlocked = commandIncludes(command, policy.blockedCommandPatterns);
-  if (legacyBlocked) reasons.push(`Blocked by legacy policy pattern: ${legacyBlocked}`);
-  const legacyPrompt = commandIncludes(command, policy.requireConfirmationPatterns);
-  if (legacyPrompt) reasons.push(`Confirmation required by legacy policy pattern: ${legacyPrompt}`);
-
-  const hasForbid = reasons.some((reason) => reason.startsWith("Forbidden") || reason.startsWith("Blocked"));
-  const hasPrompt = reasons.some((reason) => reason.startsWith("Prompt") || reason.startsWith("Confirmation"));
-  return {
-    mode,
-    decision: mode === "off" ? "allow" : hasForbid ? "forbid" : hasPrompt ? "prompt" : "allow",
-    reasons,
-    segments
+  return evaluateExecPolicyCore(command, { policy: { ...policy, execPolicy }, mode }) as {
+    mode: RuntimePolicySettings["execPolicy"];
+    decision: "allow" | "prompt" | "forbid";
+    reasons: string[];
+    segments: Array<{ command: string; words: string[]; matches: string[]; warnings: string[] }>;
   };
 }
 
@@ -1232,9 +1097,9 @@ export default function companyGuard(pi: ExtensionAPI) {
         return { block: true, reason: execDecision.reasons.join("; ") };
       }
 
-      const protectedHit = protectedPaths.find((pattern) => command.includes(pattern.replace("/**", "")));
+      const protectedHit = findProtectedPathInCommand(command, protectedPaths);
       if (protectedHit) {
-        return { block: true, reason: `Command touches protected path: ${protectedHit}` };
+        return { block: true, reason: `Command touches protected path: ${protectedHit.candidate} matches ${protectedHit.pattern}` };
       }
 
       if (execDecision.mode !== "off" && execDecision.decision === "prompt") {
@@ -1249,7 +1114,7 @@ export default function companyGuard(pi: ExtensionAPI) {
     if (["write", "edit"].includes(event.toolName)) {
       const relativePath = extractLikelyPathFromInput(ctx.cwd, event.input as Record<string, unknown>);
       if (relativePath) {
-        const matched = matchesAny(relativePath, protectedPaths);
+        const matched = matchesAnyPath(relativePath, protectedPaths);
         if (matched) {
           return { block: true, reason: `Blocked write to protected path: ${relativePath} matches ${matched}` };
         }

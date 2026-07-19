@@ -18,7 +18,7 @@ Pi core không có subagents built-in. Theo design của Pi, subagents là exten
 
 Từ `v0.3.7`, `scripts/setup.sh` mặc định cài `pi-subagents` và chạy config preset `safe`.
 
-Từ `v0.3.11`, workflow prompts của platform có **auto-delegation policy**: khi anh chạy `/task`, `/be-to-fe`, `/platform-improve`, `/plan`, hoặc `/review`, parent agent phải tự cân nhắc spawn subagent cho phần việc độc lập. Anh không bắt buộc phải gọi `/run` nếu chỉ muốn task hoàn chỉnh.
+Từ `v0.3.12`, workflow prompts của platform có **auto-delegation policy**: khi anh chạy `/task`, `/be-to-fe`, `/platform-improve`, `/plan`, hoặc `/review`, parent agent phải tự cân nhắc spawn subagent cho phần việc độc lập. Anh không bắt buộc phải gọi `/run` nếu chỉ muốn task hoàn chỉnh.
 
 Xem chi tiết: `docs/auto-delegation-policy.md`.
 
@@ -31,7 +31,7 @@ Một lệnh setup đầy đủ:
 ```bash
 bash /path/to/pi_agent/scripts/setup.sh . \
   --profile auto \
-  --package-source git:github.com/Vt-mmm/pi_agent@v0.3.11 \
+  --package-source git:github.com/Vt-mmm/pi_agent@v0.3.12 \
   --mcp-preset core \
   --subagents-preset safe
 ```
@@ -39,7 +39,7 @@ bash /path/to/pi_agent/scripts/setup.sh . \
 Nếu chỉ cài global:
 
 ```bash
-pi install git:github.com/Vt-mmm/pi_agent@v0.3.11
+pi install git:github.com/Vt-mmm/pi_agent@v0.3.12
 pi install npm:pi-subagents
 bash /path/to/pi_agent/scripts/configure-subagents.sh --preset safe
 ```

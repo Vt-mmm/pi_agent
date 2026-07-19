@@ -33,7 +33,7 @@ From there, Pi can onboard the project, select an operating profile, use the rig
 
 ```bash
 npm install -g @earendil-works/pi-coding-agent
-pi install git:github.com/Vt-mmm/pi_agent@v0.3.11
+pi install git:github.com/Vt-mmm/pi_agent@v0.3.12
 ```
 
 Optional Herdr integration:
@@ -222,7 +222,7 @@ Most projects do not need shell init. Use this only when you want to pre-create 
 ```bash
 bash /path/to/pi_agent/scripts/setup.sh /path/to/project \
   --profile be-readonly-fe \
-  --package-source git:github.com/Vt-mmm/pi_agent@v0.3.11 \
+  --package-source git:github.com/Vt-mmm/pi_agent@v0.3.12 \
   --mcp-preset core \
   --subagents-preset safe
 ```
@@ -243,6 +243,9 @@ pi_agent/
 ## Verification
 
 ```bash
+npm ci --ignore-scripts --legacy-peer-deps
+npm run typecheck
+npm test
 bash scripts/verify-local.sh
 bash scripts/team-doctor.sh . --strict-share
 pi list --approve
@@ -314,7 +317,7 @@ This repository intentionally excludes:
 
 ## Maturity
 
-Current release: `v0.3.11`.
+Current release: `v0.3.12`.
 
 Ready for:
 
