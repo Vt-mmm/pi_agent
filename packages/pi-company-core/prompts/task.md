@@ -37,7 +37,7 @@ Mandatory flow:
 10. If the task requires source writes, make a short plan first.
 11. Do not touch protected paths.
 12. Use MCP/tools only when the profile capability allows it.
-13. Before final answer, run the verify command mapped to the changed file class and record it with `company_verify_record`.
+13. Before final answer, run the verify command through Pi bash, then record the observed result with `company_verify_record`.
 14. Record handoff with `company_trace_record`.
 15. Call `company_task_gate_check`. If gate fails, final outcome is blocked/partial, not done.
 16. If the user asks about token/context/cost usage, call `company_usage_snapshot`; for exact token/cost totals, tell the user to run `/session` or `pi-company-usage <project-path>`.

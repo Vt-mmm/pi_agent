@@ -58,7 +58,7 @@ Mandatory flow:
 12. Record BE/FE context files with `company_context_record`.
 13. Before shell commands beyond simple read/list/test, call `company_exec_policy_check`.
 14. Implement FE only.
-15. Run FE verify commands from the profile and record evidence with `company_verify_record`.
+15. Run FE verify commands from the profile through Pi bash and record the observed result with `company_verify_record`.
 16. Record handoff with `company_trace_record`.
 17. Call `company_task_gate_check`; if it fails, report blocked/partial instead of done.
 

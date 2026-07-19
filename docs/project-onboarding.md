@@ -27,6 +27,8 @@ Sau khi `/onboard-project` chạy xong, project có file:
 
 `.pi/project-context.md` là context snapshot để task sau không phải scout lại toàn bộ repo từ đầu.
 
+Memory markdown là local/private mặc định và bị ignore bởi `.pi/.gitignore`. Chỉ commit memory nếu team quyết định opt-in sau khi review/redact.
+
 `.pi/memory/` là durable memory thủ công để giữ preference/decision/lesson ổn định giữa các session. Nó không thay thế snapshot hoặc source hiện tại.
 
 ## Vì sao không để bash làm bước này
@@ -105,4 +107,4 @@ khi có thay đổi lớn:
 
 `/task` sẽ yêu cầu đọc `.pi/project-context.md`. Nếu file còn trạng thái `Generated: not yet`, agent phải dừng và yêu cầu chạy `/onboard-project` trước.
 
-Đây là điểm khác với CLI thuần: context bootstrap trở thành một bước có artifact, có thể review, commit, và tái dùng cho nhiều session/team member.
+Đây là điểm khác với CLI thuần: context bootstrap trở thành một bước có artifact có thể review và tái dùng. `.pi/project-context.md` có thể commit cho team; memory markdown thì private-by-default.

@@ -30,4 +30,4 @@ Use `REVIEW_GUIDELINES.md` when reviewing code in this project.
 
 ## Secrets
 
-Do not commit OAuth tokens, API keys, `.env`, `auth.json`, session files, or `.pi/memory/local/`.
+Do not commit OAuth tokens, API keys, `.env`, `auth.json`, session files, `.pi/memory/MEMORY.md`, `.pi/memory/memory_summary.md`, or `.pi/memory/local/`.

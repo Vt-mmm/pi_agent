@@ -1,0 +1,2 @@
+# Keep memory seed files in the Pi package tarball.
+# Project runtime ignore behavior is defined by .pi/.gitignore.

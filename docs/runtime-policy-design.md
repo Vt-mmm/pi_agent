@@ -23,7 +23,7 @@ Runtime policy là lớp kiểm soát cách agent đọc context, gọi tool, s�
 | Tool registry | `company_tool_policy_check` | Check external tool capability against profile. |
 | Task contract | `company_task_start` | Persist scope, acceptance criteria, risk lane, and verify plan. |
 | Context manifest | `company_context_record` | Record files read for a task. |
-| Verify evidence | `company_verify_record` | Record commands, result, and relevant output. |
+| Verify evidence | `company_verify_record` | Record command result only after matching an observed Pi `bash` tool result. |
 | Final gate | `company_task_gate_check` | Validate readiness before final handoff. |
 | Trace | `company_trace_record` | Persist changed files, outcome, and handoff state. |
 | Usage | `company_usage_snapshot` | Show session/context/token usage when available. |
@@ -64,7 +64,7 @@ intake
   -> context manifest
   -> plan
   -> guarded implementation
-  -> verify evidence
+  -> observed verify evidence
   -> trace
   -> final gate
   -> handoff

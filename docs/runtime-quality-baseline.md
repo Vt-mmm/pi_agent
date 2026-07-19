@@ -2,7 +2,7 @@
 
 ## Mục tiêu
 
-`v0.3.13` định nghĩa bộ kiểm soát runtime để Pi Agent Platform có thể chạy task một cách có kỷ luật cho solo, internal team, và public package.
+`v0.3.14` định nghĩa bộ kiểm soát runtime để Pi Agent Platform có thể chạy task một cách có kỷ luật cho solo, internal team, và public package.
 
 Các module chính:
 
@@ -111,11 +111,13 @@ Runtime behavior:
 
 - kiểm tra task contract;
 - kiểm tra context manifest;
-- kiểm tra verify evidence;
-- yêu cầu passing verify khi task có source changes;
+- kiểm tra verify evidence đã đối chiếu với Pi `bash` `tool_result` thật;
+- yêu cầu observed passing verify khi task có source changes;
 - block `company_trace_record completed` nếu final gate đang enforce và proof chưa đủ.
 
 Agent vẫn phải gọi `company_task_gate_check` trước final handoff.
+
+`company_verify_record` không còn tin `exitCode` tự khai báo. Lệnh verify phải khớp một bash tool result đã quan sát sau `task.createdAt`, và claimed `exitCode` phải khớp trạng thái `isError` của Pi.
 
 ## 5. Local verification
 
@@ -134,7 +136,7 @@ pi list --approve
 - package manifests;
 - JSON parse;
 - required docs/scripts/prompts;
-- protected-path, shell protected path, and exec-policy regression tests;
+- protected-path, shell protected path, exec-policy, observed-verify, and redaction regression tests;
 - profile doctor;
 - team doctor;
 - TypeScript syntax for extension;

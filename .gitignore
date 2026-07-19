@@ -19,12 +19,14 @@ auth.json
 progress.md
 .pi/trust.json
 .pi/auth.json
-.pi/memory/state.sqlite
-.pi/memory/raw_memories.md
-.pi/memory/rollout_summaries/
-.pi/memory/extensions/ad_hoc/
-.pi/memory/local/
-.pi/memory/.git/
+/.pi/memory/state.sqlite
+/.pi/memory/raw_memories.md
+/.pi/memory/MEMORY.md
+/.pi/memory/memory_summary.md
+/.pi/memory/rollout_summaries/
+/.pi/memory/extensions/ad_hoc/
+/.pi/memory/local/
+/.pi/memory/.git/
 
 # Node/package output
 node_modules/

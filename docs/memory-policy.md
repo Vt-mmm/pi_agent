@@ -30,7 +30,7 @@ Bài “How Pi remembers” mô tả hệ thống đầy đủ gồm:
 
 Do đó bản platform hiện tại lấy phần chắc chắn nhất:
 
-- memory file markdown dễ đọc/sửa/commit;
+- memory file markdown dễ đọc/sửa, nhưng mặc định là private local state;
 - write explicit-only;
 - search/read bằng tool;
 - profile knobs để sau này bật external package hoặc assisted mode.
@@ -41,14 +41,18 @@ Trong project được init:
 
 ```text
 .pi/memory/
-├─ memory_summary.md   compact index, bắt đầu bằng v1
-├─ MEMORY.md           durable project memory handbook
+├─ memory_summary.md   compact index, bắt đầu bằng v1, ignored by default
+├─ MEMORY.md           durable project memory handbook, ignored by default
 └─ local/              private local notes, ignored by git
 ```
+
+Memory markdown mặc định không commit vì nội dung có thể đến từ model/user free-text. Nếu team muốn shared handbook, hãy review/redact thủ công rồi opt-in bằng cách bỏ rule ignore ở `.pi/.gitignore`.
 
 Runtime/experimental files không commit:
 
 ```text
+.pi/memory/MEMORY.md
+.pi/memory/memory_summary.md
 .pi/memory/state.sqlite
 .pi/memory/raw_memories.md
 .pi/memory/rollout_summaries/
@@ -92,7 +96,7 @@ Mode hiện tại:
 | Tool | Mục đích |
 |---|---|
 | `company_memory_status` | Xem memory config/files/rules. |
-| `company_memory_note` | Ghi durable note khi user explicit ask. Có redaction pattern cơ bản. |
+| `company_memory_note` | Ghi durable note khi user explicit ask. Có redaction cho token/key/connection-string phổ biến. |
 | `company_memory_search` | Keyword-search memory markdown. |
 | `company_memory_citation_record` | Ghi memory file đã ảnh hưởng task contract. |
 
@@ -122,7 +126,7 @@ Agent nên gọi `company_memory_note` với category `preference`.
 4. đọc repo files hiện tại để verify
 5. implement
 
-Memory giúp giảm token scout lại, nhưng không thay thế việc đọc source hiện tại.
+Memory giúp giảm token scout lại, nhưng không thay thế việc đọc source hiện tại. Không paste secret vào memory; redaction là lớp phòng tai nạn, không phải bảo đảm dữ liệu nhạy cảm có thể được lưu an toàn.
 
 ## Khi muốn dùng package memory ngoài
 

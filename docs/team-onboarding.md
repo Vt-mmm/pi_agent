@@ -6,7 +6,7 @@ Một thành viên mới không cần biết local path của maintainer. Luồn
 
 ```bash
 npm install -g @earendil-works/pi-coding-agent
-pi install git:github.com/Vt-mmm/pi_agent@v0.3.13
+pi install git:github.com/Vt-mmm/pi_agent@v0.3.14
 cd /path/to/project
 pi
 /login
@@ -31,14 +31,14 @@ Khuyến nghị dùng tag cố định:
 
 ```bash
 npm install -g @earendil-works/pi-coding-agent
-pi install git:github.com/Vt-mmm/pi_agent@v0.3.13
+pi install git:github.com/Vt-mmm/pi_agent@v0.3.14
 ```
 
 Nếu team publish npm private:
 
 ```bash
 npm install -g @earendil-works/pi-coding-agent
-pi install npm:@company/pi_agent@0.3.13
+pi install npm:@company/pi_agent@0.3.14
 ```
 
 Không cần chạy bash để set profile cho từng project.
@@ -80,9 +80,12 @@ Rồi chạy:
 Output chính:
 
 - `.pi/project-context.md`
+- `.pi/company-state/project-onboarding.json`
+
+Memory files are created locally but ignored by default:
+
 - `.pi/memory/memory_summary.md`
 - `.pi/memory/MEMORY.md`
-- `.pi/company-state/project-onboarding.json`
 
 Đây là bước model đọc qua project lần đầu theo cách bounded: đọc profile, AGENTS, README, docs/config/source map/test command; không load toàn bộ source.
 
@@ -107,7 +110,7 @@ Các script setup/init vẫn tồn tại cho case preseed config vào repo hoặ
 ```bash
 bash /path/to/pi_agent/scripts/setup.sh /path/to/project \
   --profile be-readonly-fe \
-  --package-source git:github.com/Vt-mmm/pi_agent@v0.3.13 \
+  --package-source git:github.com/Vt-mmm/pi_agent@v0.3.14 \
   --mcp-preset core \
   --subagents-preset safe
 ```
@@ -115,7 +118,7 @@ bash /path/to/pi_agent/scripts/setup.sh /path/to/project \
 Nếu cần override profile:
 
 ```bash
-bash /path/to/pi_agent/scripts/setup.sh /path/to/project --project-only --profile backend-api --package-source git:github.com/Vt-mmm/pi_agent@v0.3.13 --mcp-preset core --subagents-preset safe
+bash /path/to/pi_agent/scripts/setup.sh /path/to/project --project-only --profile backend-api --package-source git:github.com/Vt-mmm/pi_agent@v0.3.14 --mcp-preset core --subagents-preset safe
 ```
 
 Profile built-in trong Pi:
@@ -144,6 +147,8 @@ Project init tạo:
 - `.pi/.gitignore`
 - `AGENTS.md` nếu chưa có
 - `REVIEW_GUIDELINES.md` nếu chưa có
+
+Hai file memory ở trên là local/private mặc định theo `.pi/.gitignore`; chỉ commit nếu team opt-in sau review.
 
 ## Bước 4 — run trong Herdr
 

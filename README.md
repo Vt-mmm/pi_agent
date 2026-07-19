@@ -25,7 +25,7 @@ From there, Pi can onboard the project, select an operating profile, use the rig
   - `company_tool_policy_check`
   - `company_task_gate_check`
   - `company_usage_snapshot`
-- Accident-brake guardrails for protected paths, destructive shell commands, task contracts, context manifests, verification evidence, and trace records.
+- Accident-brake guardrails for protected paths, destructive shell commands, task contracts, context manifests, observed verification evidence, and trace records.
 - Quality benchmark recorder for comparing approved agent surfaces, models, and workflow presets on the same task scenarios.
 - Built-in profiles for frontend, backend, fullstack, BE-readonly/FE-write, data, DevOps, mobile, docs, Python, and Node TypeScript.
 
@@ -33,7 +33,7 @@ From there, Pi can onboard the project, select an operating profile, use the rig
 
 ```bash
 npm install -g @earendil-works/pi-coding-agent
-pi install git:github.com/Vt-mmm/pi_agent@v0.3.13
+pi install git:github.com/Vt-mmm/pi_agent@v0.3.14
 ```
 
 Optional Herdr integration:
@@ -222,7 +222,7 @@ Most projects do not need shell init. Use this only when you want to pre-create 
 ```bash
 bash /path/to/pi_agent/scripts/setup.sh /path/to/project \
   --profile be-readonly-fe \
-  --package-source git:github.com/Vt-mmm/pi_agent@v0.3.13 \
+  --package-source git:github.com/Vt-mmm/pi_agent@v0.3.14 \
   --mcp-preset core \
   --subagents-preset safe
 ```
@@ -317,7 +317,7 @@ This repository intentionally excludes:
 
 ## Maturity
 
-Current release: `v0.3.13`.
+Current release: `v0.3.14`.
 
 Ready for:
 
@@ -333,6 +333,8 @@ Ready for:
 Security boundary:
 
 - The guard extension is an accident-prevention layer for agent mistakes and common prompt-injection patterns.
+- Verify evidence is accepted only when it matches an observed Pi bash tool result in the active session after task start.
+- Project memory files are private-by-default in generated projects; opt in to shared memory only after review/redaction.
 - It is not an OS sandbox. For untrusted code, untrusted prompts, or adversarial workloads, run Pi inside an isolated container/VM with filesystem, process, network, and credential boundaries.
 
 Still requires project-specific validation for:

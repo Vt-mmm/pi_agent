@@ -12,7 +12,7 @@ User request
   -> plan / task contract
   -> guarded tool calls
   -> implementation
-  -> verify evidence
+  -> observed verify evidence
   -> trace / handoff
 ```
 
@@ -25,7 +25,7 @@ Project cụ thể chỉ cần adapter/profile riêng. Core package giữ lifecy
 | Risk lane | `riskLane` + profile `hardGates` | Chặn auth, release, provider config, destructive action, database migration. |
 | Intake | `company_task_start` | Mỗi task có scope, output, acceptance criteria trước khi edit. |
 | Context rules | `/onboard-project`, `.pi/project-context.md`, `requiredContext`, context manifest | Giảm token và tránh đọc toàn repo. |
-| Test matrix | `verifyCommands` + verify evidence | DONE phải có command thực chạy hoặc `N/A` rõ lý do. |
+| Test matrix | `verifyCommands` + observed verify evidence | DONE phải có command thực chạy qua Pi bash hoặc `N/A` rõ lý do. |
 | Trace | `company_trace_record`, `.pi/company-state/traces.jsonl`, session entry | Có audit trail cho task. |
 | Protected paths | `protectedPaths` trong profile + extension guard | Mỗi project có vùng cấm riêng. |
 | Tool registry | `mcpCapabilities` + `.mcp.json` | Không tự đoán tool/MCP. |

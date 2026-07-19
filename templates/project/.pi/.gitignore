@@ -11,6 +11,8 @@ npm/
 git/
 trust.json
 auth.json
+memory/MEMORY.md
+memory/memory_summary.md
 memory/state.sqlite
 memory/raw_memories.md
 memory/rollout_summaries/

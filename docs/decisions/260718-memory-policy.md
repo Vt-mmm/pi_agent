@@ -24,7 +24,7 @@ Default memory is:
 - markdown-first;
 - explicit-only;
 - advisory, not authoritative;
-- committed only for safe summary/handbook files;
+- private-by-default for summary/handbook files; team can opt in to commit only after review/redaction;
 - local/cache/catalog files ignored.
 
 The platform exposes `company_memory_status`, `company_memory_note`, `company_memory_search`, and `company_memory_citation_record`.

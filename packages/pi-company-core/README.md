@@ -28,7 +28,7 @@ Shared Pi package for reusable project workflows.
 - `company_task_start`
 - `company_source_checkout`
 - `company_context_record`
-- `company_verify_record`
+- `company_verify_record` — records verify evidence only after matching an observed bash tool result
 - `company_trace_record`
 
 ## Prompt recipes
@@ -58,7 +58,7 @@ When `pi-subagents` is installed, this package exposes:
 ## Install
 
 ```bash
-pi install git:github.com/Vt-mmm/pi_agent@v0.3.13
+pi install git:github.com/Vt-mmm/pi_agent@v0.3.14
 ```
 
 ## Project profile
@@ -77,7 +77,7 @@ Runtime task tools write local state to:
 - `.pi/company-state/tasks/*.json`
 - `.pi/project-context.md`
 - `.pi/company-state/project-onboarding.json`
-- `.pi/memory/MEMORY.md` when the user explicitly asks Pi to remember durable information
+- `.pi/memory/MEMORY.md` when the user explicitly asks Pi to remember durable information; generated projects ignore this file by default
 - `.pi/company-state/traces.jsonl`
 - Pi custom session entry `company-task-trace`
 

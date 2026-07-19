@@ -10,6 +10,14 @@ import {
   findProtectedPathInCommand,
   matchesAnyPath
 } from "./policy-core.js";
+import {
+  createBashResultLedger,
+  observedBashResultFromToolResultEvent
+} from "./runtime-evidence.js";
+import {
+  redactForStorage,
+  redactSensitiveText
+} from "./redaction-core.js";
 
 type ProjectProfile = {
   schemaVersion?: number;
@@ -82,7 +90,7 @@ type TaskContract = {
   mcpCapabilities: string[];
   verifyCommands: string[];
   changedFiles: string[];
-  verifyEvidence: Array<{ command: string; exitCode: number; summary: string; recordedAt: string }>;
+  verifyEvidence: Array<{ command: string; exitCode: number; summary: string; recordedAt: string; observed?: boolean; observedAt?: string; isError?: boolean }>;
   trace: {
     outcome: "pending" | "completed" | "blocked" | "partial" | "failed";
     friction?: string;
@@ -196,13 +204,6 @@ const DEFAULT_RUNTIME_POLICY: Required<RuntimePolicySettings> = {
   toolRegistry: "advisory",
   finalGate: "enforce"
 };
-
-const SECRET_PATTERNS = [
-  /AKIA[0-9A-Z]{16}/g,
-  /\b(?:gho_|ghp_|sk-)[A-Za-z0-9_]{16,}\b/g,
-  /\b(?:api[_-]?key|token|password|secret|credential|client_secret)\s*[:=]\s*["']?[^"'\s]+/gi,
-  /-----BEGIN [A-Z ]*PRIVATE KEY-----[\s\S]*?-----END [A-Z ]*PRIVATE KEY-----/g
-];
 
 const DEFAULT_POLICY: BasePolicy = {
   protectedPaths: [".git/**", "**/auth.json", "**/.env", "**/.env.*"],
@@ -568,15 +569,40 @@ function memoryLocalDir(cwd: string, settings: Required<MemorySettings>): string
   return projectFilePath(cwd, settings.localDir);
 }
 
+function ensurePiGitignore(cwd: string): void {
+  const target = path.join(cwd, ".pi", ".gitignore");
+  fs.mkdirSync(path.dirname(target), { recursive: true });
+  const required = [
+    "memory/MEMORY.md",
+    "memory/memory_summary.md",
+    "memory/state.sqlite",
+    "memory/raw_memories.md",
+    "memory/rollout_summaries/",
+    "memory/extensions/ad_hoc/",
+    "memory/local/",
+    "memory/.git/"
+  ];
+  const existing = fs.existsSync(target) ? fs.readFileSync(target, "utf8") : "";
+  const additions = required.filter((line) => !existing.split(/\r?\n/).includes(line));
+  if (additions.length === 0) return;
+  const prefix = existing.trimEnd();
+  fs.writeFileSync(target, `${prefix ? `${prefix}\n` : ""}${additions.join("\n")}\n`);
+}
+
 function redactMemoryText(input: string): { text: string; redacted: boolean } {
-  let text = input;
-  for (const pattern of SECRET_PATTERNS) {
-    text = text.replace(pattern, "[REDACTED_SECRET]");
-  }
-  return { text, redacted: text !== input };
+  return redactSensitiveText(input);
+}
+
+function redactText(input: string): string {
+  return redactSensitiveText(input).text;
+}
+
+function redactTextArray(input: string[] | undefined): string[] {
+  return (input ?? []).map((item) => redactText(item));
 }
 
 function ensureProjectMemoryFiles(cwd: string, settings: Required<MemorySettings>): void {
+  ensurePiGitignore(cwd);
   const summaryPath = memorySummaryPath(cwd, settings);
   const handbookPath = memoryHandbookPath(cwd, settings);
   fs.mkdirSync(path.dirname(summaryPath), { recursive: true });
@@ -629,15 +655,16 @@ function appendMemoryNote(cwd: string, profile: ProjectProfile, note: {
   ensureProjectMemoryFiles(cwd, settings);
   const target = memoryHandbookPath(cwd, settings);
   const redacted = redactMemoryText(note.content);
-  const title = note.title.trim().replace(/\s+/g, " ").slice(0, 120);
+  const title = redactText(note.title).trim().replace(/\s+/g, " ").slice(0, 120);
   const category = note.category.trim().toLowerCase().replace(/[^a-z0-9_-]+/g, "-").slice(0, 40) || "note";
+  const source = note.source ? redactText(note.source).trim() : "";
   const entry = [
     "",
     `### ${title}`,
     "",
     `- Recorded: ${nowIso()}`,
     `- Category: ${category}`,
-    `- Source: ${note.source?.trim() || "explicit-user-request"}`,
+    `- Source: ${source || "explicit-user-request"}`,
     "",
     redacted.text.trim(),
     ""
@@ -686,9 +713,10 @@ function searchMemoryFiles(cwd: string, profile: ProjectProfile, query: string, 
 function writeProjectOnboarding(cwd: string, snapshot: ProjectOnboardingSnapshot, markdown: string): ProjectOnboardingSnapshot {
   fs.mkdirSync(path.join(cwd, ".pi"), { recursive: true });
   ensureStateDirs(cwd);
-  fs.writeFileSync(projectContextFilePath(cwd), `${markdown.trimEnd()}\n`);
-  fs.writeFileSync(onboardingStateFilePath(cwd), `${JSON.stringify(snapshot, null, 2)}\n`);
-  return snapshot;
+  const safeSnapshot = redactForStorage(snapshot) as ProjectOnboardingSnapshot;
+  fs.writeFileSync(projectContextFilePath(cwd), `${redactText(markdown).trimEnd()}\n`);
+  fs.writeFileSync(onboardingStateFilePath(cwd), `${JSON.stringify(safeSnapshot, null, 2)}\n`);
+  return safeSnapshot;
 }
 
 function adapterProfilePath(extensionDir: string, profileName: string): string | undefined {
@@ -855,7 +883,12 @@ function evaluateTaskGate(task: TaskContract | undefined, policy: BasePolicy): {
   }
   if (finalGate.requireContextManifest && task.contextManifest.length === 0) missing.push("context manifest");
   if (finalGate.requireVerifyEvidence && task.verifyEvidence.length === 0) missing.push("verify evidence");
-  if (finalGate.requirePassingVerify && task.verifyEvidence.length > 0 && !task.verifyEvidence.some((evidence) => evidence.exitCode === 0)) missing.push("passing verify evidence");
+  if (task.verifyEvidence.some((evidence) => evidence.observed !== true)) {
+    warnings.push("Unobserved verify evidence is ignored by the passing verify gate.");
+  }
+  if (finalGate.requirePassingVerify && task.verifyEvidence.length > 0 && !task.verifyEvidence.some((evidence) => evidence.exitCode === 0 && evidence.observed === true)) {
+    missing.push("observed passing verify evidence");
+  }
   if (finalGate.requireTrace && task.trace.outcome === "pending") missing.push("final trace");
   if (task.changedFiles.length === 0 && task.trace.outcome === "completed") warnings.push("Trace is completed but changedFiles is empty.");
   return { decision: missing.length === 0 ? "pass" : "fail", missing, warnings };
@@ -938,14 +971,16 @@ function formatUsageSnapshot(snapshot: UsageSnapshot): string {
 
 function appendTrace(cwd: string, payload: Record<string, unknown>): void {
   ensureStateDirs(cwd);
-  fs.appendFileSync(traceFilePath(cwd), `${JSON.stringify({ recordedAt: nowIso(), ...payload })}\n`);
+  const safePayload = redactForStorage(payload) as Record<string, unknown>;
+  fs.appendFileSync(traceFilePath(cwd), `${JSON.stringify({ recordedAt: nowIso(), ...safePayload })}\n`);
 }
 
 function appendSessionTrace(pi: ExtensionAPI, payload: Record<string, unknown>): void {
+  const safePayload = redactForStorage(payload) as Record<string, unknown>;
   pi.appendEntry(COMPANY_TRACE_STATE_TYPE, {
     version: 1,
     recordedAt: nowIso(),
-    ...payload
+    ...safePayload
   });
 }
 
@@ -1072,6 +1107,7 @@ function checkoutReferenceRepo(repoRef: string, forceUpdate = false): ReferenceR
 export default function companyGuard(pi: ExtensionAPI) {
   const extensionDir = path.dirname(new URL(import.meta.url).pathname);
   const policy = loadPolicy(extensionDir);
+  const bashResults = createBashResultLedger({ maxEntries: 300 });
 
   pi.on("session_start", async (_event, ctx) => {
     const profile = loadProfileFromContext(ctx);
@@ -1079,6 +1115,11 @@ export default function companyGuard(pi: ExtensionAPI) {
     pi.setSessionName(`pi:${name}`);
     const profileHint = fs.existsSync(projectProfilePath(ctx.cwd)) ? "" : " (run /onboard-project to select a profile)";
     ctx.ui.notify(`Company Pi guard loaded: ${name}${profileHint}`, "info");
+  });
+
+  pi.on("tool_result", async (event, ctx) => {
+    const observed = observedBashResultFromToolResultEvent(event, ctx.cwd);
+    if (observed) bashResults.record(observed);
   });
 
   pi.on("tool_call", async (event, ctx) => {
@@ -1508,16 +1549,16 @@ export default function companyGuard(pi: ExtensionAPI) {
         projectId: profile.projectId,
         profileMode: profile.mode,
         contextFile: ".pi/project-context.md",
-        summary: params.summary,
-        model: params.model,
-        sourceFiles: params.sourceFiles,
-        updateTriggers: params.updateTriggers ?? [
+        summary: redactText(params.summary),
+        model: params.model ? redactText(params.model) : undefined,
+        sourceFiles: params.sourceFiles.map((file) => ({ path: file.path, reason: redactText(file.reason) })),
+        updateTriggers: redactTextArray(params.updateTriggers ?? [
           "Project structure changed",
           "Stack/framework changed",
           "Verify commands changed",
           "Domain or ownership rules changed"
-        ],
-        notes: params.notes,
+        ]),
+        notes: params.notes ? redactText(params.notes) : undefined,
         recordedAt: nowIso()
       };
       writeProjectOnboarding(ctx.cwd, snapshot, params.markdown);
@@ -1552,15 +1593,16 @@ export default function companyGuard(pi: ExtensionAPI) {
     async execute(_toolCallId, params, _signal, _onUpdate, ctx) {
       const profile = loadProfileFromContext(ctx);
       const createdAt = nowIso();
-      const taskId = safeTaskId(params.taskId ?? params.summary);
+      const safeSummary = redactText(params.summary);
+      const taskId = safeTaskId(redactText(params.taskId ?? params.summary));
       const task: TaskContract = {
         taskId,
-        summary: params.summary,
+        summary: safeSummary,
         riskLane: params.riskLane,
-        expectedOutput: params.expectedOutput,
-        acceptanceCriteria: params.acceptanceCriteria,
-        scope: params.scope,
-        outOfScope: params.outOfScope ?? [],
+        expectedOutput: redactText(params.expectedOutput),
+        acceptanceCriteria: redactTextArray(params.acceptanceCriteria),
+        scope: redactTextArray(params.scope),
+        outOfScope: redactTextArray(params.outOfScope),
         protectedPaths: profile.protectedPaths ?? [],
         requiredContext: profile.requiredContext ?? [],
         contextManifest: [],
@@ -1574,8 +1616,8 @@ export default function companyGuard(pi: ExtensionAPI) {
         updatedAt: createdAt
       };
       writeTask(ctx.cwd, task);
-      appendTrace(ctx.cwd, { taskId, event: "task_start", summary: params.summary, riskLane: params.riskLane });
-      appendSessionTrace(pi, { taskId, event: "task_start", summary: params.summary, riskLane: params.riskLane });
+      appendTrace(ctx.cwd, { taskId, event: "task_start", summary: task.summary, riskLane: params.riskLane });
+      appendSessionTrace(pi, { taskId, event: "task_start", summary: task.summary, riskLane: params.riskLane });
 
       return {
         content: [{ type: "text", text: `Task contract created: .pi/company-state/tasks/${taskId}.json` }],
@@ -1657,14 +1699,18 @@ export default function companyGuard(pi: ExtensionAPI) {
         };
       }
 
+      const safeFiles = params.files.map((file) => ({
+        path: file.path,
+        reason: redactText(file.reason)
+      }));
       const seen = new Set(task.contextManifest.map((item) => `${item.path}\u0000${item.reason}`));
-      for (const file of params.files) {
+      for (const file of safeFiles) {
         const key = `${file.path}\u0000${file.reason}`;
         if (!seen.has(key)) task.contextManifest.push(file);
       }
       writeTask(ctx.cwd, task);
-      appendTrace(ctx.cwd, { taskId: task.taskId, event: "context_record", files: params.files });
-      appendSessionTrace(pi, { taskId: task.taskId, event: "context_record", files: params.files });
+      appendTrace(ctx.cwd, { taskId: task.taskId, event: "context_record", files: safeFiles });
+      appendSessionTrace(pi, { taskId: task.taskId, event: "context_record", files: safeFiles });
 
       return {
         content: [{ type: "text", text: `Context recorded for ${task.taskId}: ${params.files.length} file(s)` }],
@@ -1690,19 +1736,38 @@ export default function companyGuard(pi: ExtensionAPI) {
         return { content: [{ type: "text", text: `Task not found: ${params.taskId}` }], isError: true };
       }
 
-      task.verifyEvidence.push({
+      const observed = bashResults.findMatching({
+        cwd: ctx.cwd,
         command: params.command,
+        notBefore: task.createdAt,
+        exitCode: params.exitCode
+      });
+      if (!observed.ok) {
+        return {
+          content: [{ type: "text", text: `Verify evidence rejected: ${observed.reason}` }],
+          details: redactForStorage(observed),
+          isError: true
+        };
+      }
+
+      const safeCommand = redactText(params.command);
+      const safeSummary = redactText(params.summary);
+      task.verifyEvidence.push({
+        command: safeCommand,
         exitCode: params.exitCode,
-        summary: params.summary,
-        recordedAt: nowIso()
+        summary: safeSummary,
+        recordedAt: nowIso(),
+        observed: true,
+        observedAt: observed.entry.recordedAt,
+        isError: observed.entry.isError
       });
       writeTask(ctx.cwd, task);
-      appendTrace(ctx.cwd, { taskId: task.taskId, event: "verify_record", command: params.command, exitCode: params.exitCode });
-      appendSessionTrace(pi, { taskId: task.taskId, event: "verify_record", command: params.command, exitCode: params.exitCode });
+      appendTrace(ctx.cwd, { taskId: task.taskId, event: "verify_record", command: safeCommand, exitCode: params.exitCode, observedAt: observed.entry.recordedAt });
+      appendSessionTrace(pi, { taskId: task.taskId, event: "verify_record", command: safeCommand, exitCode: params.exitCode, observedAt: observed.entry.recordedAt });
 
       return {
-        content: [{ type: "text", text: `Verify evidence recorded for ${task.taskId}: exit ${params.exitCode}` }],
-        details: task
+        content: [{ type: "text", text: `Verify evidence recorded for ${task.taskId}: observed exit ${params.exitCode}` }],
+        details: { task, observation: redactForStorage(observed.entry) }
       };
     }
   });
@@ -1725,14 +1790,18 @@ export default function companyGuard(pi: ExtensionAPI) {
         return { content: [{ type: "text", text: `Task not found: ${params.taskId}` }], isError: true };
       }
 
+      const safeFiles = params.files.map((file) => ({
+        path: file.path,
+        reason: redactText(file.reason)
+      }));
       const seen = new Set(task.memoryCitations.map((item) => `${item.path}\u0000${item.reason}`));
-      for (const file of params.files) {
+      for (const file of safeFiles) {
         const key = `${file.path}\u0000${file.reason}`;
         if (!seen.has(key)) task.memoryCitations.push(file);
       }
       writeTask(ctx.cwd, task);
-      appendTrace(ctx.cwd, { taskId: task.taskId, event: "memory_citation_record", files: params.files });
-      appendSessionTrace(pi, { taskId: task.taskId, event: "memory_citation_record", files: params.files });
+      appendTrace(ctx.cwd, { taskId: task.taskId, event: "memory_citation_record", files: safeFiles });
+      appendSessionTrace(pi, { taskId: task.taskId, event: "memory_citation_record", files: safeFiles });
 
       return {
         content: [{ type: "text", text: `Memory citations recorded for ${task.taskId}: ${params.files.length} file(s)` }],
@@ -1766,8 +1835,8 @@ export default function companyGuard(pi: ExtensionAPI) {
         changedFiles: params.changedFiles ?? task.changedFiles,
         trace: {
           outcome: params.outcome,
-          friction: params.friction,
-          notes: params.notes,
+          friction: params.friction ? redactText(params.friction) : undefined,
+          notes: params.notes ? redactText(params.notes) : undefined,
           recordedAt: nowIso()
         }
       };
@@ -1786,16 +1855,16 @@ export default function companyGuard(pi: ExtensionAPI) {
         event: "trace_record",
         outcome: params.outcome,
         changedFiles: nextTask.changedFiles,
-        friction: params.friction,
-        notes: params.notes
+        friction: nextTask.trace.friction,
+        notes: nextTask.trace.notes
       });
       appendSessionTrace(pi, {
         taskId: nextTask.taskId,
         event: "trace_record",
         outcome: params.outcome,
         changedFiles: nextTask.changedFiles,
-        friction: params.friction,
-        notes: params.notes
+        friction: nextTask.trace.friction,
+        notes: nextTask.trace.notes
       });
 
       return {

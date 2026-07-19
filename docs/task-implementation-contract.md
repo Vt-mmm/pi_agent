@@ -88,7 +88,7 @@ Check large context with company_context_budget.
 Check complex/high-impact shell with company_exec_policy_check.
 Check non-company tools with company_tool_policy_check.
 Do not edit before scope + verify command are known.
-Before final, record verify evidence and trace.
+Before final, run the verify command through Pi bash, record observed verify evidence, and trace.
 Call company_task_gate_check before DONE.
 If verify cannot run, final outcome is blocked/partial, not done.
 ```

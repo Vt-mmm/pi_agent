@@ -14,11 +14,11 @@ required_files=(
   "$ROOT/.pi/settings.json"
   "$ROOT/.pi/company-profile.json"
   "$ROOT/.pi/project-context.md"
-  "$ROOT/.pi/memory/memory_summary.md"
-  "$ROOT/.pi/memory/MEMORY.md"
   "$ROOT/packages/pi-company-core/package.json"
   "$ROOT/packages/pi-company-core/extensions/company-guard.ts"
   "$ROOT/packages/pi-company-core/extensions/policy-core.js"
+  "$ROOT/packages/pi-company-core/extensions/redaction-core.js"
+  "$ROOT/packages/pi-company-core/extensions/runtime-evidence.js"
   "$ROOT/packages/pi-company-core/prompts/onboard-project.md"
   "$ROOT/packages/pi-company-core/prompts/company-commands.md"
   "$ROOT/packages/pi-company-core/prompts/profiles.md"
@@ -54,6 +54,7 @@ required_files=(
   "$ROOT/templates/project/.mcp.json"
   "$ROOT/templates/project/.pi/mcp.json"
   "$ROOT/templates/project/.pi/project-context.md"
+  "$ROOT/templates/project/.pi/.npmignore"
   "$ROOT/templates/project/.pi/memory/memory_summary.md"
   "$ROOT/templates/project/.pi/memory/MEMORY.md"
   "$ROOT/templates/project/.pi/.gitignore"
@@ -95,6 +96,8 @@ required_files=(
   "$ROOT/scripts/configure-mcp.sh"
   "$ROOT/scripts/configure-subagents.sh"
   "$ROOT/tests/policy-core.test.mjs"
+  "$ROOT/tests/redaction-core.test.mjs"
+  "$ROOT/tests/runtime-evidence.test.mjs"
 )
 
 for file in "${required_files[@]}"; do
@@ -252,7 +255,9 @@ fi
 
 node --check "$ROOT/packages/pi-company-core/extensions/company-guard.ts" >/dev/null
 node --check "$ROOT/packages/pi-company-core/extensions/policy-core.js" >/dev/null
-node --test "$ROOT/tests/policy-core.test.mjs" >/dev/null
+node --check "$ROOT/packages/pi-company-core/extensions/redaction-core.js" >/dev/null
+node --check "$ROOT/packages/pi-company-core/extensions/runtime-evidence.js" >/dev/null
+(cd "$ROOT" && npm test) >/dev/null
 if [[ -x "$ROOT/node_modules/.bin/tsc" ]]; then
   (cd "$ROOT" && npm run typecheck) >/dev/null
 fi

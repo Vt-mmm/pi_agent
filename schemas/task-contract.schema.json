@@ -154,6 +154,18 @@
           },
           "summary": {
             "type": "string"
+          },
+          "observed": {
+            "type": "boolean",
+            "description": "True only when the verify command was matched against an observed bash tool_result."
+          },
+          "observedAt": {
+            "type": "string",
+            "description": "Timestamp of the matching bash tool_result observation."
+          },
+          "isError": {
+            "type": "boolean",
+            "description": "Observed Pi tool_result isError flag."
           }
         },
         "additionalProperties": true

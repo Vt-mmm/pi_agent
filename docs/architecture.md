@@ -36,7 +36,7 @@ Any project
 | Company core | platform repo | Có | extension guard, prompt, skill, policy engine. |
 | Domain pack | platform repo | Có | frontend/backend/data profile chung. |
 | Project adapter | project repo hoặc platform repo | Có | paths, context, verify, MCP capabilities. |
-| Project memory | project repo | Có một phần | `.pi/memory/MEMORY.md` và summary; local/cache/catalog ignored. |
+| Project memory | user/project machine | Không mặc định | `.pi/memory/MEMORY.md` và summary là private-by-default; team chỉ opt-in commit sau review/redaction. |
 
 ## Luồng chạy
 
