@@ -56,6 +56,7 @@ required_files=(
   "$ROOT/docs/quickstart-vietnamese.md"
   "$ROOT/docs/command-reference-vietnamese.md"
   "$ROOT/docs/auto-delegation-policy.md"
+  "$ROOT/docs/pi-subagents-upstream-review.md"
   "$ROOT/docs/project-onboarding.md"
   "$ROOT/docs/workflow-recipes.md"
   "$ROOT/docs/memory-policy.md"
@@ -160,6 +161,11 @@ grep -R "/company-usage" "$ROOT/packages/pi-company-core" "$ROOT/docs" "$ROOT/RE
 grep -R "/company-commands" "$ROOT/README.md" "$ROOT/docs" "$ROOT/packages/pi-company-core/prompts" >/dev/null
 grep -R "auto-delegation" "$ROOT/README.md" "$ROOT/docs" "$ROOT/packages/pi-company-core/prompts" "$ROOT/templates/project/AGENTS.md" >/dev/null
 grep -R "Subagents used/not used" "$ROOT/packages/pi-company-core/prompts" "$ROOT/docs/auto-delegation-policy.md" >/dev/null
+grep -R "pi-subagents upstream" "$ROOT/README.md" "$ROOT/docs/pi-subagents-upstream-review.md" >/dev/null
+grep -R "pi-web-access" "$ROOT/README.md" "$ROOT/docs" "$ROOT/scripts/install-global.sh" "$ROOT/scripts/setup.sh" >/dev/null
+grep -R "parallel-review" "$ROOT/docs" "$ROOT/README.md" >/dev/null
+grep -R "intercomBridge" "$ROOT/scripts/configure-subagents.sh" "$ROOT/docs/subagents-and-multiagent.md" >/dev/null
+grep -R "waitTool" "$ROOT/scripts/configure-subagents.sh" "$ROOT/docs/subagents-and-multiagent.md" >/dev/null
 grep -R "company_profile_options" "$ROOT/packages/pi-company-core" "$ROOT/docs" >/dev/null
 grep -R "company_profile_apply" "$ROOT/packages/pi-company-core" "$ROOT/docs" >/dev/null
 grep -R "company_project_onboarding_record" "$ROOT/packages/pi-company-core" "$ROOT/docs" >/dev/null

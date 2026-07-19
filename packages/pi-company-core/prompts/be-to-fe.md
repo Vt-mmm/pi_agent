@@ -28,9 +28,10 @@ Mandatory flow:
    - BE scout: read-only.
    - FE implementation: source-write.
    - Auth/data migration/external provider: high-risk, ask before implementation.
-6. Decide whether subagents are useful. If `pi-subagents`/`subagent(...)` is available, prefer automatic read-only delegation:
+6. Decide whether subagents are useful. If the bundled `pi-subagents` parent skill is available, use it for delegation patterns and safety boundaries. If `pi-subagents`/`subagent(...)` is available, prefer automatic read-only delegation:
    - `company-scout` maps backend contract read-only;
    - `company-scout` maps frontend touchpoints read-only;
+   - builtin `context-builder` may create handoff context when the BE→FE mapping touches multiple journeys/forms/contracts;
    - `company-planner` produces the FE implementation plan when the contract touches multiple layers;
    - `company-reviewer` reviews diff/verification after implementation.
    Continue single-agent if subagents are unavailable, the task is tiny, or requirements are unresolved.

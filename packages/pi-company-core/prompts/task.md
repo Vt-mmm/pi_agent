@@ -24,8 +24,9 @@ Mandatory flow:
    - required context
    - verify command
 5. Read all required context files from the profile before planning, then call `company_context_budget` for large or unfamiliar files.
-6. Decide whether subagents are useful. If `pi-subagents`/`subagent(...)` is available, use subagents automatically for independent read-heavy scout/planning/review work instead of requiring the user to type `/run`:
+6. Decide whether subagents are useful. If the bundled `pi-subagents` parent skill is available, use it for delegation patterns and safety boundaries. If `pi-subagents`/`subagent(...)` is available, use subagents automatically for independent read-heavy scout/planning/review work instead of requiring the user to type `/run`:
    - use `company-scout` for unfamiliar module/spec mapping;
+   - use builtin `context-builder` when a large task needs a handoff context/meta-prompt before planning;
    - use `company-planner` for medium/high-risk implementation planning;
    - use `company-reviewer` for final diff/test/scope review;
    - keep implementation single-writer unless the user explicitly asks for parallel writers or worktree isolation is clearly safe;

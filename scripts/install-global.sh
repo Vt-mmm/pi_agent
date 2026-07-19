@@ -4,15 +4,15 @@ set -euo pipefail
 usage() {
   cat <<'USAGE'
 Usage:
-  scripts/install-global.sh [--package-source <source>] [--with-mcp] [--mcp-preset <preset>] [--with-subagents] [--subagents-preset <preset>] [--with-herdr] [--with-codex-herdr] [--model-scope <preset>]
+  scripts/install-global.sh [--package-source <source>] [--with-mcp] [--mcp-preset <preset>] [--with-subagents] [--subagents-preset <preset>] [--with-web-access] [--with-herdr] [--with-codex-herdr] [--model-scope <preset>]
 
 Purpose:
   Install the company Pi package into the current user's global Pi settings.
 
 Package source examples:
-  git:github.com/Vt-mmm/pi_agent@v0.3.9
+  git:github.com/Vt-mmm/pi_agent@v0.3.10
   https://github.com/Vt-mmm/pi_agent
-  npm:@company/pi_agent@0.3.9
+  npm:@company/pi_agent@0.3.10
   /absolute/path/to/pi_agent
 
 Notes:
@@ -21,6 +21,7 @@ Notes:
   - Herdr integration is optional and modifies user-level Herdr/Pi config.
   - MCP preset defaults to core: Context7 docs, Chrome DevTools, GitHub.
   - Subagents preset defaults to safe: compact tool description, bounded concurrency/depth.
+  - Web access is optional. Install it only when you want the builtin `researcher` subagent to browse/fetch web sources inside Pi.
 USAGE
 }
 
@@ -31,6 +32,7 @@ MCP_PRESET="core"
 WITH_SUBAGENTS=false
 SUBAGENTS_PRESET="safe"
 SUBAGENTS_MODEL_SCOPE="none"
+WITH_WEB_ACCESS=false
 WITH_HERDR=false
 WITH_CODEX_HERDR=false
 CONFIGURE_MODEL_SCOPE=true
@@ -66,6 +68,10 @@ while [[ $# -gt 0 ]]; do
     --subagents-model-scope)
       SUBAGENTS_MODEL_SCOPE="${2:-}"
       shift 2
+      ;;
+    --with-web-access)
+      WITH_WEB_ACCESS=true
+      shift
       ;;
     --with-herdr)
       WITH_HERDR=true
@@ -143,6 +149,11 @@ if [[ "$WITH_SUBAGENTS" == true ]]; then
   bash "$PLATFORM_ROOT/scripts/configure-subagents.sh" --preset "$SUBAGENTS_PRESET" --model-scope "$SUBAGENTS_MODEL_SCOPE"
 fi
 
+if [[ "$WITH_WEB_ACCESS" == true ]]; then
+  echo "Installing Pi web access for researcher subagent:"
+  pi install npm:pi-web-access
+fi
+
 if [[ "$CONFIGURE_MODEL_SCOPE" == true ]]; then
   echo "Configuring Pi model selector scope:"
   bash "$PLATFORM_ROOT/scripts/configure-model-scope.sh" --preset "$MODEL_SCOPE_PRESET" --default-model "$DEFAULT_MODEL"
@@ -173,4 +184,4 @@ echo "  /model          # or Ctrl+L: select Codex/Claude model from Pi selector"
 echo "  /scoped-models  # optional: edit Ctrl+P model cycle scope"
 echo "  /mcp            # inspect MCP servers; authenticate Figma/GitHub only when needed"
 echo "  /subagents-doctor"
-echo "  /run scout \"Map this repo area\""
+echo "  /task Implement <task>  # parent may auto-delegate scout/planner/reviewer"

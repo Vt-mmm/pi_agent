@@ -29,8 +29,10 @@ Mandatory flow:
    - reference repo URL + commit/tag;
    - files inspected;
    - exact behavior/concept being migrated.
-6. Decide whether subagents are useful. If `pi-subagents`/`subagent(...)` is available, use automatic read-only delegation for independent research:
+6. Decide whether subagents are useful. If the bundled `pi-subagents` parent skill is available, use it for delegation patterns and safety boundaries. If `pi-subagents`/`subagent(...)` is available, use automatic read-only delegation for independent research:
    - `company-scout` inspects current platform docs/scripts;
+   - builtin `researcher` inspects official/web evidence when `pi-web-access` or equivalent web tools are installed;
+   - builtin `context-builder` creates handoff context/meta-prompt for broad migrations;
    - `company-scout` inspects official docs/reference repo evidence;
    - `company-planner` builds the migration matrix and target plan;
    - `company-reviewer` checks parity/docs/runtime behavior after changes.

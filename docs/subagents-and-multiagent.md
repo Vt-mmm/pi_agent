@@ -12,12 +12,17 @@ Pi core không có subagents built-in. Theo design của Pi, subagents là exten
 - status/fleet/cost/doctor commands;
 - bounded recursion/concurrency;
 - optional worktree isolation cho parallel writers.
+- prompt shortcuts như `/parallel-review`, `/review-loop`, `/parallel-research`, `/parallel-context-build`;
+- native supervisor channel (`contact_supervisor` / `subagent_supervisor`);
+- acceptance gates, output files, forked context, watchdog, model profiles, and lifecycle artifacts.
 
 Từ `v0.3.7`, `scripts/setup.sh` mặc định cài `pi-subagents` và chạy config preset `safe`.
 
-Từ `v0.3.9`, workflow prompts của platform có **auto-delegation policy**: khi anh chạy `/task`, `/be-to-fe`, `/platform-migration`, `/plan`, hoặc `/review`, parent agent phải tự cân nhắc spawn subagent cho phần việc độc lập. Anh không bắt buộc phải gọi `/run` nếu chỉ muốn task hoàn chỉnh.
+Từ `v0.3.10`, workflow prompts của platform có **auto-delegation policy**: khi anh chạy `/task`, `/be-to-fe`, `/platform-migration`, `/plan`, hoặc `/review`, parent agent phải tự cân nhắc spawn subagent cho phần việc độc lập. Anh không bắt buộc phải gọi `/run` nếu chỉ muốn task hoàn chỉnh.
 
 Xem chi tiết: `docs/auto-delegation-policy.md`.
+
+Upstream review chi tiết: `docs/pi-subagents-upstream-review.md`.
 
 ## Install/setup
 
@@ -26,7 +31,7 @@ Một lệnh setup đầy đủ:
 ```bash
 bash /path/to/pi_agent/scripts/setup.sh . \
   --profile auto \
-  --package-source git:github.com/Vt-mmm/pi_agent@v0.3.9 \
+  --package-source git:github.com/Vt-mmm/pi_agent@v0.3.10 \
   --mcp-preset core \
   --subagents-preset safe
 ```
@@ -34,7 +39,7 @@ bash /path/to/pi_agent/scripts/setup.sh . \
 Nếu chỉ cài global:
 
 ```bash
-pi install git:github.com/Vt-mmm/pi_agent@v0.3.9
+pi install git:github.com/Vt-mmm/pi_agent@v0.3.10
 pi install npm:pi-subagents
 bash /path/to/pi_agent/scripts/configure-subagents.sh --preset safe
 ```
@@ -59,6 +64,11 @@ Nội dung chính:
 
 - `toolDescriptionMode: compact` để giảm prompt/token;
 - `asyncByDefault: false` để không tự chạy background nếu không yêu cầu;
+- `waitTool.enabled: true` để parent có thể đợi async runs khi workflow cần kết quả;
+- `intercomBridge.mode: always` để child có thể hỏi parent qua `contact_supervisor`;
+- `singleRunOutputBaseDir` và `defaultSessionDir` stable trong `~/.pi/agent`;
+- `worktreeBaseDir` stable cho parallel writer khi được explicit bật;
+- `scheduledRuns.enabled: false` để không lộ surface schedule nếu user không yêu cầu;
 - `parallel.concurrency: 3`;
 - `parallel.maxTasks: 6`;
 - `maxSubagentDepth: 1`;
@@ -84,6 +94,16 @@ Sau khi mở session mới hoặc `/reload`:
 ```
 
 `/subagents-doctor` là lệnh đầu tiên nên chạy nếu không thấy tool/agent.
+
+Optional research support:
+
+```bash
+pi install npm:pi-web-access
+# hoặc
+bash /path/to/pi_agent/scripts/setup.sh . --with-web-access
+```
+
+`researcher` builtin cần web/search/fetch tools từ package này. Không bật mặc định để tránh tăng tool surface cho team không cần web research.
 
 Giải nghĩa nhanh:
 
@@ -114,6 +134,8 @@ Ask oracle to challenge this plan before we edit code.
 Use reviewer to review the current diff for correctness and tests.
 Run parallel reviewers: correctness, tests, and unnecessary complexity.
 Have worker implement this approved plan, then run reviewer.
+Run a review loop on this change until reviewers stop finding fixes worth doing, max 3 rounds.
+Run parallel research: external docs, local code context, and practical tradeoffs.
 ```
 
 Với workflow platform, còn có thể chỉ gọi:
@@ -128,7 +150,21 @@ Parent agent sẽ tự quyết định:
 - spawn `company-scout` nếu cần map source/spec;
 - spawn `company-planner` nếu cần plan medium/high-risk;
 - spawn `company-reviewer` trước final nếu diff không nhỏ;
+- dùng builtin `researcher` nếu task cần external evidence và web tools available;
+- dùng builtin `context-builder` nếu task lớn cần handoff context;
 - ghi trong final `Subagents: used/not used and why`.
+
+## Upstream prompt shortcuts nên biết
+
+| Prompt | Dùng khi nào |
+|---|---|
+| `/parallel-review` | Review nhiều góc nhìn độc lập; thêm `autofix` nếu muốn áp fix đáng làm. |
+| `/review-loop` | Worker/reviewer/fix loop đến khi sạch hoặc hết max rounds. |
+| `/parallel-research` | External research + local scout + tradeoff. Cần `pi-web-access` cho web researcher. |
+| `/parallel-context-build` | Tạo `context.md`/meta-prompt handoff cho task lớn. |
+| `/parallel-handoff-plan` | Research + context-builder + implementation handoff plan. |
+| `/gather-context-and-clarify` | Đọc/scout trước rồi chỉ hỏi câu clarification thật sự cần. |
+| `/parallel-cleanup` | Cleanup review sau implementation; có thể thêm `autofix`. |
 
 ## Gọi bằng slash command
 
@@ -181,11 +217,23 @@ Status/control:
 
 ```text
 subagent({ action: "status" })
+subagent({ action: "status", view: "fleet" })
 subagent({ action: "status", id: "<run-id>", view: "transcript" })
 subagent({ action: "steer", id: "<run-id>", message: "Focus only on tests." })
 subagent({ action: "stop", id: "<run-id>" })
 subagent({ action: "resume", id: "<run-id>", message: "Continue after this clarification." })
+subagent_supervisor({ action: "pending" })
+subagent_supervisor({ action: "reply", replyTo: "<request-id>", message: "Approved path A." })
 ```
+
+Output/file controls:
+
+```text
+/run scout[output=context.md,outputMode=file-only] "Map target area"
+/chain scout[output=context.md,as=context] "Scan" -> planner[reads=context.md] "Plan from {outputs.context}"
+```
+
+Use `outputMode=file-only` khi report dài để parent không bị nhồi full output vào context.
 
 ## Company subagents
 
@@ -229,6 +277,37 @@ subagent({
 ```
 
 For normal solo/internal workflow, prefer one `company-worker` plus parallel read-only reviewers.
+
+## Watchdog opt-in
+
+Watchdog không phải `reviewer`. Nó là adversarial review ở boundary `agent_end`, chỉ chạy khi có repo edits. Không bật mặc định vì tốn thêm model pass.
+
+Session-only high-risk run:
+
+```text
+/subagents-watchdog recommend-model
+/subagents-watchdog session model recommended
+/subagents-watchdog on
+```
+
+Persistent project/user config chỉ dùng khi team đã đồng ý cost/latency.
+
+## Model profiles
+
+Khi team có nhiều provider/quota:
+
+```text
+/subagents-refresh-provider-models openai-codex
+/subagents-generate-profiles openai-codex
+/subagents-load-profile openai-codex.quota
+/subagents-check-profile openai-codex.quota
+```
+
+Model scope platform vẫn có thể enforce bằng:
+
+```bash
+pi-company-subagents --preset safe --model-scope company
+```
 
 ## Cost/token controls
 

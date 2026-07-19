@@ -30,6 +30,7 @@ Options:
                                   Configure pi-subagents runtime baseline (default: safe)
   --subagents-model-scope <none|company|codex|claude>
                                   Optional subagent model allowlist (default: none)
+  --with-web-access               Install pi-web-access for builtin `researcher` subagent (default: skip)
   --with-herdr / --no-herdr      Install/skip Herdr Pi integration if herdr exists (default: install)
   --with-codex-herdr             Also install Herdr Codex integration if codex exists
   --model-scope <full|codex|claude>
@@ -47,13 +48,13 @@ Options:
   -h, --help
 
 Package source examples:
-  git:github.com/Vt-mmm/pi_agent@v0.3.9
+  git:github.com/Vt-mmm/pi_agent@v0.3.10
   https://github.com/Vt-mmm/pi_agent
-  npm:@company/pi_agent@0.3.9
+  npm:@company/pi_agent@0.3.10
   /absolute/path/to/pi_agent
 
 One-command team setup example:
-  bash /path/to/pi_agent/scripts/setup.sh . --profile auto --package-source git:github.com/Vt-mmm/pi_agent@v0.3.9
+  bash /path/to/pi_agent/scripts/setup.sh . --profile auto --package-source git:github.com/Vt-mmm/pi_agent@v0.3.10
 USAGE
 }
 
@@ -68,6 +69,7 @@ MCP_PRESET="core"
 WITH_SUBAGENTS=true
 SUBAGENTS_PRESET="safe"
 SUBAGENTS_MODEL_SCOPE="none"
+WITH_WEB_ACCESS=false
 WITH_HERDR=true
 WITH_CODEX_HERDR=false
 CONFIGURE_MODEL_SCOPE=true
@@ -137,6 +139,10 @@ while [[ $# -gt 0 ]]; do
     --subagents-model-scope)
       SUBAGENTS_MODEL_SCOPE="${2:-}"
       shift 2
+      ;;
+    --with-web-access)
+      WITH_WEB_ACCESS=true
+      shift
       ;;
     --with-herdr)
       WITH_HERDR=true
@@ -315,6 +321,9 @@ if [[ "$DO_GLOBAL" == true ]]; then
   if [[ "$WITH_SUBAGENTS" == true ]]; then
     install_args+=("--with-subagents" "--subagents-preset" "$SUBAGENTS_PRESET" "--subagents-model-scope" "$SUBAGENTS_MODEL_SCOPE")
   fi
+  if [[ "$WITH_WEB_ACCESS" == true ]]; then
+    install_args+=("--with-web-access")
+  fi
   if [[ "$WITH_CODEX_HERDR" == true ]]; then
     install_args+=("--with-codex-herdr")
   elif [[ "$WITH_HERDR" == true ]]; then
@@ -366,4 +375,4 @@ echo "Daily flow after setup:"
 echo "  herdr    # optional"
 echo "  cd <project>"
 echo "  pi"
-echo "  /run scout \"Map this repo area\""
+echo "  /task Implement <task>  # parent may auto-delegate scout/planner/reviewer"

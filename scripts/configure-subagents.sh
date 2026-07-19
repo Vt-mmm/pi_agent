@@ -90,9 +90,15 @@ const presets = {
     asyncByDefault: false,
     asyncWidget: true,
     forceTopLevelAsync: false,
+    waitTool: { enabled: true },
+    intercomBridge: { mode: "always" },
     globalConcurrencyLimit: 4,
     maxSubagentSpawnsPerSession: 16,
     maxSubagentDepth: 1,
+    defaultSessionDir: "~/.pi/agent/sessions/subagent",
+    singleRunOutputBaseDir: "~/.pi/agent/subagent-outputs",
+    worktreeBaseDir: "~/.pi/agent/worktrees/pi-subagents",
+    scheduledRuns: { enabled: false, maxPending: 20, maxLatenessMs: 300000 },
     parallel: { maxTasks: 4, concurrency: 2 },
     completionBatch: { enabled: true, debounceMs: 150, maxWaitMs: 1000 }
   },
@@ -101,9 +107,15 @@ const presets = {
     asyncByDefault: false,
     asyncWidget: true,
     forceTopLevelAsync: false,
+    waitTool: { enabled: true },
+    intercomBridge: { mode: "always" },
     globalConcurrencyLimit: 8,
     maxSubagentSpawnsPerSession: 32,
     maxSubagentDepth: 1,
+    defaultSessionDir: "~/.pi/agent/sessions/subagent",
+    singleRunOutputBaseDir: "~/.pi/agent/subagent-outputs",
+    worktreeBaseDir: "~/.pi/agent/worktrees/pi-subagents",
+    scheduledRuns: { enabled: false, maxPending: 20, maxLatenessMs: 300000 },
     parallel: { maxTasks: 6, concurrency: 3 },
     completionBatch: { enabled: true, debounceMs: 150, maxWaitMs: 1000, stragglerDebounceMs: 75, stragglerMaxWaitMs: 400, stragglerWindowMs: 2000 }
   },
@@ -112,9 +124,15 @@ const presets = {
     asyncByDefault: true,
     asyncWidget: true,
     forceTopLevelAsync: false,
+    waitTool: { enabled: true },
+    intercomBridge: { mode: "always" },
     globalConcurrencyLimit: 8,
     maxSubagentSpawnsPerSession: 32,
     maxSubagentDepth: 1,
+    defaultSessionDir: "~/.pi/agent/sessions/subagent",
+    singleRunOutputBaseDir: "~/.pi/agent/subagent-outputs",
+    worktreeBaseDir: "~/.pi/agent/worktrees/pi-subagents",
+    scheduledRuns: { enabled: false, maxPending: 20, maxLatenessMs: 300000 },
     parallel: { maxTasks: 6, concurrency: 3 },
     completionBatch: { enabled: true, debounceMs: 150, maxWaitMs: 1000, stragglerDebounceMs: 75, stragglerMaxWaitMs: 400, stragglerWindowMs: 2000 }
   },
@@ -123,9 +141,15 @@ const presets = {
     asyncByDefault: false,
     asyncWidget: true,
     forceTopLevelAsync: false,
+    waitTool: { enabled: true },
+    intercomBridge: { mode: "always" },
     globalConcurrencyLimit: 12,
     maxSubagentSpawnsPerSession: 64,
     maxSubagentDepth: 1,
+    defaultSessionDir: "~/.pi/agent/sessions/subagent",
+    singleRunOutputBaseDir: "~/.pi/agent/subagent-outputs",
+    worktreeBaseDir: "~/.pi/agent/worktrees/pi-subagents",
+    scheduledRuns: { enabled: false, maxPending: 20, maxLatenessMs: 300000 },
     parallel: { maxTasks: 10, concurrency: 5 },
     completionBatch: { enabled: true, debounceMs: 150, maxWaitMs: 1000, stragglerDebounceMs: 75, stragglerMaxWaitMs: 400, stragglerWindowMs: 2000 }
   }
@@ -215,4 +239,3 @@ if (dryRun) {
   console.log(JSON.stringify(report, null, 2));
 }
 NODE
-

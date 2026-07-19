@@ -15,7 +15,7 @@ Phần còn lại — OAuth, package, context, harness, MCP, tool-call guard —
 
 ```bash
 npm install -g @earendil-works/pi-coding-agent
-pi install git:github.com/Vt-mmm/pi_agent@v0.3.9
+pi install git:github.com/Vt-mmm/pi_agent@v0.3.10
 ```
 
 Sau bước này, project mới không cần chạy bash init profile. Chỉ cần:
@@ -80,6 +80,14 @@ pi-company-subagents --preset safe
 bash /path/to/pi_agent/scripts/configure-subagents.sh --preset safe
 ```
 
+Nếu muốn dùng builtin `researcher` cho web/docs research trong Pi:
+
+```bash
+pi install npm:pi-web-access
+# hoặc setup từ đầu:
+bash /path/to/pi_agent/scripts/setup.sh . --with-web-access
+```
+
 Lệnh này yêu cầu model đọc qua project theo phạm vi có kiểm soát, rồi ghi:
 
 ```text
@@ -101,7 +109,7 @@ File này là snapshot context cho task sau. Nếu file còn `Generated: not yet
 bash /path/to/pi_agent/scripts/setup.sh /path/to/project \
   --project-only \
   --profile auto \
-  --package-source git:github.com/Vt-mmm/pi_agent@v0.3.9 \
+  --package-source git:github.com/Vt-mmm/pi_agent@v0.3.10 \
   --mcp-preset core \
   --subagents-preset safe
 ```
@@ -122,7 +130,7 @@ Script bash chỉ dùng khi muốn preseed config vào repo:
 ```bash
 bash /path/to/pi_agent/scripts/setup.sh /path/to/project \
   --profile be-readonly-fe \
-  --package-source git:github.com/Vt-mmm/pi_agent@v0.3.9 \
+  --package-source git:github.com/Vt-mmm/pi_agent@v0.3.10 \
   --mcp-preset core \
   --subagents-preset safe
 ```
@@ -147,7 +155,16 @@ Prompt mẫu khi đã rõ task:
 /task Implement this request. Use company_context, company_task_start, company_context_budget, company_exec_policy_check when shell is needed, company_verify_record, company_trace_record, and company_task_gate_check before done.
 ```
 
-Từ `v0.3.9`, `/task` có auto-delegation policy. Với task đủ lớn, parent agent phải tự cân nhắc dùng `company-scout`, `company-planner`, hoặc `company-reviewer`; anh không cần tự gọi `/run` nếu không muốn ép orchestration.
+Từ `v0.3.10`, `/task` có auto-delegation policy. Với task đủ lớn, parent agent phải tự cân nhắc dùng `company-scout`, `company-planner`, hoặc `company-reviewer`; anh không cần tự gọi `/run` nếu không muốn ép orchestration.
+
+Các workflow upstream đáng dùng khi muốn ép rõ shape:
+
+```text
+/parallel-review current diff
+/review-loop current diff max 3 rounds
+/parallel-research <question cần external evidence + local code context>
+/parallel-context-build <task lớn cần context handoff>
+```
 
 Prompt mẫu cho 2 recipe hay gặp:
 

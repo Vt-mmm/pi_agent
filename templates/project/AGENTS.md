@@ -22,6 +22,7 @@ Before implementation:
 14. For external reference repos, use `company-reference-repo` and read targeted files only.
 15. For medium/large tasks, auto-delegate independent read-only scout/planning/review work to `company-scout`, `company-planner`, `company-reviewer`, or `company-oracle` when `pi-subagents` is available. Do not require the user to type `/run` for normal task orchestration.
 16. Keep implementation single-writer by default. Use parallel writers only with explicit user approval or safe worktree isolation and disjoint write sets.
+17. If the bundled `pi-subagents` parent skill is available, use it for delegation patterns, review loops, native supervisor coordination, and safety boundaries.
 
 ## Review
 

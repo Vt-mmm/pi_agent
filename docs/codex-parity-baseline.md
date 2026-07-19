@@ -2,7 +2,7 @@
 
 ## Mục tiêu
 
-`v0.3.9` không cố copy OpenAI Codex. Mục tiêu là học các runtime invariant tốt của Codex và triển khai clean-room vào Pi package để dùng được cho solo/internal/team:
+`v0.3.10` không cố copy OpenAI Codex. Mục tiêu là học các runtime invariant tốt của Codex và triển khai clean-room vào Pi package để dùng được cho solo/internal/team:
 
 1. Exec policy
 2. Context budget
@@ -11,7 +11,7 @@
 5. Integration/local verification
 6. Benchmark parity
 
-Trạng thái sau `v0.3.9`: **P3-baseline**. Tức là platform đã có module runtime để kiểm soát task tốt hơn P2, nhưng số liệu Pi vs Codex vs Claude vẫn phải chạy theo project/model thật trước khi tuyên bố token/cost reduction.
+Trạng thái sau `v0.3.10`: **P3-baseline**. Tức là platform đã có module runtime để kiểm soát task tốt hơn P2, nhưng số liệu Pi vs Codex vs Claude vẫn phải chạy theo project/model thật trước khi tuyên bố token/cost reduction.
 
 ## 1. Exec policy
 

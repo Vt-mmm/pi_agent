@@ -13,6 +13,7 @@ This repository is designed for teams that want a `cd project && pi` workflow wi
 - MCP baseline via `pi-mcp-adapter`, `pi-company-mcp`, `.mcp.json`, and token-efficient proxy mode.
 - Multi-agent baseline via `pi-subagents`, `pi-company-subagents`, and company subagent roles.
 - Auto-delegation policy for `/task`, `/be-to-fe`, `/platform-migration`, `/plan`, and `/review` so normal tasks can spawn read-only scout/planner/reviewer agents without the user memorizing subagent commands.
+- Upstream `pi-subagents` integration notes for bundled orchestration skill, review loops, parallel research, context-builder handoffs, watchdog opt-in, supervisor channel, and model profiles.
 - Built-in profiles for frontend, backend, fullstack, BE-readonly/FE-write, data, DevOps, mobile, docs, Python, and Node TypeScript.
 - Guardrails for protected paths, destructive shell commands, task contracts, context manifests, verification evidence, and trace records.
 - Codex-inspired runtime policy modules:
@@ -37,7 +38,7 @@ This repository is designed for teams that want a `cd project && pi` workflow wi
 
 ```bash
 npm install -g @earendil-works/pi-coding-agent
-pi install git:github.com/Vt-mmm/pi_agent@v0.3.9
+pi install git:github.com/Vt-mmm/pi_agent@v0.3.10
 ```
 
 Optional Herdr integration:
@@ -206,6 +207,14 @@ pi-company-subagents --preset safe
 bash /path/to/pi_agent/scripts/configure-subagents.sh --preset safe
 ```
 
+Optional for builtin `researcher` web/docs research:
+
+```bash
+pi install npm:pi-web-access
+# or during setup:
+bash /path/to/pi_agent/scripts/setup.sh . --with-web-access
+```
+
 In Pi:
 
 ```text
@@ -233,6 +242,15 @@ Daily task prompts can auto-delegate when useful:
 
 The agent should report `Subagents: used/not used and why` in the final handoff.
 
+Useful upstream workflow shortcuts:
+
+```text
+/parallel-review current diff
+/review-loop current diff max 3 rounds
+/parallel-research <question>
+/parallel-context-build <large task>
+```
+
 Natural language also works:
 
 ```text
@@ -254,7 +272,7 @@ Most projects do not need shell init. Use this only when you want to pre-create 
 ```bash
 bash /path/to/pi_agent/scripts/setup.sh /path/to/project \
   --profile be-readonly-fe \
-  --package-source git:github.com/Vt-mmm/pi_agent@v0.3.9 \
+  --package-source git:github.com/Vt-mmm/pi_agent@v0.3.10 \
   --mcp-preset core \
   --subagents-preset safe
 ```
@@ -334,6 +352,7 @@ MIT License. See [LICENSE](LICENSE).
 - [MCP and tools](docs/mcp-and-tools.md)
 - [Subagents and multi-agent](docs/subagents-and-multiagent.md)
 - [Auto-delegation policy](docs/auto-delegation-policy.md)
+- [pi-subagents upstream review](docs/pi-subagents-upstream-review.md)
 - [Context-window policy](docs/context-window-policy.md)
 - [Memory policy](docs/memory-policy.md)
 - [Task implementation contract](docs/task-implementation-contract.md)

@@ -16,7 +16,7 @@ Rules:
 3. Read `.pi/project-context.md`; if it is missing or still pending, recommend `/onboard-project` before implementation.
 4. Read required context.
 5. Identify protected paths and external/high-risk actions.
-6. Decide whether subagents are useful. If `pi-subagents`/`subagent(...)` is available, use `company-scout` automatically for independent read-only repo/spec mapping before planning medium/large tasks. Use `company-oracle` for architecture/risk challenge when the decision is non-obvious. Continue single-agent for tiny plans or unavailable subagent tooling.
+6. Decide whether subagents are useful. If the bundled `pi-subagents` parent skill is available, use it for delegation patterns and safety boundaries. If `pi-subagents`/`subagent(...)` is available, use `company-scout` automatically for independent read-only repo/spec mapping before planning medium/large tasks. Use builtin `context-builder` when the task needs a handoff context/meta-prompt. Use `company-oracle` for architecture/risk challenge when the decision is non-obvious. Continue single-agent for tiny plans or unavailable subagent tooling.
 7. Produce phases with exact files, commands, and verify gates.
 8. Do not implement yet unless the user explicitly asks.
 
