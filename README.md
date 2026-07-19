@@ -11,6 +11,7 @@ This repository is designed for teams that want a `cd project && pi` workflow wi
 - Runtime profile selection via `/profiles`.
 - Explicit project memory via `/memory-policy` and `company_memory_*` tools.
 - MCP baseline via `pi-mcp-adapter`, `pi-company-mcp`, `.mcp.json`, and token-efficient proxy mode.
+- Multi-agent baseline via `pi-subagents`, `pi-company-subagents`, and company subagent roles.
 - Built-in profiles for frontend, backend, fullstack, BE-readonly/FE-write, data, DevOps, mobile, docs, Python, and Node TypeScript.
 - Guardrails for protected paths, destructive shell commands, task contracts, context manifests, verification evidence, and trace records.
 - Codex-inspired runtime policy modules:
@@ -34,7 +35,7 @@ This repository is designed for teams that want a `cd project && pi` workflow wi
 
 ```bash
 npm install -g @earendil-works/pi-coding-agent
-pi install git:github.com/Vt-mmm/pi_agent@v0.3.6
+pi install git:github.com/Vt-mmm/pi_agent@v0.3.7
 ```
 
 Optional Herdr integration:
@@ -57,6 +58,7 @@ First run inside a project:
 /model          # or Ctrl+L: select OpenAI Codex / Claude from Pi's native selector
 /scoped-models  # optional: edit Ctrl+P cycle list
 /mcp            # inspect MCP servers
+/subagents-doctor
 /onboard-project
 /memory-policy
 ```
@@ -191,6 +193,36 @@ export CONTEXT7_API_KEY=ctx7sk_...
 export GITHUB_PERSONAL_ACCESS_TOKEN=github_pat_...
 ```
 
+### Subagents and multi-agent workflows
+
+Global setup installs `pi-subagents` and configures the `safe` preset unless you pass `--no-subagents`.
+
+```bash
+pi-company-subagents --preset safe
+# fallback when cloned from Git without npm bins:
+bash /path/to/pi_agent/scripts/configure-subagents.sh --preset safe
+```
+
+In Pi:
+
+```text
+/subagents-doctor
+/subagents-models
+/subagents-fleet
+/subagent-cost
+/run company-scout "Map the auth flow. Read-only."
+/run company-planner "Plan implementation from context.md."
+/run company-worker "Implement the approved plan."
+/run company-reviewer "Review current diff."
+```
+
+Natural language also works:
+
+```text
+Use company-scout to map this module, then have company-planner produce an implementation plan.
+Run parallel company-reviewers for correctness, tests, and scope drift.
+```
+
 ### Planning and clarification
 
 ```text
@@ -205,8 +237,9 @@ Most projects do not need shell init. Use this only when you want to pre-create 
 ```bash
 bash /path/to/pi_agent/scripts/setup.sh /path/to/project \
   --profile be-readonly-fe \
-  --package-source git:github.com/Vt-mmm/pi_agent@v0.3.6 \
-  --mcp-preset core
+  --package-source git:github.com/Vt-mmm/pi_agent@v0.3.7 \
+  --mcp-preset core \
+  --subagents-preset safe
 ```
 
 ## Repository layout
@@ -281,6 +314,7 @@ MIT License. See [LICENSE](LICENSE).
 - [Project adapters](docs/project-adapters.md)
 - [Architecture](docs/architecture.md)
 - [MCP and tools](docs/mcp-and-tools.md)
+- [Subagents and multi-agent](docs/subagents-and-multiagent.md)
 - [Context-window policy](docs/context-window-policy.md)
 - [Memory policy](docs/memory-policy.md)
 - [Task implementation contract](docs/task-implementation-contract.md)
@@ -303,6 +337,7 @@ Good for:
 - read-only scouting;
 - small or normal source tasks with clear verification;
 - Codex-inspired exec/context/tool/task gate checks;
+- bounded subagent scouting/planning/review workflows;
 - collecting Pi vs Codex vs Claude benchmark evidence.
 
 Not yet proven for:
@@ -310,4 +345,4 @@ Not yet proven for:
 - replacing Codex/Claude CLI on high-risk tasks without project-specific benchmark evidence;
 - true final assistant stop-hook enforcement when Pi does not expose a hard final hook;
 - Codex-grade filesystem/network/env sandbox if Pi/host runtime does not provide it;
-- complex multi-agent worktree isolation.
+- complex multi-agent worktree isolation without project-specific dry runs.

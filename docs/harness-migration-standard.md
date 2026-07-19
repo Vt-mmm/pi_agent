@@ -112,7 +112,7 @@ Pi Company Platform cần 7 module logic:
 | P1 | schema + task contract + doctor + verify-local + lean prompts | Có thể dùng cho task nhỏ nếu human review sát. |
 | P2 | extension tools: task_start/context_record/verify_record/trace + session custom entries | Có thể dùng cho FE/source task có guard rõ. |
 | P3 | exec policy + context budget + tool registry + task gate + benchmark recorder | Đủ để thay một phần Codex/Claude CLI baseline sau project benchmark. |
-| P4 | subagent/worktree isolation + team publish + security review | Đủ triển khai cho team. |
+| P4 | subagent/worktree isolation + team publish + security review | Bắt đầu từ `v0.3.7`; cần project-specific dry run trước khi coi là team-default cho writer parallel. |
 
 ## Chuẩn “DONE”
 

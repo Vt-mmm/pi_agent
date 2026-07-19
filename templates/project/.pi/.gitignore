@@ -4,6 +4,8 @@ todos/
 sessions/
 session-control/
 cache/
+.pi-subagents/
+progress.md
 benchmarks/
 npm/
 git/

@@ -8,6 +8,7 @@ Pi package dùng chung cho nhiều project.
 - `prompts/*.md`: prompt template dùng chung.
 - `skills/company-ops/SKILL.md`: operating skill cho agent.
 - `skills/company-reference-repo/`: cache repo tham chiếu để nghiên cứu Codex/Pi/package ngoài.
+- `subagents/*.md`: company roles cho `pi-subagents`.
 - `policies/base-policy.json`: policy mặc định.
 - MCP/tool policy: dùng `company_tool_policy_check`; MCP server thật được cấu hình ở `.mcp.json` / `.pi/mcp.json`.
 - Runtime parity tools:
@@ -25,10 +26,20 @@ Pi package dùng chung cho nhiều project.
 - `/be-to-fe`: scout backend contract read-only rồi implement frontend only.
 - `/task`, `/plan`, `/discuss`, `/review`: task lifecycle chuẩn.
 
+## Subagents
+
+Khi cài thêm `pi-subagents`, package này expose:
+
+- `company-scout`
+- `company-planner`
+- `company-worker`
+- `company-reviewer`
+- `company-oracle`
+
 ## Cài local
 
 ```bash
-pi install git:github.com/Vt-mmm/pi_agent@v0.3.6
+pi install git:github.com/Vt-mmm/pi_agent@v0.3.7
 ```
 
 ## Project profile

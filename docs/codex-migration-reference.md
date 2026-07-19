@@ -16,7 +16,7 @@ Tham khảo OpenAI Codex CLI để thiết kế Pi platform, nhưng không khóa
 | final verify gate | `company_task_gate_check` + `company_trace_record` gate |
 | sandbox/env/network | Pi extension guard + optional container/VM; not full Codex parity yet |
 | MCP config | `pi-mcp-adapter` + `.mcp.json` / `.pi/mcp.json` |
-| subagents | Herdr panes/session profiles trước; Pi SDK/RPC sau |
+| subagents | `pi-subagents` + package agents `company-*` + bounded concurrency/depth |
 | non-interactive exec | Pi `--mode rpc` hoặc JSON event stream |
 | hooks | Pi extension lifecycle events |
 | model routing | Pi provider/model settings + prompt policy |

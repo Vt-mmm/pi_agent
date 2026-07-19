@@ -10,6 +10,7 @@ Checks:
   - Pi/Herdr availability
   - Root package Pi manifest
   - MCP adapter/baseline visibility
+  - Subagents package/config visibility
   - Project .pi/settings.json package source
   - Project company profile
   - No local-machine paths in share-critical files when --strict-share is used
@@ -78,6 +79,11 @@ for (const rel of [
   "packages/pi-company-core/prompts/be-to-fe.md",
   "packages/pi-company-core/prompts/task.md",
   "packages/pi-company-core/prompts/discuss.md",
+  "packages/pi-company-core/subagents/company-scout.md",
+  "packages/pi-company-core/subagents/company-planner.md",
+  "packages/pi-company-core/subagents/company-worker.md",
+  "packages/pi-company-core/subagents/company-reviewer.md",
+  "packages/pi-company-core/subagents/company-oracle.md",
   "templates/project/.pi/settings.json",
   "templates/project/.pi/company-profile.json",
   "templates/project/.mcp.json",
@@ -86,7 +92,8 @@ for (const rel of [
   "templates/project/.pi/memory/memory_summary.md",
   "templates/project/.pi/memory/MEMORY.md",
   "scripts/setup.sh",
-  "scripts/configure-mcp.sh"
+  "scripts/configure-mcp.sh",
+  "scripts/configure-subagents.sh"
 ]) {
   if (!exists(rel)) errors.push(`missing platform file: ${rel}`);
 }
@@ -95,6 +102,7 @@ const rootPackage = readJson(path.join(platformRoot, "package.json"));
 if (!rootPackage.pi?.extensions?.length) errors.push("root package.json missing pi.extensions");
 if (!rootPackage.pi?.skills?.length) errors.push("root package.json missing pi.skills");
 if (!rootPackage.pi?.prompts?.length) errors.push("root package.json missing pi.prompts");
+if (!rootPackage.pi?.subagents?.agents?.length) errors.push("root package.json missing pi.subagents.agents");
 
 if (!commandExists("pi")) warnings.push("pi is not on PATH");
 if (!commandExists("herdr")) warnings.push("herdr is not on PATH; Herdr integration optional");
@@ -119,11 +127,14 @@ function mcpSummary(file) {
 }
 
 let piHasMcpAdapter = false;
+let piHasSubagents = false;
 if (commandExists("pi")) {
   const piList = spawnSync("pi", ["list"], { encoding: "utf8" });
   const combined = `${piList.stdout ?? ""}\n${piList.stderr ?? ""}`;
   piHasMcpAdapter = combined.includes("pi-mcp-adapter");
+  piHasSubagents = combined.includes("pi-subagents");
   if (!piHasMcpAdapter) warnings.push("Pi MCP adapter not found in `pi list`; run setup with --with-mcp or `pi install npm:pi-mcp-adapter`");
+  if (!piHasSubagents) warnings.push("Pi subagents package not found in `pi list`; run setup with --with-subagents or `pi install npm:pi-subagents`");
 }
 
 const mcpFiles = [
@@ -136,6 +147,15 @@ const mcp = mcpFiles.map(mcpSummary);
 const totalMcpServers = mcp.reduce((sum, item) => sum + item.serverCount, 0);
 if (piHasMcpAdapter && totalMcpServers === 0) {
   warnings.push("Pi MCP adapter is installed but no MCP servers are configured; run `pi-company-mcp --preset core --scope global` or `/mcp setup`");
+}
+
+const subagentConfigPath = path.join(process.env.PI_CODING_AGENT_DIR || path.join(process.env.HOME || "", ".pi", "agent"), "extensions", "subagent", "config.json");
+const subagentConfig = readJsonIfPresent(subagentConfigPath);
+if (piHasSubagents && !subagentConfig) {
+  warnings.push("Pi subagents package is installed but config is missing; run `pi-company-subagents --preset safe`");
+}
+if (subagentConfig && subagentConfig.toolDescriptionMode !== "compact") {
+  warnings.push("Pi subagents toolDescriptionMode is not compact; token use may be higher");
 }
 
 const projectSettingsPath = path.join(projectPath, ".pi", "settings.json");
@@ -223,7 +243,13 @@ const report = {
   piOnPath: commandExists("pi"),
   herdrOnPath: commandExists("herdr"),
   piHasMcpAdapter,
+  piHasSubagents,
   mcp,
+  subagents: {
+    configPath: subagentConfigPath,
+    configExists: Boolean(subagentConfig),
+    config: subagentConfig
+  },
   rootPiManifest: rootPackage.pi,
   warnings,
   errors

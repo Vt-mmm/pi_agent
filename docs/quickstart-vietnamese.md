@@ -15,7 +15,7 @@ Phần còn lại — OAuth, package, context, harness, MCP, tool-call guard —
 
 ```bash
 npm install -g @earendil-works/pi-coding-agent
-pi install git:github.com/Vt-mmm/pi_agent@v0.3.6
+pi install git:github.com/Vt-mmm/pi_agent@v0.3.7
 ```
 
 Sau bước này, project mới không cần chạy bash init profile. Chỉ cần:
@@ -42,6 +42,7 @@ Sau khi login và chọn model intended cho project understanding:
 /model          # hoặc Ctrl+L để chọn model bằng selector của Pi
 /scoped-models  # optional, chỉnh danh sách Ctrl+P cycle
 /mcp            # kiểm tra MCP adapter/server
+/subagents-doctor
 /onboard-project
 /memory-policy
 ```
@@ -70,6 +71,14 @@ Nếu clone repo GitHub và chưa link npm bin, dùng fallback:
 bash /path/to/pi_agent/scripts/configure-mcp.sh --preset core --scope global
 ```
 
+Nếu muốn xem/re-apply subagents baseline từ terminal:
+
+```bash
+pi-company-subagents --preset safe
+# fallback:
+bash /path/to/pi_agent/scripts/configure-subagents.sh --preset safe
+```
+
 Lệnh này yêu cầu model đọc qua project theo phạm vi có kiểm soát, rồi ghi:
 
 ```text
@@ -91,8 +100,9 @@ File này là snapshot context cho task sau. Nếu file còn `Generated: not yet
 bash /path/to/pi_agent/scripts/setup.sh /path/to/project \
   --project-only \
   --profile auto \
-  --package-source git:github.com/Vt-mmm/pi_agent@v0.3.6 \
-  --mcp-preset core
+  --package-source git:github.com/Vt-mmm/pi_agent@v0.3.7 \
+  --mcp-preset core \
+  --subagents-preset safe
 ```
 
 Đổi profile sau này trong Pi:
@@ -111,8 +121,9 @@ Script bash chỉ dùng khi muốn preseed config vào repo:
 ```bash
 bash /path/to/pi_agent/scripts/setup.sh /path/to/project \
   --profile be-readonly-fe \
-  --package-source git:github.com/Vt-mmm/pi_agent@v0.3.6 \
-  --mcp-preset core
+  --package-source git:github.com/Vt-mmm/pi_agent@v0.3.7 \
+  --mcp-preset core \
+  --subagents-preset safe
 ```
 
 ## Bước 6 — chạy hằng ngày
@@ -141,6 +152,8 @@ Prompt mẫu cho 2 recipe hay gặp:
 /platform-migration Migrate selected Pi docs and Codex CLI GitHub concepts into this platform.
 /be-to-fe Implement FE from BE spec <endpoint/spec>. Backend read-only.
 /memory-policy Show project memory policy and safe remember workflow.
+/run company-scout "Map target area read-only before planning."
+/run company-reviewer "Review current diff before final handoff."
 ```
 
 Cache repo tham chiếu để đọc targeted trong Pi:

@@ -1,6 +1,6 @@
 {
   "name": "pi-agent-platform",
-  "version": "0.3.6",
+  "version": "0.3.7",
   "private": true,
   "license": "MIT",
   "type": "module",
@@ -21,7 +21,8 @@
     "pi-company-usage": "scripts/pi-session-stats.sh",
     "pi-company-models": "scripts/pi-model-catalog.sh",
     "pi-company-model-scope": "scripts/configure-model-scope.sh",
-    "pi-company-mcp": "scripts/configure-mcp.sh"
+    "pi-company-mcp": "scripts/configure-mcp.sh",
+    "pi-company-subagents": "scripts/configure-subagents.sh"
   },
   "pi": {
     "extensions": [
@@ -32,7 +33,12 @@
     ],
     "prompts": [
       "packages/pi-company-core/prompts"
-    ]
+    ],
+    "subagents": {
+      "agents": [
+        "packages/pi-company-core/subagents"
+      ]
+    }
   },
   "peerDependencies": {
     "@earendil-works/pi-ai": "*",
@@ -54,7 +60,8 @@
     "usage": "bash scripts/pi-session-stats.sh",
     "models": "bash scripts/pi-model-catalog.sh",
     "model-scope": "bash scripts/configure-model-scope.sh",
-    "mcp": "bash scripts/configure-mcp.sh"
+    "mcp": "bash scripts/configure-mcp.sh",
+    "subagents": "bash scripts/configure-subagents.sh"
   },
   "engines": {
     "node": ">=20"

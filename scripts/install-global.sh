@@ -4,15 +4,15 @@ set -euo pipefail
 usage() {
   cat <<'USAGE'
 Usage:
-  scripts/install-global.sh [--package-source <source>] [--with-mcp] [--mcp-preset <preset>] [--with-herdr] [--with-codex-herdr] [--model-scope <preset>]
+  scripts/install-global.sh [--package-source <source>] [--with-mcp] [--mcp-preset <preset>] [--with-subagents] [--subagents-preset <preset>] [--with-herdr] [--with-codex-herdr] [--model-scope <preset>]
 
 Purpose:
   Install the company Pi package into the current user's global Pi settings.
 
 Package source examples:
-  git:github.com/Vt-mmm/pi_agent@v0.3.6
+  git:github.com/Vt-mmm/pi_agent@v0.3.7
   https://github.com/Vt-mmm/pi_agent
-  npm:@company/pi_agent@0.3.6
+  npm:@company/pi_agent@0.3.7
   /absolute/path/to/pi_agent
 
 Notes:
@@ -20,6 +20,7 @@ Notes:
   - Model scope is configured with Pi's native `enabledModels` so users choose via `/model`, Ctrl+L, `/scoped-models`, and Ctrl+P.
   - Herdr integration is optional and modifies user-level Herdr/Pi config.
   - MCP preset defaults to core: Context7 docs, Chrome DevTools, GitHub.
+  - Subagents preset defaults to safe: compact tool description, bounded concurrency/depth.
 USAGE
 }
 
@@ -27,6 +28,9 @@ PLATFORM_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 PACKAGE_SOURCE="${PI_COMPANY_PACKAGE_SOURCE:-}"
 WITH_MCP=false
 MCP_PRESET="core"
+WITH_SUBAGENTS=false
+SUBAGENTS_PRESET="safe"
+SUBAGENTS_MODEL_SCOPE="none"
 WITH_HERDR=false
 WITH_CODEX_HERDR=false
 CONFIGURE_MODEL_SCOPE=true
@@ -49,6 +53,18 @@ while [[ $# -gt 0 ]]; do
       ;;
     --mcp-preset)
       MCP_PRESET="${2:-}"
+      shift 2
+      ;;
+    --with-subagents)
+      WITH_SUBAGENTS=true
+      shift
+      ;;
+    --subagents-preset)
+      SUBAGENTS_PRESET="${2:-}"
+      shift 2
+      ;;
+    --subagents-model-scope)
+      SUBAGENTS_MODEL_SCOPE="${2:-}"
       shift 2
       ;;
     --with-herdr)
@@ -120,6 +136,13 @@ if [[ "$WITH_MCP" == true ]]; then
   bash "$PLATFORM_ROOT/scripts/configure-mcp.sh" --scope global --preset "$MCP_PRESET"
 fi
 
+if [[ "$WITH_SUBAGENTS" == true ]]; then
+  echo "Installing Pi subagents:"
+  pi install npm:pi-subagents
+  echo "Configuring Pi subagents baseline:"
+  bash "$PLATFORM_ROOT/scripts/configure-subagents.sh" --preset "$SUBAGENTS_PRESET" --model-scope "$SUBAGENTS_MODEL_SCOPE"
+fi
+
 if [[ "$CONFIGURE_MODEL_SCOPE" == true ]]; then
   echo "Configuring Pi model selector scope:"
   bash "$PLATFORM_ROOT/scripts/configure-model-scope.sh" --preset "$MODEL_SCOPE_PRESET" --default-model "$DEFAULT_MODEL"
@@ -149,3 +172,5 @@ echo "  /login"
 echo "  /model          # or Ctrl+L: select Codex/Claude model from Pi selector"
 echo "  /scoped-models  # optional: edit Ctrl+P model cycle scope"
 echo "  /mcp            # inspect MCP servers; authenticate Figma/GitHub only when needed"
+echo "  /subagents-doctor"
+echo "  /run scout \"Map this repo area\""

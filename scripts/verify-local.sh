@@ -27,6 +27,11 @@ required_files=(
   "$ROOT/packages/pi-company-core/skills/company-ops/SKILL.md"
   "$ROOT/packages/pi-company-core/skills/company-reference-repo/SKILL.md"
   "$ROOT/packages/pi-company-core/skills/company-reference-repo/checkout-reference-repo.sh"
+  "$ROOT/packages/pi-company-core/subagents/company-scout.md"
+  "$ROOT/packages/pi-company-core/subagents/company-planner.md"
+  "$ROOT/packages/pi-company-core/subagents/company-worker.md"
+  "$ROOT/packages/pi-company-core/subagents/company-reviewer.md"
+  "$ROOT/packages/pi-company-core/subagents/company-oracle.md"
   "$ROOT/adapters/generic/profile.json"
   "$ROOT/adapters/backend-api/profile.json"
   "$ROOT/adapters/be-readonly-fe/profile.json"
@@ -52,6 +57,7 @@ required_files=(
   "$ROOT/docs/workflow-recipes.md"
   "$ROOT/docs/memory-policy.md"
   "$ROOT/docs/model-options.md"
+  "$ROOT/docs/subagents-and-multiagent.md"
   "$ROOT/docs/harness-migration-standard.md"
   "$ROOT/docs/task-implementation-contract.md"
   "$ROOT/docs/codex-parity-baseline.md"
@@ -74,6 +80,7 @@ required_files=(
   "$ROOT/scripts/pi-model-catalog.sh"
   "$ROOT/scripts/configure-model-scope.sh"
   "$ROOT/scripts/configure-mcp.sh"
+  "$ROOT/scripts/configure-subagents.sh"
 )
 
 for file in "${required_files[@]}"; do
@@ -126,10 +133,16 @@ const rootPkg = JSON.parse(fs.readFileSync(path.join(root, "package.json"), "utf
 if (!rootPkg.pi || !rootPkg.pi.extensions || !rootPkg.pi.prompts || !rootPkg.pi.skills) {
   throw new Error("root package.json missing pi manifest");
 }
+if (!rootPkg.pi.subagents?.agents?.length) {
+  throw new Error("root package.json missing pi.subagents.agents");
+}
 
 const pkg = JSON.parse(fs.readFileSync(path.join(root, "packages/pi-company-core/package.json"), "utf8"));
 if (!pkg.pi || !pkg.pi.extensions || !pkg.pi.prompts || !pkg.pi.skills) {
   throw new Error("packages/pi-company-core/package.json missing pi manifest");
+}
+if (!pkg.pi.subagents?.agents?.length) {
+  throw new Error("packages/pi-company-core/package.json missing pi.subagents.agents");
 }
 NODE
 
@@ -158,6 +171,9 @@ grep -R "pi-company-models" "$ROOT/README.md" "$ROOT/docs/model-options.md" >/de
 grep -R "enabledModels" "$ROOT/templates/global/settings.json" "$ROOT/docs/model-options.md" "$ROOT/scripts/configure-model-scope.sh" >/dev/null
 grep -R "pi-company-mcp" "$ROOT/README.md" "$ROOT/docs/mcp-and-tools.md" "$ROOT/scripts/configure-mcp.sh" >/dev/null
 grep -R "pi-mcp-adapter" "$ROOT/README.md" "$ROOT/docs/mcp-and-tools.md" "$ROOT/scripts/install-global.sh" >/dev/null
+grep -R "pi-company-subagents" "$ROOT/README.md" "$ROOT/docs/subagents-and-multiagent.md" "$ROOT/scripts/configure-subagents.sh" >/dev/null
+grep -R "pi-subagents" "$ROOT/README.md" "$ROOT/docs/subagents-and-multiagent.md" "$ROOT/scripts/install-global.sh" "$ROOT/scripts/setup.sh" >/dev/null
+grep -R "company-scout" "$ROOT/README.md" "$ROOT/docs/subagents-and-multiagent.md" "$ROOT/packages/pi-company-core/subagents" >/dev/null
 grep -R "@upstash/context7-mcp" "$ROOT/scripts/configure-mcp.sh" "$ROOT/docs/mcp-and-tools.md" >/dev/null
 grep -R "https://mcp.figma.com/mcp" "$ROOT/scripts/configure-mcp.sh" "$ROOT/docs/mcp-and-tools.md" >/dev/null
 grep -R "ghcr.io/github/github-mcp-server" "$ROOT/scripts/configure-mcp.sh" "$ROOT/docs/mcp-and-tools.md" >/dev/null
@@ -172,6 +188,7 @@ grep -R "company-reference-repo" "$ROOT/packages/pi-company-core/skills" "$ROOT/
 grep -R "company_reference_checkout" "$ROOT/packages/pi-company-core" >/dev/null
 grep -R "scripts/setup.sh" "$ROOT/README.md" "$ROOT/docs" >/dev/null
 grep -R "parity-benchmark.sh" "$ROOT/README.md" "$ROOT/docs" >/dev/null
+grep -R ".pi-subagents/" "$ROOT/.gitignore" "$ROOT/docs/subagents-and-multiagent.md" "$ROOT/docs/distribution-standard.md" "$ROOT/scripts/init-project.sh" >/dev/null
 
 node --check "$ROOT/packages/pi-company-core/extensions/company-guard.ts" >/dev/null
 bash -n "$ROOT/scripts/parity-benchmark.sh"
@@ -180,10 +197,13 @@ bash -n "$ROOT/scripts/pi-session-stats.sh"
 bash -n "$ROOT/scripts/pi-model-catalog.sh"
 bash -n "$ROOT/scripts/configure-model-scope.sh"
 bash -n "$ROOT/scripts/configure-mcp.sh"
+bash -n "$ROOT/scripts/configure-subagents.sh"
 bash "$ROOT/scripts/pi-model-catalog.sh" --json >/dev/null
 bash "$ROOT/scripts/configure-model-scope.sh" --dry-run --preset full --default-model openai-codex/gpt-5.5:xhigh >/dev/null
 bash "$ROOT/scripts/configure-mcp.sh" --list >/dev/null
 bash "$ROOT/scripts/configure-mcp.sh" --dry-run --preset popular --scope project --project "$ROOT" >/dev/null
+bash "$ROOT/scripts/configure-subagents.sh" --list >/dev/null
+bash "$ROOT/scripts/configure-subagents.sh" --dry-run --preset safe >/dev/null
 bash "$ROOT/scripts/runtime-policy-smoke.sh" >/dev/null
 
 bash "$ROOT/scripts/profile-doctor.sh" "$ROOT" "$ROOT/.pi/company-profile.json" >/dev/null

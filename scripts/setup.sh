@@ -24,6 +24,12 @@ Options:
   --with-mcp / --no-mcp          Install/skip Pi MCP adapter during global install (default: install)
   --mcp-preset <minimal|core|popular|all|docs|browser|github|design|design-local|web>
                                   Configure shared global MCP baseline when --with-mcp is enabled (default: core)
+  --with-subagents / --no-subagents
+                                  Install/skip pi-subagents during global install (default: install)
+  --subagents-preset <minimal|safe|async|parallel>
+                                  Configure pi-subagents runtime baseline (default: safe)
+  --subagents-model-scope <none|company|codex|claude>
+                                  Optional subagent model allowlist (default: none)
   --with-herdr / --no-herdr      Install/skip Herdr Pi integration if herdr exists (default: install)
   --with-codex-herdr             Also install Herdr Codex integration if codex exists
   --model-scope <full|codex|claude>
@@ -41,13 +47,13 @@ Options:
   -h, --help
 
 Package source examples:
-  git:github.com/Vt-mmm/pi_agent@v0.3.6
+  git:github.com/Vt-mmm/pi_agent@v0.3.7
   https://github.com/Vt-mmm/pi_agent
-  npm:@company/pi_agent@0.3.6
+  npm:@company/pi_agent@0.3.7
   /absolute/path/to/pi_agent
 
 One-command team setup example:
-  bash /path/to/pi_agent/scripts/setup.sh . --profile auto --package-source git:github.com/Vt-mmm/pi_agent@v0.3.6
+  bash /path/to/pi_agent/scripts/setup.sh . --profile auto --package-source git:github.com/Vt-mmm/pi_agent@v0.3.7
 USAGE
 }
 
@@ -59,6 +65,9 @@ DO_GLOBAL=true
 DO_PROJECT=true
 WITH_MCP=true
 MCP_PRESET="core"
+WITH_SUBAGENTS=true
+SUBAGENTS_PRESET="safe"
+SUBAGENTS_MODEL_SCOPE="none"
 WITH_HERDR=true
 WITH_CODEX_HERDR=false
 CONFIGURE_MODEL_SCOPE=true
@@ -111,6 +120,22 @@ while [[ $# -gt 0 ]]; do
       ;;
     --mcp-preset)
       MCP_PRESET="${2:-}"
+      shift 2
+      ;;
+    --with-subagents)
+      WITH_SUBAGENTS=true
+      shift
+      ;;
+    --no-subagents)
+      WITH_SUBAGENTS=false
+      shift
+      ;;
+    --subagents-preset)
+      SUBAGENTS_PRESET="${2:-}"
+      shift 2
+      ;;
+    --subagents-model-scope)
+      SUBAGENTS_MODEL_SCOPE="${2:-}"
       shift 2
       ;;
     --with-herdr)
@@ -287,6 +312,9 @@ if [[ "$DO_GLOBAL" == true ]]; then
   if [[ "$WITH_MCP" == true ]]; then
     install_args+=("--with-mcp" "--mcp-preset" "$MCP_PRESET")
   fi
+  if [[ "$WITH_SUBAGENTS" == true ]]; then
+    install_args+=("--with-subagents" "--subagents-preset" "$SUBAGENTS_PRESET" "--subagents-model-scope" "$SUBAGENTS_MODEL_SCOPE")
+  fi
   if [[ "$WITH_CODEX_HERDR" == true ]]; then
     install_args+=("--with-codex-herdr")
   elif [[ "$WITH_HERDR" == true ]]; then
@@ -329,6 +357,7 @@ if [[ "$DO_PROJECT" == true ]]; then
   echo "  /model             # or Ctrl+L: select provider/model from Pi selector"
   echo "  /scoped-models     # optional: edit Ctrl+P model cycle scope"
   echo "  /mcp               # inspect MCP servers; run /mcp setup for guided changes"
+  echo "  /subagents-doctor  # inspect subagent setup"
   echo "  /onboard-project   # first project-read snapshot before implementation"
   echo "  /memory-policy     # inspect project memory policy when needed"
 fi
@@ -337,3 +366,4 @@ echo "Daily flow after setup:"
 echo "  herdr    # optional"
 echo "  cd <project>"
 echo "  pi"
+echo "  /run scout \"Map this repo area\""

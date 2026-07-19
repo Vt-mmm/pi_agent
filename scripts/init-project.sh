@@ -16,9 +16,9 @@ Options:
   -h, --help
 
 Package source examples:
-  git:github.com/Vt-mmm/pi_agent@v0.3.6
+  git:github.com/Vt-mmm/pi_agent@v0.3.7
   https://github.com/Vt-mmm/pi_agent
-  npm:@company/pi_agent@0.3.6
+  npm:@company/pi_agent@0.3.7
 
 Default package source:
   1. --package-source
@@ -270,6 +270,19 @@ fi
 
 if [[ ! -f "$PROJECT_PATH/.pi/.gitignore" ]]; then
   cp "$PLATFORM_ROOT/templates/project/.pi/.gitignore" "$PROJECT_PATH/.pi/.gitignore"
+fi
+
+PROJECT_GITIGNORE="$PROJECT_PATH/.gitignore"
+if [[ ! -f "$PROJECT_GITIGNORE" ]]; then
+  : > "$PROJECT_GITIGNORE"
+fi
+if ! grep -F "# Pi Company Platform runtime" "$PROJECT_GITIGNORE" >/dev/null 2>&1; then
+  {
+    echo
+    echo "# Pi Company Platform runtime"
+    echo ".pi-subagents/"
+    echo "progress.md"
+  } >> "$PROJECT_GITIGNORE"
 fi
 
 if [[ ! -f "$PROJECT_PATH/.pi/project-context.md" ]]; then

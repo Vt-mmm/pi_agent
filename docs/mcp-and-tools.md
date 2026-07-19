@@ -4,7 +4,7 @@
 
 Pi core không hard-code MCP. Platform của mình cài `pi-mcp-adapter` để Pi dùng MCP theo kiểu token-efficient: một proxy tool `mcp(...)`, server lazy-connect, metadata cache, output guard. Project profile chỉ khai báo capability được phép; MCP config mới khai báo server thật.
 
-Từ `v0.3.6`, repo có thêm:
+Từ `v0.3.7`, repo có thêm:
 
 - `pi-company-mcp` / `scripts/configure-mcp.sh`;
 - MCP preset `core`, `popular`, `all`, `design`, `design-local`, `browser`, `docs`, `github`;
@@ -18,7 +18,7 @@ Global install mặc định sẽ cài adapter và seed preset `core` nếu dùn
 ```bash
 bash /path/to/pi_agent/scripts/setup.sh . \
   --profile auto \
-  --package-source git:github.com/Vt-mmm/pi_agent@v0.3.6 \
+  --package-source git:github.com/Vt-mmm/pi_agent@v0.3.7 \
   --mcp-preset core
 ```
 

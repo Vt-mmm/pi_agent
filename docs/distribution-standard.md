@@ -14,9 +14,9 @@ Repo này phải chạy được cho nhiều project/domain khác nhau. Vì vậ
 
 | Use case | Package source |
 |---|---|
-| Team stable | `git:github.com/Vt-mmm/pi_agent@v0.3.6` |
+| Team stable | `git:github.com/Vt-mmm/pi_agent@v0.3.7` |
 | Team latest internal | `https://github.com/Vt-mmm/pi_agent` |
-| Enterprise npm | `npm:@company/pi_agent@0.3.6` |
+| Enterprise npm | `npm:@company/pi_agent@0.3.7` |
 | Local platform dev | `/path/to/pi_agent` |
 
 Pin tag/commit cho project nghiêm túc để tránh workflow đổi bất ngờ.
@@ -32,7 +32,7 @@ Root `package.json` có `pi` manifest trỏ tới:
 Do đó team có thể:
 
 ```bash
-pi install git:github.com/Vt-mmm/pi_agent@v0.3.6
+pi install git:github.com/Vt-mmm/pi_agent@v0.3.7
 ```
 
 Không cần biết internal folder `packages/pi-company-core`.
@@ -43,7 +43,7 @@ Team nên install global package một lần:
 
 ```bash
 npm install -g @earendil-works/pi-coding-agent
-pi install git:github.com/Vt-mmm/pi_agent@v0.3.6
+pi install git:github.com/Vt-mmm/pi_agent@v0.3.7
 ```
 
 Sau đó project nào cũng:
@@ -61,6 +61,7 @@ Sau setup, bước first-run trong Pi là:
 /login
 <select provider/model>
 /mcp
+/subagents-doctor
 /onboard-project
 ```
 
@@ -73,8 +74,9 @@ Nếu muốn commit sẵn `.pi/company-profile.json` vào repo hoặc bootstrap 
 ```bash
 bash scripts/setup.sh /path/to/project \
   --profile be-readonly-fe \
-  --package-source git:github.com/Vt-mmm/pi_agent@v0.3.6 \
-  --mcp-preset core
+  --package-source git:github.com/Vt-mmm/pi_agent@v0.3.7 \
+  --mcp-preset core \
+  --subagents-preset safe
 ```
 
 Với project cần scout BE nhưng chỉ implement FE, có thể chọn trong Pi:
@@ -90,6 +92,7 @@ Với project cần scout BE nhưng chỉ implement FE, có thể chọn trong P
 ```text
 project/
 ├─ AGENTS.md
+├─ .gitignore
 ├─ REVIEW_GUIDELINES.md
 ├─ .mcp.json
 └─ .pi/
@@ -106,6 +109,7 @@ project/
 Files nên commit:
 
 - `AGENTS.md`
+- `.gitignore`
 - `REVIEW_GUIDELINES.md`
 - `.mcp.json`
 - `.pi/settings.json`
@@ -129,6 +133,8 @@ Files không commit:
 - `.pi/todos/`
 - `.pi/auth.json`
 - `.env`
+- `.pi-subagents/`
+- `progress.md` nếu chỉ là scratch runtime
 
 ## Release checklist
 
@@ -139,16 +145,17 @@ Files không commit:
    bash scripts/verify-local.sh
    bash scripts/team-doctor.sh . --strict-share
    bash scripts/parity-benchmark.sh . --init
-   bash scripts/setup.sh --global-only --package-source git:github.com/Vt-mmm/pi_agent@v0.3.6 --dry-run
+   bash scripts/setup.sh --global-only --package-source git:github.com/Vt-mmm/pi_agent@v0.3.7 --dry-run
    bash scripts/configure-mcp.sh --dry-run --preset popular --scope project --project .
+   bash scripts/configure-subagents.sh --dry-run --preset safe
    pi list
    ```
 
 3. Tag:
 
    ```bash
-   git tag v0.3.6
-   git push origin v0.3.6
+   git tag v0.3.7
+   git push origin v0.3.7
    ```
 
 4. Team updates:
