@@ -325,8 +325,10 @@ Các lệnh này chạy ngoài Pi.
 | Command | Dùng khi nào |
 |---|---|
 | `npm install -g @earendil-works/pi-coding-agent` | Cài Pi CLI lần đầu. |
-| `pi install git:github.com/Vt-mmm/pi_agent@v0.3.22` | Cài package platform từ GitHub. |
+| `pi install git:github.com/Vt-mmm/pi_agent@v0.3.23` | Cài package platform từ GitHub. |
 | `pi list --approve` | Xem package Pi đã install. |
+| `pi-company-auto` | Mở Pi với project trust `--approve` cho lần chạy hiện tại; guard vẫn bật. |
+| `pi-company-auto --read-only -p "<task>"` | Auto-run scout/read-only với tool set `read,grep,find,ls`. |
 | `pi --list-models` | Xem model Pi thấy được theo credentials hiện tại. |
 | `pi-company-install --with-mcp --with-subagents` | Cài global package + MCP + subagent baseline từ package bin. |
 | `pi-company-setup <project> --profile auto` | Setup đầy đủ cho một project khi muốn preseed bằng bin. |

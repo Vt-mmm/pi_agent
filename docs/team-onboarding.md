@@ -8,7 +8,7 @@ Một thành viên mới không cần biết local path của maintainer. Luồn
 
 ```bash
 npm install -g @earendil-works/pi-coding-agent
-pi install git:github.com/Vt-mmm/pi_agent@v0.3.22
+pi install git:github.com/Vt-mmm/pi_agent@v0.3.23
 cd /path/to/project
 pi
 /login
@@ -33,14 +33,14 @@ Khuyến nghị dùng tag cố định:
 
 ```bash
 npm install -g @earendil-works/pi-coding-agent
-pi install git:github.com/Vt-mmm/pi_agent@v0.3.22
+pi install git:github.com/Vt-mmm/pi_agent@v0.3.23
 ```
 
 Nếu team publish npm private:
 
 ```bash
 npm install -g @earendil-works/pi-coding-agent
-pi install npm:@company/pi_agent@0.3.22
+pi install npm:@company/pi_agent@0.3.23
 ```
 
 Không cần chạy bash để set profile cho từng project.
@@ -112,7 +112,7 @@ Các script setup/init vẫn tồn tại cho case preseed config vào repo hoặ
 ```bash
 bash /path/to/pi_agent/scripts/setup.sh /path/to/project \
   --profile be-readonly-fe \
-  --package-source git:github.com/Vt-mmm/pi_agent@v0.3.22 \
+  --package-source git:github.com/Vt-mmm/pi_agent@v0.3.23 \
   --mcp-preset core \
   --subagents-preset safe
 ```
@@ -120,7 +120,7 @@ bash /path/to/pi_agent/scripts/setup.sh /path/to/project \
 Nếu cần override profile:
 
 ```bash
-bash /path/to/pi_agent/scripts/setup.sh /path/to/project --project-only --profile backend-api --package-source git:github.com/Vt-mmm/pi_agent@v0.3.22 --mcp-preset core --subagents-preset safe
+bash /path/to/pi_agent/scripts/setup.sh /path/to/project --project-only --profile backend-api --package-source git:github.com/Vt-mmm/pi_agent@v0.3.23 --mcp-preset core --subagents-preset safe
 ```
 
 Profile built-in trong Pi:
@@ -161,6 +161,20 @@ pi
 ```
 
 Trong Pi, nếu project trust prompt hiện ra, chỉ approve khi đúng repo. Project trust cho phép Pi load `.pi/settings.json`, `.pi` resources và project extensions.
+
+Sau khi team đã hiểu repo và muốn giảm prompt trust cho từng lần chạy, dùng:
+
+```bash
+pi-company-auto
+```
+
+Read-only auto-run cho scout/audit:
+
+```bash
+pi-company-auto --read-only -p "Scout module mapping. Do not edit source."
+```
+
+Lệnh này wrap `pi --approve`; nó không bypass company guard.
 
 ## Bước 5 — task workflow
 

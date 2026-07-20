@@ -14,9 +14,9 @@ Repo này phải chạy được cho nhiều project/domain khác nhau. Vì vậ
 
 | Use case | Package source |
 |---|---|
-| Team stable | `git:github.com/Vt-mmm/pi_agent@v0.3.22` |
+| Team stable | `git:github.com/Vt-mmm/pi_agent@v0.3.23` |
 | Team latest internal | `https://github.com/Vt-mmm/pi_agent` |
-| Enterprise npm | `npm:@company/pi_agent@0.3.22` |
+| Enterprise npm | `npm:@company/pi_agent@0.3.23` |
 | Local platform dev | `/path/to/pi_agent` |
 
 Pin tag/commit cho project nghiêm túc để tránh workflow đổi bất ngờ.
@@ -32,7 +32,7 @@ Root `package.json` có `pi` manifest trỏ tới:
 Do đó team có thể:
 
 ```bash
-pi install git:github.com/Vt-mmm/pi_agent@v0.3.22
+pi install git:github.com/Vt-mmm/pi_agent@v0.3.23
 ```
 
 Không cần biết internal folder `packages/pi-company-core`.
@@ -43,7 +43,7 @@ Team nên install global package một lần:
 
 ```bash
 npm install -g @earendil-works/pi-coding-agent
-pi install git:github.com/Vt-mmm/pi_agent@v0.3.22
+pi install git:github.com/Vt-mmm/pi_agent@v0.3.23
 ```
 
 Sau đó project nào cũng:
@@ -74,7 +74,7 @@ Nếu muốn commit sẵn `.pi/company-profile.json` vào repo hoặc bootstrap 
 ```bash
 bash scripts/setup.sh /path/to/project \
   --profile be-readonly-fe \
-  --package-source git:github.com/Vt-mmm/pi_agent@v0.3.22 \
+  --package-source git:github.com/Vt-mmm/pi_agent@v0.3.23 \
   --mcp-preset core \
   --subagents-preset safe
 ```
@@ -147,7 +147,7 @@ Files không commit:
    bash scripts/verify-local.sh --offline   # CI / clean machine without Pi login catalog
    bash scripts/team-doctor.sh . --strict-share
    bash scripts/quality-benchmark.sh . --init
-   bash scripts/setup.sh --global-only --package-source git:github.com/Vt-mmm/pi_agent@v0.3.22 --dry-run
+   bash scripts/setup.sh --global-only --package-source git:github.com/Vt-mmm/pi_agent@v0.3.23 --dry-run
    bash scripts/configure-mcp.sh --dry-run --preset popular --scope project --project .
    bash scripts/configure-subagents.sh --dry-run --preset safe
    pi list
@@ -156,8 +156,8 @@ Files không commit:
 3. Tag:
 
    ```bash
-   git tag v0.3.22
-   git push origin v0.3.22
+   git tag v0.3.23
+   git push origin v0.3.23
    ```
 
 4. Team updates:

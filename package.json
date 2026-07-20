@@ -1,6 +1,6 @@
 {
   "name": "pi-agent-platform",
-  "version": "0.3.22",
+  "version": "0.3.23",
   "private": true,
   "license": "MIT",
   "type": "module",
@@ -22,7 +22,8 @@
     "pi-company-models": "scripts/pi-model-catalog.sh",
     "pi-company-model-scope": "scripts/configure-model-scope.sh",
     "pi-company-mcp": "scripts/configure-mcp.sh",
-    "pi-company-subagents": "scripts/configure-subagents.sh"
+    "pi-company-subagents": "scripts/configure-subagents.sh",
+    "pi-company-auto": "scripts/pi-auto.sh"
   },
   "pi": {
     "extensions": [
@@ -65,6 +66,7 @@
     "benchmark": "bash scripts/quality-benchmark.sh",
     "smoke": "bash scripts/runtime-policy-smoke.sh",
     "usage": "bash scripts/pi-session-stats.sh",
+    "auto": "bash scripts/pi-auto.sh",
     "models": "bash scripts/pi-model-catalog.sh",
     "model-scope": "bash scripts/configure-model-scope.sh",
     "mcp": "bash scripts/configure-mcp.sh",

@@ -12,6 +12,17 @@ Shared Pi package for reusable project workflows.
 - `policies/base-policy.json`: default runtime policy, including protected path and shell protected path defaults.
 - input hook support for local screenshot/image paths pasted into chat; supported images are attached as `[image1]`, `[image2]`, ...
 
+## Trusted run wrapper
+
+The root package exposes `pi-company-auto`:
+
+```bash
+pi-company-auto
+pi-company-auto --read-only -p "Scout payment mapping. Do not edit source."
+```
+
+This is a wrapper for `pi --approve` on the current run. It loads trusted project-local resources without turning off Company guardrails.
+
 ## Runtime quality tools
 
 - `company_exec_policy_check`
@@ -63,7 +74,7 @@ When `pi-subagents` is installed, this package exposes:
 ## Install
 
 ```bash
-pi install git:github.com/Vt-mmm/pi_agent@v0.3.22
+pi install git:github.com/Vt-mmm/pi_agent@v0.3.23
 ```
 
 ## Project profile

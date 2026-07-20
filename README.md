@@ -11,6 +11,21 @@ pi
 
 From there, Pi can onboard the project, select an operating profile, use the right tools, record task evidence, and hand off verified implementation work.
 
+For a trusted project where you want Pi to load project-local `.pi` resources without another trust prompt on that run:
+
+```bash
+cd /path/to/project
+pi-company-auto
+```
+
+Read-only scout mode:
+
+```bash
+pi-company-auto --read-only -p "Scout payment mapping. Do not edit source."
+```
+
+`pi-company-auto` is a convenience wrapper for Pi project trust (`pi --approve`). It does not bypass protected-path checks, destructive shell checks, task gates, or verification evidence.
+
 ## What it provides
 
 - Global Pi package with prompts, skills, guard extensions, and company subagents.
@@ -20,6 +35,7 @@ From there, Pi can onboard the project, select an operating profile, use the rig
 - MCP setup helpers for Context7, Chrome DevTools, GitHub, Playwright, and Figma.
 - Subagent setup helpers for read-only scouting, planning, implementation, review, and risk challenge.
 - Chat image-path intake: paste a local screenshot path into the Pi chat box and the guard attaches it as `[image1]` before the model sees the prompt.
+- Trusted-run wrapper: `pi-company-auto` launches Pi with `--approve` for the current run while keeping company guardrails active.
 - Runtime policy tools:
   - `company_exec_policy_check`
   - `company_context_budget`
@@ -35,7 +51,7 @@ From there, Pi can onboard the project, select an operating profile, use the rig
 
 ```bash
 npm install -g @earendil-works/pi-coding-agent
-pi install git:github.com/Vt-mmm/pi_agent@v0.3.22
+pi install git:github.com/Vt-mmm/pi_agent@v0.3.23
 ```
 
 Optional Herdr integration:
@@ -258,7 +274,7 @@ Most projects do not need shell init. Use this only when you want to pre-create 
 ```bash
 bash /path/to/pi_agent/scripts/setup.sh /path/to/project \
   --profile be-readonly-fe \
-  --package-source git:github.com/Vt-mmm/pi_agent@v0.3.22 \
+  --package-source git:github.com/Vt-mmm/pi_agent@v0.3.23 \
   --mcp-preset core \
   --subagents-preset safe
 ```
@@ -356,7 +372,7 @@ This repository intentionally excludes:
 
 ## Maturity
 
-Current release: `v0.3.22`.
+Current release: `v0.3.23`.
 
 Ready for:
 
