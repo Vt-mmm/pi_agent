@@ -25,6 +25,7 @@ From there, Pi can onboard the project, select an operating profile, use the rig
   - `company_tool_policy_check`
   - `company_task_gate_check`
   - `company_usage_snapshot`
+  - `company_context_preflight`
 - Accident-brake guardrails for protected paths, destructive shell commands, task contracts, context manifests, observed verification evidence, and trace records.
 - Quality benchmark recorder for comparing approved agent surfaces, models, and workflow presets on the same task scenarios.
 - Built-in profiles for frontend, backend, fullstack, BE-readonly/FE-write, data, DevOps, mobile, docs, Python, and Node TypeScript.
@@ -33,7 +34,7 @@ From there, Pi can onboard the project, select an operating profile, use the rig
 
 ```bash
 npm install -g @earendil-works/pi-coding-agent
-pi install git:github.com/Vt-mmm/pi_agent@v0.3.20
+pi install git:github.com/Vt-mmm/pi_agent@v0.3.21
 ```
 
 Optional Herdr integration:
@@ -103,6 +104,24 @@ Switch profiles later:
 ```
 
 Use `/task` when the requirement is clear enough to implement.
+
+For read-only investigation:
+
+```text
+/scout Scout <module/spec/contract/risk>. Do not edit source.
+```
+
+Use `/scout` for payment/auth/data/BE-contract mapping before deciding whether to implement.
+
+When the current session is already heavy, use the fresh workflow commands. They open a new governed Pi session and replay the compact workflow prompt automatically:
+
+```text
+/fresh-task <request>
+/fresh-scout <read-only request>
+/fresh-be-to-fe <backend-readonly/frontend request>
+```
+
+The input guard also collapses pasted mandatory-flow boilerplate automatically. Users should not paste the full company checklist into every task.
 
 ### Project improvement
 
@@ -222,7 +241,7 @@ Most projects do not need shell init. Use this only when you want to pre-create 
 ```bash
 bash /path/to/pi_agent/scripts/setup.sh /path/to/project \
   --profile be-readonly-fe \
-  --package-source git:github.com/Vt-mmm/pi_agent@v0.3.20 \
+  --package-source git:github.com/Vt-mmm/pi_agent@v0.3.21 \
   --mcp-preset core \
   --subagents-preset safe
 ```
@@ -266,6 +285,8 @@ bash scripts/quality-benchmark.sh /path/to/project --record \
 Usage / token follow-up:
 
 ```text
+/task-preflight
+/task-preflight compact
 /company-usage
 /session
 ```
@@ -318,7 +339,7 @@ This repository intentionally excludes:
 
 ## Maturity
 
-Current release: `v0.3.20`.
+Current release: `v0.3.21`.
 
 Ready for:
 
@@ -328,7 +349,7 @@ Ready for:
 - read-only scouting and planning;
 - backend-readonly/frontend-write workflows;
 - bounded subagent scouting, planning, implementation, and review;
-- runtime checks for exec policy, context budget, tool policy, task gate, and usage snapshot;
+- runtime checks for exec policy, context budget, context preflight, tool policy, task gate, and usage snapshot;
 - project-level quality/token/cost benchmarking.
 
 Security boundary:

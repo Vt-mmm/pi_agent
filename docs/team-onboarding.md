@@ -8,7 +8,7 @@ Một thành viên mới không cần biết local path của maintainer. Luồn
 
 ```bash
 npm install -g @earendil-works/pi-coding-agent
-pi install git:github.com/Vt-mmm/pi_agent@v0.3.20
+pi install git:github.com/Vt-mmm/pi_agent@v0.3.21
 cd /path/to/project
 pi
 /login
@@ -33,14 +33,14 @@ Khuyến nghị dùng tag cố định:
 
 ```bash
 npm install -g @earendil-works/pi-coding-agent
-pi install git:github.com/Vt-mmm/pi_agent@v0.3.20
+pi install git:github.com/Vt-mmm/pi_agent@v0.3.21
 ```
 
 Nếu team publish npm private:
 
 ```bash
 npm install -g @earendil-works/pi-coding-agent
-pi install npm:@company/pi_agent@0.3.20
+pi install npm:@company/pi_agent@0.3.21
 ```
 
 Không cần chạy bash để set profile cho từng project.
@@ -112,7 +112,7 @@ Các script setup/init vẫn tồn tại cho case preseed config vào repo hoặ
 ```bash
 bash /path/to/pi_agent/scripts/setup.sh /path/to/project \
   --profile be-readonly-fe \
-  --package-source git:github.com/Vt-mmm/pi_agent@v0.3.20 \
+  --package-source git:github.com/Vt-mmm/pi_agent@v0.3.21 \
   --mcp-preset core \
   --subagents-preset safe
 ```
@@ -120,7 +120,7 @@ bash /path/to/pi_agent/scripts/setup.sh /path/to/project \
 Nếu cần override profile:
 
 ```bash
-bash /path/to/pi_agent/scripts/setup.sh /path/to/project --project-only --profile backend-api --package-source git:github.com/Vt-mmm/pi_agent@v0.3.20 --mcp-preset core --subagents-preset safe
+bash /path/to/pi_agent/scripts/setup.sh /path/to/project --project-only --profile backend-api --package-source git:github.com/Vt-mmm/pi_agent@v0.3.21 --mcp-preset core --subagents-preset safe
 ```
 
 Profile built-in trong Pi:
@@ -175,6 +175,22 @@ Task rõ:
 ```text
 /task Implement feature X. Follow project profile, protected paths, required context, exec policy, context budget, tool policy, verify, trace, and task gate.
 ```
+
+Scout/audit read-only:
+
+```text
+/scout Scout payment FE mapping vs BE contract. Backend read-only. Do not edit source.
+```
+
+Session nặng hoặc context overflow:
+
+```text
+/fresh-scout <read-only scout>
+/fresh-task <bounded task>
+/fresh-be-to-fe <BE-readonly/FE request>
+```
+
+Không paste full mandatory flow hằng ngày. Platform prompts/tools đã chứa checklist; input guard sẽ tự collapse boilerplate nếu paste nhầm.
 
 Runtime gate tools:
 

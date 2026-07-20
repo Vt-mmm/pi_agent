@@ -20,8 +20,18 @@ Lần đầu gắn project vào platform, chạy `/onboard-project` sau login/mo
 Trước khi ghi context manifest hoặc dự định đưa file lớn vào prompt, dùng:
 
 ```text
+company_context_preflight
 company_context_budget
 ```
+
+Trước task lớn/risk cao trong Pi TUI:
+
+```text
+/task-preflight
+/task-preflight compact
+```
+
+Nếu recommendation là `fresh-session`, dùng `/fresh-task`, `/fresh-scout`, hoặc `/fresh-be-to-fe` thay vì tiếp tục nhồi context vào session hiện tại.
 
 ## Context manifest
 
@@ -56,8 +66,10 @@ Pi settings template dùng:
 
 - Nếu task là read-only, không mở write-capable prompt.
 - Nếu task là source-write, phải biết verify command trước khi sửa.
+- Không paste full mandatory-flow boilerplate vào task hằng ngày; platform prompts/tools đã chứa flow đó.
 - Nếu context vượt budget, tạo summary theo module thay vì nhồi full files.
 - File context vượt hard cap phải được summarize hoặc đọc targeted slices, không inject full.
+- Nếu input quá dài thật, lưu intake vào file project/local gitignored rồi reference file; không dán toàn bộ spec vào một turn.
 - Memory chỉ là hint. Phải verify bằng source hiện tại trước khi sửa code.
 
 ## Nguồn

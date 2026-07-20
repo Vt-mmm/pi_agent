@@ -55,6 +55,7 @@ required_files=(
   "$ROOT/packages/pi-company-core/prompts/memory-policy.md"
   "$ROOT/packages/pi-company-core/prompts/platform-improve.md"
   "$ROOT/packages/pi-company-core/prompts/be-to-fe.md"
+  "$ROOT/packages/pi-company-core/prompts/scout.md"
   "$ROOT/packages/pi-company-core/prompts/task.md"
   "$ROOT/packages/pi-company-core/prompts/discuss.md"
   "$ROOT/packages/pi-company-core/prompts/plan.md"
@@ -237,6 +238,9 @@ grep -R "ghcr.io/github/github-mcp-server" "$ROOT/scripts/configure-mcp.sh" "$RO
 grep -R "Ctrl+L" "$ROOT/README.md" "$ROOT/docs/model-options.md" "$ROOT/docs/team-onboarding.md" "$ROOT/docs/quickstart-vietnamese.md" >/dev/null
 grep -R "/platform-improve" "$ROOT/packages/pi-company-core/prompts" "$ROOT/docs" >/dev/null
 grep -R "/be-to-fe" "$ROOT/packages/pi-company-core/prompts" "$ROOT/docs" >/dev/null
+grep -R "/scout" "$ROOT/packages/pi-company-core/prompts" "$ROOT/docs" "$ROOT/README.md" >/dev/null
+grep -R "company_context_preflight" "$ROOT/packages/pi-company-core" "$ROOT/docs" >/dev/null
+grep -R ".pi/task-inbox" "$ROOT/.gitignore" "$ROOT/templates/project/.pi/.gitignore" "$ROOT/docs" >/dev/null
 grep -R "Task Implementation Contract" "$ROOT/docs" "$ROOT/packages/pi-company-core/prompts" >/dev/null
 grep -R "company-task-trace" "$ROOT/packages/pi-company-core/extensions/company-guard.ts" "$ROOT/docs" >/dev/null
 grep -R "company-source-cache" "$ROOT/packages/pi-company-core/skills" "$ROOT/templates/project/AGENTS.md" >/dev/null

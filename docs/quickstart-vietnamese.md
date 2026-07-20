@@ -17,7 +17,7 @@ Phần còn lại — OAuth, package, context, harness, MCP, tool-call guard —
 
 ```bash
 npm install -g @earendil-works/pi-coding-agent
-pi install git:github.com/Vt-mmm/pi_agent@v0.3.20
+pi install git:github.com/Vt-mmm/pi_agent@v0.3.21
 ```
 
 Sau bước này, project mới không cần chạy bash init profile. Chỉ cần:
@@ -111,7 +111,7 @@ File này là snapshot context cho task sau. Nếu file còn `Generated: not yet
 bash /path/to/pi_agent/scripts/setup.sh /path/to/project \
   --project-only \
   --profile auto \
-  --package-source git:github.com/Vt-mmm/pi_agent@v0.3.20 \
+  --package-source git:github.com/Vt-mmm/pi_agent@v0.3.21 \
   --mcp-preset core \
   --subagents-preset safe
 ```
@@ -132,7 +132,7 @@ Script bash chỉ dùng khi muốn preseed config vào repo:
 ```bash
 bash /path/to/pi_agent/scripts/setup.sh /path/to/project \
   --profile be-readonly-fe \
-  --package-source git:github.com/Vt-mmm/pi_agent@v0.3.20 \
+  --package-source git:github.com/Vt-mmm/pi_agent@v0.3.21 \
   --mcp-preset core \
   --subagents-preset safe
 ```
@@ -157,7 +157,23 @@ Prompt mẫu khi đã rõ task:
 /task Implement this request. Use company_context, company_task_start, company_context_budget, company_exec_policy_check when shell is needed, company_verify_record, company_trace_record, and company_task_gate_check before done.
 ```
 
-Từ `v0.3.20`, `/task` có auto-delegation policy. Với task đủ lớn, parent agent phải tự cân nhắc dùng `company-scout`, `company-planner`, hoặc `company-reviewer`; anh không cần tự gọi `/run` nếu không muốn ép orchestration.
+Prompt mẫu khi chỉ cần scout/read-only:
+
+```text
+/scout Scout payment FE mapping vs BE contract. Backend read-only. Do not edit source.
+```
+
+Nếu session đang nặng hoặc gặp context overflow:
+
+```text
+/fresh-scout Scout payment FE mapping vs BE contract. Backend read-only. Do not edit source.
+/fresh-task Implement <bounded task>.
+/fresh-be-to-fe Implement FE support from <BE contract>. Backend read-only.
+```
+
+Không paste full mandatory flow hằng ngày. Từ `v0.3.21`, input guard tự collapse mandatory-flow boilerplate và fresh workflow tự mở session mới khi cần.
+
+Từ `v0.3.21`, `/task` có auto-delegation policy. Với task đủ lớn, parent agent phải tự cân nhắc dùng `company-scout`, `company-planner`, hoặc `company-reviewer`; anh không cần tự gọi `/run` nếu không muốn ép orchestration.
 
 Các workflow package đáng dùng khi muốn ép rõ shape:
 

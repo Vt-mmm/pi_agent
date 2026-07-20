@@ -20,6 +20,7 @@ Use this for tasks like:
 
 Mandatory flow:
 
+0. Call `company_context_preflight` with `workflow=be-to-fe`. If it recommends `fresh-session`, stop loading context in this session and tell the user to use `/fresh-be-to-fe <request>` unless this command already runs in a fresh session.
 1. Call `company_context` with `detail=full` and confirm profile/protected backend paths.
 2. Call `company_memory_status`; search memory for prior BE/FE mapping decisions if relevant, record citations with `company_memory_citation_record`, then verify against current BE/FE files.
 3. Read `.pi/project-context.md`. If pending, stop and ask for `/onboard-project`.
@@ -63,6 +64,8 @@ Mandatory flow:
 17. Call `company_task_gate_check`; if it fails, report blocked/partial instead of done.
 
 For generic projects, use profile `be-readonly-fe` when the repo policy is “BE scout only, FE write allowed”.
+
+Do not ask the user to paste the mandatory flow. The platform prompt already contains it. If the user asks only for scout/audit, stay read-only and prefer `/scout` or `/fresh-scout`.
 
 Final output:
 

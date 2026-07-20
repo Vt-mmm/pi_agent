@@ -14,12 +14,15 @@ Company package thêm command:
 
 ```text
 /company-usage
+/task-preflight
+/task-preflight compact
 ```
 
 Agent cũng có thể gọi tool:
 
 ```text
 company_usage_snapshot
+company_context_preflight
 ```
 
 `/company-usage` hiển thị:
@@ -31,6 +34,17 @@ company_usage_snapshot
 - live context usage hiện tại;
 - active branch entries / total entries;
 - lệnh để lấy exact token/cost totals từ terminal khác.
+
+`/task-preflight` hiển thị:
+
+- workflow đang định chạy;
+- live context;
+- estimated input tokens;
+- projected context;
+- recommendation: `ok`, `watch`, `compact`, hoặc `fresh-session`;
+- fresh workflow commands nếu session hiện tại quá nặng.
+
+`/task-preflight compact` gọi Pi compaction với hướng dẫn giữ lại decisions, blockers, changed files, verify command, và next action.
 
 Giới hạn kỹ thuật: extension command context expose `ctx.getContextUsage()`, phù hợp để biết context window đang dùng bao nhiêu. Exact billed totals như `input`, `output`, `cacheRead`, `cacheWrite`, `cost` là API của Pi `/session` và RPC `get_session_stats`.
 
@@ -92,9 +106,12 @@ Ví dụ output:
 Xem `contextUsage.percent`:
 
 - `< 50%`: bình thường.
-- `50–75%`: bắt đầu tránh đọc file lớn không cần thiết.
-- `> 75%`: cân nhắc `/compact` trước task dài tiếp theo.
+- `50–70%`: bắt đầu tránh đọc file lớn không cần thiết.
+- `70–82%`: chạy `/task-preflight compact` trước task dài tiếp theo.
+- `> 82%`: dùng `/fresh-task`, `/fresh-scout`, hoặc `/fresh-be-to-fe` cho work mới.
 - Sau compaction, `contextUsage.tokens` có thể là `null` cho đến khi có assistant response mới.
+
+Nếu user paste full mandatory-flow boilerplate, platform input guard sẽ collapse về workflow command ngắn. Nếu prompt quá dài thật, platform có thể lưu intake vào `.pi/task-inbox/` local gitignored rồi replay bằng fresh workflow command.
 
 ## Khi nào ghi benchmark
 

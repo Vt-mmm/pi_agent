@@ -27,7 +27,11 @@ Mandatory flow:
    - `/chain` = run agents sequentially.
 5. Explain when to use `company-scout`, `company-planner`, `company-worker`, `company-reviewer`, and `company-oracle`.
 6. If a command might depend on package/provider availability, say so and tell the user to type `/` in Pi or run `pi list --approve`.
-7. Do not claim token/cost savings unless benchmark evidence exists. Point to `/company-usage`, `/subagent-cost`, and `pi-company-usage <project>`.
+7. Explain context overflow prevention when relevant:
+   - `/task-preflight` checks whether to proceed, compact, or fresh-session.
+   - `/fresh-task`, `/fresh-scout`, and `/fresh-be-to-fe` open a new governed session and replay the compact workflow prompt.
+   - `/scout` is the read-only audit/scout workflow.
+8. Do not claim token/cost savings unless benchmark evidence exists. Point to `/company-usage`, `/task-preflight`, `/subagent-cost`, and `pi-company-usage <project>`.
 
 Output format:
 

@@ -18,6 +18,7 @@ Shared Pi package for reusable project workflows.
 - `company_tool_policy_check`
 - `company_task_gate_check`
 - `company_usage_snapshot`
+- `company_context_preflight`
 - `company_memory_status`
 - `company_memory_note`
 - `company_memory_search`
@@ -40,7 +41,10 @@ Shared Pi package for reusable project workflows.
 - `/model-options`: explain model selector, scoped models, thinking levels, and benchmark discipline.
 - `/platform-improve`: improve package setup, runtime policy, docs, MCP, model, memory, or subagent workflows.
 - `/be-to-fe`: scout backend/spec read-only, then implement frontend only.
+- `/scout`: governed read-only scout/audit workflow.
 - `/task`: governed implementation lifecycle.
+- `/task-preflight`: check whether the active session should run, compact, or start fresh before large work.
+- `/fresh-task`, `/fresh-scout`, `/fresh-be-to-fe`: start a fresh governed session and replay the compact workflow prompt.
 - `/plan`: bounded implementation plan.
 - `/discuss`: clarify a rough request before planning or editing.
 - `/review`: review source/diff with scope and verification checks.
@@ -58,7 +62,7 @@ When `pi-subagents` is installed, this package exposes:
 ## Install
 
 ```bash
-pi install git:github.com/Vt-mmm/pi_agent@v0.3.20
+pi install git:github.com/Vt-mmm/pi_agent@v0.3.21
 ```
 
 ## Project profile
@@ -80,6 +84,7 @@ Runtime task tools write local state to:
 - `.pi/memory/MEMORY.md` when the user explicitly asks Pi to remember durable information; generated projects ignore this file by default
 - `.pi/company-state/observed-bash.jsonl`
 - `.pi/company-state/traces.jsonl`
+- `.pi/task-inbox/*.md` for oversized local task intake; generated projects ignore this directory by default
 - Pi custom session entry `company-task-trace`
 
 Project-local state belongs in `.pi/.gitignore`.

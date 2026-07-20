@@ -115,17 +115,23 @@ function createPiHarness() {
     registerCommand(name, command) {
       commands.set(name, command);
     },
+    sendMessage(message) {
+      entries.push({ type: "message", payload: message });
+    },
     appendEntry(type, payload) {
       entries.push({ type, payload });
     },
     setSessionName(name) {
       sessionName = name;
+    },
+    getThinkingLevel() {
+      return "xhigh";
     }
   };
   return { pi, handlers, tools, commands, entries, getSessionName: () => sessionName };
 }
 
-function createContext(cwd) {
+function createContext(cwd, options = {}) {
   const notices = [];
   return {
     cwd,
@@ -139,7 +145,10 @@ function createContext(cwd) {
       confirm: async () => false
     },
     isProjectTrusted: () => true,
-    getContextUsage: () => ({ usedTokens: 0, maxTokens: 1000 }),
+    getContextUsage: () => options.contextUsage ?? ({ tokens: 0, contextWindow: 1000, percent: 0 }),
+    compact: () => {
+      notices.push({ message: "compact called", level: "info" });
+    },
     sessionManager: {
       getSessionFile: () => path.join(cwd, ".pi", "session.jsonl"),
       getSessionId: () => "session-test",
@@ -176,11 +185,61 @@ describe("company guard integration", () => {
     companyGuard(harness.pi);
     await harness.handlers.get("session_start")({}, ctx);
 
-    assert.equal(harness.tools.size, 18);
-    assert.equal(harness.commands.size, 3);
-    assert.deepEqual([...harness.handlers.keys()].sort(), ["session_start", "tool_call", "tool_result"]);
+    assert.equal(harness.tools.size, 19);
+    assert.equal(harness.commands.size, 7);
+    assert.deepEqual([...harness.handlers.keys()].sort(), ["input", "session_start", "tool_call", "tool_result"]);
     assert.equal(harness.getSessionName(), "pi:Integration Project");
     assert.match(ctx.ui.notices[0].message, /Company Pi guard loaded: Integration Project/);
+  });
+
+  it("collapses pasted mandatory-flow boilerplate before agent processing", async () => {
+    const { root, companyGuard } = await loadGuardFixture();
+    const cwd = createProject(root);
+    const ctx = createContext(cwd);
+    const harness = createPiHarness();
+    companyGuard(harness.pi);
+    const input = harness.handlers.get("input");
+
+    const longPrompt = [
+      "Implement this task:",
+      "",
+      "```text",
+      "Scout giúp anh logic payment FE đã mapping với BE chưa. Backend read-only. Do not edit source.",
+      "```",
+      "",
+      "Mandatory flow:",
+      "1. Call company_context.",
+      "2. Build with company_task_start.",
+      "3. Record with company_context_record.",
+      "4. Record verify with company_verify_record.",
+      "5. Call company_task_gate_check.",
+      "",
+      "Output format:",
+      "- Changed files.",
+      "- Verify command/result."
+    ].join("\n");
+
+    const result = await input({ text: longPrompt, source: "interactive" }, ctx);
+    assert.equal(result.action, "transform");
+    assert.match(result.text, /^\/scout Scout giúp anh logic payment FE/);
+    assert.doesNotMatch(result.text, /Mandatory flow/);
+  });
+
+  it("routes heavy-session scout requests into a fresh governed session command", async () => {
+    const { root, companyGuard } = await loadGuardFixture();
+    const cwd = createProject(root);
+    const ctx = createContext(cwd, { contextUsage: { tokens: 850, contextWindow: 1000, percent: 85 } });
+    const harness = createPiHarness();
+    companyGuard(harness.pi);
+    const input = harness.handlers.get("input");
+
+    const result = await input({
+      text: "/scout Scout payment FE mapping vs BE contract. Backend read-only. Do not edit source.",
+      source: "interactive"
+    }, ctx);
+
+    assert.equal(result.action, "transform");
+    assert.match(result.text, /^\/fresh-scout Scout payment FE mapping/);
   });
 
   it("blocks raw access to secrets, guard state, and guard profile without false positives", async () => {

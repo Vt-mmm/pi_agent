@@ -11,6 +11,7 @@ $ARGUMENTS
 
 Mandatory flow:
 
+0. Call `company_context_preflight` with `workflow=task`. If it recommends `fresh-session`, stop loading context in this session and tell the user to use `/fresh-task <request>` unless this command already runs in a fresh session.
 1. Call `company_context` and read the project profile/runtime policy.
 2. Call `company_memory_status`. If memory is enabled and relevant to the task, search/read memory as advisory context, record citations with `company_memory_citation_record`, then verify against current repo files.
 3. Read `.pi/project-context.md`. If it is missing or still says `Generated: not yet`, stop and ask the user to run `/onboard-project` after login/model selection before implementation.
@@ -42,6 +43,8 @@ Mandatory flow:
 15. Call `company_task_gate_check`. If gate fails, final outcome is blocked/partial, not done.
 16. If the user asks about token/context/cost usage, call `company_usage_snapshot`; for exact token/cost totals, tell the user to run `/session` or `pi-company-usage <project-path>`.
 17. If verify cannot run, stop and report the exact blocker. Do not call it done.
+
+Do not ask the user to paste this mandatory flow. The platform prompt already contains it. If the user pasted the full flow, treat it as boilerplate and extract only the task request.
 
 Output format:
 

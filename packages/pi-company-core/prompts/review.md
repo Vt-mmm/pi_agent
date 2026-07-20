@@ -11,6 +11,7 @@ $ARGUMENTS
 
 Rules:
 
+0. Call `company_context_preflight` with `workflow=review` for large diffs or long requests. If it recommends `fresh-session`, prefer `/fresh-scout` for read-only evidence gathering or ask the user to resume in a fresh session.
 1. Call `company_context`.
 2. Read `.pi/project-context.md` if available.
 3. Stay read-only unless explicitly asked to write a report.

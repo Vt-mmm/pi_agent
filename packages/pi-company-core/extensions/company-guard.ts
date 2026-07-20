@@ -189,6 +189,20 @@ type UsageSnapshot = {
   };
 };
 
+type ContextPreflight = {
+  workflow: string;
+  inputChars: number;
+  inputTokenEstimate: number;
+  liveContext?: UsageSnapshot["contextUsage"];
+  projectedContext?: {
+    tokens: number;
+    percent: number;
+  };
+  recommendation: "ok" | "watch" | "compact" | "fresh-session" | "unknown";
+  reason: string;
+  commands: string[];
+};
+
 type ReferenceRepo = {
   host: string;
   owner: string;
@@ -200,6 +214,12 @@ type ReferenceRepo = {
 };
 
 const COMPANY_TRACE_STATE_TYPE = "company-task-trace";
+const CONTEXT_WATCH_PERCENT = 50;
+const CONTEXT_COMPACT_PERCENT = 70;
+const CONTEXT_FRESH_PERCENT = 82;
+const LONG_INPUT_CHARS = 8000;
+const BOILERPLATE_COLLAPSE_CHARS = 300;
+const MAX_INLINE_COLLAPSED_TASK_CHARS = 2200;
 
 const DEFAULT_MEMORY_SETTINGS: Required<MemorySettings> = {
   enabled: true,
@@ -1377,6 +1397,195 @@ function formatUsageSnapshot(snapshot: UsageSnapshot): string {
   ].join("\n");
 }
 
+function estimateTokensFromChars(chars: number): number {
+  return Math.max(0, Math.ceil(chars / 4));
+}
+
+function buildContextPreflight(snapshot: UsageSnapshot, workflow = "task", inputChars = 0): ContextPreflight {
+  const inputTokenEstimate = estimateTokensFromChars(inputChars);
+  const live = snapshot.contextUsage;
+  let projectedContext: ContextPreflight["projectedContext"];
+  let recommendation: ContextPreflight["recommendation"] = "unknown";
+  let reason = "Context usage is unavailable; use /session or /company-usage if the task is large.";
+
+  if (live && live.tokens !== null && live.percent !== null) {
+    const projectedTokens = live.tokens + inputTokenEstimate;
+    const projectedPercent = live.contextWindow > 0 ? (projectedTokens / live.contextWindow) * 100 : live.percent;
+    projectedContext = {
+      tokens: projectedTokens,
+      percent: projectedPercent
+    };
+
+    if (live.percent >= CONTEXT_FRESH_PERCENT || projectedPercent >= CONTEXT_FRESH_PERCENT || inputChars >= LONG_INPUT_CHARS) {
+      recommendation = "fresh-session";
+      reason = "Use a fresh governed session before this task to avoid provider context overflow and stale task state.";
+    } else if (live.percent >= CONTEXT_COMPACT_PERCENT || projectedPercent >= CONTEXT_COMPACT_PERCENT) {
+      recommendation = "compact";
+      reason = "Compact before continuing; the current session is close to the high-context zone.";
+    } else if (live.percent >= CONTEXT_WATCH_PERCENT || projectedPercent >= CONTEXT_WATCH_PERCENT) {
+      recommendation = "watch";
+      reason = "Proceed, but keep context targeted and avoid broad file injection.";
+    } else {
+      recommendation = "ok";
+      reason = "Context is within the normal range for a bounded task.";
+    }
+  } else if (inputChars >= LONG_INPUT_CHARS) {
+    recommendation = "fresh-session";
+    reason = "The incoming request is large; start a fresh governed session and keep the full intake in a file.";
+  }
+
+  return {
+    workflow,
+    inputChars,
+    inputTokenEstimate,
+    liveContext: live,
+    projectedContext,
+    recommendation,
+    reason,
+    commands: [
+      "/task-preflight",
+      "/task-preflight compact",
+      `/fresh-${workflow === "be-to-fe" ? "be-to-fe" : workflow === "scout" ? "scout" : "task"} <request>`,
+      "/company-usage",
+      "/session"
+    ]
+  };
+}
+
+function formatContextPreflight(preflight: ContextPreflight, snapshot: UsageSnapshot): string {
+  const live = preflight.liveContext
+    ? `${formatCount(preflight.liveContext.tokens)} / ${formatCount(preflight.liveContext.contextWindow)} (${formatPercent(preflight.liveContext.percent)})`
+    : "unavailable";
+  const projected = preflight.projectedContext
+    ? `${formatCount(preflight.projectedContext.tokens)} (${formatPercent(preflight.projectedContext.percent)})`
+    : "unavailable";
+  return [
+    "# Company task preflight",
+    "",
+    `- Workflow: ${preflight.workflow}`,
+    `- Session: ${snapshot.sessionName ?? "unnamed"} (${snapshot.sessionId ?? "unknown"})`,
+    `- Model: ${snapshot.model}`,
+    `- Thinking: ${snapshot.thinkingLevel}`,
+    `- Entries: ${formatCount(snapshot.entries.branch)} active / ${formatCount(snapshot.entries.total)} total`,
+    `- Live context: ${live}`,
+    `- Incoming input estimate: ${formatCount(preflight.inputTokenEstimate)} tokens from ${formatCount(preflight.inputChars)} chars`,
+    `- Projected context: ${projected}`,
+    `- Recommendation: ${preflight.recommendation}`,
+    `- Reason: ${preflight.reason}`,
+    "",
+    "Commands:",
+    "",
+    "```text",
+    ...preflight.commands,
+    "```",
+    "",
+    "Notes:",
+    "",
+    "- Do not paste the full mandatory flow into every task. Platform prompts and company tools already carry it.",
+    "- Use `/scout` for read-only risk mapping. Use `/fresh-scout` when the current session is already heavy.",
+    "- If exact billed token/cost totals are needed, run `/session` in Pi or `pi-company-usage <project-path>` from another terminal."
+  ].join("\n");
+}
+
+function looksLikeGovernedBoilerplate(text: string): boolean {
+  const lower = text.toLowerCase();
+  const markers = [
+    "mandatory flow",
+    "company_context",
+    "company_task_start",
+    "company_context_record",
+    "company_verify_record",
+    "company_task_gate_check",
+    "output format"
+  ];
+  return markers.filter((marker) => lower.includes(marker)).length >= 3;
+}
+
+function extractFencedBlockAfter(label: RegExp, text: string): string | undefined {
+  const labelMatch = label.exec(text);
+  if (!labelMatch || labelMatch.index === undefined) return undefined;
+  const rest = text.slice(labelMatch.index + labelMatch[0].length);
+  const fenced = /```(?:text|md|markdown)?\s*([\s\S]*?)```/i.exec(rest);
+  return fenced?.[1]?.trim();
+}
+
+function extractTaskRequest(text: string): string {
+  const labeled =
+    extractFencedBlockAfter(/(?:implement|scout|review|plan)\s+(?:this\s+)?task\s*:?\s*/i, text) ??
+    extractFencedBlockAfter(/request\s*:?\s*/i, text);
+  if (labeled) return stripLeadingWorkflowCommand(labeled);
+
+  const firstFence = /```(?:text|md|markdown)?\s*([\s\S]*?)```/i.exec(text);
+  if (firstFence?.[1]?.trim()) return stripLeadingWorkflowCommand(firstFence[1].trim());
+
+  return stripLeadingWorkflowCommand(text.trim());
+}
+
+function stripLeadingWorkflowCommand(input: string): string {
+  return input.replace(/^\/(?:task|scout|be-to-fe|review|plan|platform-improve)\b\s*/i, "").trim();
+}
+
+function trimTaskForInline(input: string): string {
+  const normalized = stripLeadingWorkflowCommand(input).trim().replace(/\n{3,}/g, "\n\n");
+  if (normalized.length <= MAX_INLINE_COLLAPSED_TASK_CHARS) return normalized;
+  return `${normalized.slice(0, MAX_INLINE_COLLAPSED_TASK_CHARS).trim()}\n\n[Input truncated by company preflight. Put the full spec in a project file and reference that file.]`;
+}
+
+function chooseFreshWorkflow(original: string, task: string): "task" | "scout" | "be-to-fe" {
+  const semantic = stripLeadingWorkflowCommand(task || original).toLowerCase();
+  const starts = original.trim().toLowerCase();
+  if (starts.startsWith("/be-to-fe")) return "be-to-fe";
+  if (starts.startsWith("/scout")) return "scout";
+  const asksForWrite = /\b(implement|support|surface|consume|write|change|fix)\b/.test(semantic);
+  if (/\b(scout|read-only|read only|audit|mapping|mapping matrix|map contract)\b/.test(semantic) && !asksForWrite) {
+    return "scout";
+  }
+  if (/\b(be|backend)\b/.test(semantic) && /\b(fe|frontend)\b/.test(semantic) && asksForWrite) {
+    return "be-to-fe";
+  }
+  return "task";
+}
+
+function isCompanyWorkflowInput(text: string): boolean {
+  return /^\/(?:task|be-to-fe|scout|review|plan|platform-improve)\b/i.test(text.trim());
+}
+
+function isFreshOrUtilityInput(text: string): boolean {
+  return /^\/(?:fresh-task|fresh-scout|fresh-be-to-fe|task-preflight|company-usage|session|compact)\b/i.test(text.trim());
+}
+
+function taskInboxDir(cwd: string): string {
+  return path.join(cwd, ".pi", "task-inbox");
+}
+
+function writeTaskInbox(cwd: string, workflow: string, text: string): string {
+  fs.mkdirSync(taskInboxDir(cwd), { recursive: true });
+  const stamp = new Date().toISOString().replace(/[:.]/g, "-");
+  const safeWorkflow = workflow.replace(/[^a-z0-9-]+/gi, "-").toLowerCase() || "task";
+  const fileName = `${stamp}-${safeWorkflow}.md`;
+  const absolute = path.join(taskInboxDir(cwd), fileName);
+  fs.writeFileSync(absolute, `${redactText(text)}\n`);
+  return path.relative(cwd, absolute).split(path.sep).join("/");
+}
+
+function buildFreshCommand(cwd: string, workflow: "task" | "scout" | "be-to-fe", originalText: string, reason: string): string {
+  const task = extractTaskRequest(originalText);
+  if (originalText.length >= LONG_INPUT_CHARS) {
+    const intakePath = writeTaskInbox(cwd, workflow, originalText);
+    return `/fresh-${workflow} Read task intake from ${intakePath}. ${reason}`;
+  }
+  return `/fresh-${workflow} ${trimTaskForInline(task)}`;
+}
+
+function shortTaskLabel(text: string): string {
+  const compact = text
+    .replace(/```[\s\S]*?```/g, " ")
+    .replace(/[^A-Za-z0-9\u00C0-\u1EF9_-]+/g, " ")
+    .trim()
+    .slice(0, 64);
+  return compact || "company task";
+}
+
 function appendTrace(cwd: string, payload: Record<string, unknown>): void {
   ensureStateDirs(cwd);
   const safePayload = redactForStorage(payload) as Record<string, unknown>;
@@ -1522,7 +1731,42 @@ export default function companyGuard(pi: ExtensionAPI) {
     const name = profile.displayName || profile.projectId || path.basename(ctx.cwd);
     pi.setSessionName(`pi:${name}`);
     const profileHint = fs.existsSync(projectProfilePath(ctx.cwd)) ? "" : " (run /onboard-project to select a profile)";
-    ctx.ui.notify(`Company Pi guard loaded: ${name}${profileHint}`, "info");
+    const snapshot = buildUsageSnapshot(ctx, String(pi.getThinkingLevel()));
+    const preflight = buildContextPreflight(snapshot, "task", 0);
+    const contextHint = preflight.recommendation === "fresh-session"
+      ? " Context is high; use /fresh-task or /fresh-scout for new work."
+      : preflight.recommendation === "compact"
+        ? " Context is warm; run /task-preflight before large work."
+        : "";
+    ctx.ui.notify(`Company Pi guard loaded: ${name}${profileHint}${contextHint}`, preflight.recommendation === "fresh-session" ? "warning" : "info");
+  });
+
+  pi.on("input", async (event, ctx) => {
+    if (event.source === "extension") return { action: "continue" };
+    const text = event.text.trim();
+    if (!text || isFreshOrUtilityInput(text)) return { action: "continue" };
+
+    const snapshot = buildUsageSnapshot(ctx, String(pi.getThinkingLevel()));
+    const preflight = buildContextPreflight(snapshot, chooseFreshWorkflow(text, text), text.length);
+    const hasBoilerplate = looksLikeGovernedBoilerplate(text);
+    const shouldFreshen =
+      preflight.recommendation === "fresh-session" &&
+      (hasBoilerplate || isCompanyWorkflowInput(text) || text.length >= LONG_INPUT_CHARS);
+    const shouldCollapseBoilerplate = hasBoilerplate && text.length >= BOILERPLATE_COLLAPSE_CHARS;
+
+    if (!shouldFreshen && !shouldCollapseBoilerplate) return { action: "continue" };
+
+    const task = extractTaskRequest(text);
+    const workflow = chooseFreshWorkflow(text, task);
+    const reason = shouldFreshen
+      ? "Current session is near context limits; use a fresh governed session."
+      : "Mandatory flow boilerplate is already part of the platform; collapse it to the task request.";
+    const command = shouldFreshen
+      ? buildFreshCommand(ctx.cwd, workflow, text, reason)
+      : `/${workflow} ${trimTaskForInline(task)}`;
+
+    ctx.ui.notify(`Company preflight: ${reason}`, "warning");
+    return { action: "transform", text: command };
   });
 
   pi.on("tool_result", async (event, ctx) => {
@@ -1806,6 +2050,31 @@ export default function companyGuard(pi: ExtensionAPI) {
       return {
         content: [{ type: "text", text: formatUsageSnapshot(snapshot) }],
         details: snapshot
+      };
+    }
+  });
+
+  pi.registerTool({
+    name: "company_context_preflight",
+    label: "Company Context Preflight",
+    description: "Check whether the current session should run a task directly, compact first, or start a fresh governed session.",
+    promptSnippet: "Use this before large, high-risk, or cross-module tasks to avoid context overflow.",
+    promptGuidelines: [
+      "Call this before large payment/auth/data/deploy tasks, BE-to-FE mapping, or any task where the user pasted a long intake.",
+      "If recommendation is fresh-session, do not continue loading context in the current session; ask for or use a fresh workflow command.",
+      "Do not paste mandatory-flow boilerplate into the task request; use platform workflow commands instead."
+    ],
+    parameters: Type.Object({
+      workflow: Type.Optional(StringEnum(["task", "scout", "be-to-fe", "review", "plan", "platform-improve"] as const)),
+      inputChars: Type.Optional(Type.Number({ minimum: 0 }))
+    }),
+    async execute(_toolCallId, params, _signal, _onUpdate, ctx) {
+      const workflow = params.workflow ?? "task";
+      const snapshot = buildUsageSnapshot(ctx, String(pi.getThinkingLevel()));
+      const preflight = buildContextPreflight(snapshot, workflow, params.inputChars ?? 0);
+      return {
+        content: [{ type: "text", text: formatContextPreflight(preflight, snapshot) }],
+        details: preflight
       };
     }
   });
@@ -2374,6 +2643,81 @@ export default function companyGuard(pi: ExtensionAPI) {
         },
         { triggerTurn: false }
       );
+    }
+  });
+
+  pi.registerCommand("task-preflight", {
+    description: "Check context health before a large task; optionally compact",
+    handler: async (args, ctx) => {
+      const raw = String(args ?? "").trim();
+      const workflow = raw.match(/\b(?:scout|be-to-fe|review|plan|platform-improve|task)\b/i)?.[0]?.toLowerCase() ?? "task";
+      const snapshot = buildUsageSnapshot(ctx, String(pi.getThinkingLevel()));
+      const preflight = buildContextPreflight(snapshot, workflow, raw.length);
+      const context = snapshot.contextUsage
+        ? `${formatCount(snapshot.contextUsage.tokens)} / ${formatCount(snapshot.contextUsage.contextWindow)} (${formatPercent(snapshot.contextUsage.percent)})`
+        : "context unavailable";
+      ctx.ui.notify(`Task preflight: ${preflight.recommendation}; ${context}`, preflight.recommendation === "ok" ? "info" : "warning");
+
+      if (/\bcompact\b/i.test(raw)) {
+        ctx.compact({
+          customInstructions: [
+            "Preserve current task decisions, project constraints, changed files, verify commands, open blockers, and next action.",
+            "Drop repeated mandatory-flow boilerplate and stale exploration details.",
+            "After compaction, required project context must be re-read from current repository files before implementation."
+          ].join("\n")
+        });
+      }
+
+      pi.sendMessage(
+        {
+          customType: "company-task-preflight",
+          content: formatContextPreflight(preflight, snapshot),
+          display: true,
+          details: preflight
+        },
+        { triggerTurn: false }
+      );
+    }
+  });
+
+  async function startFreshWorkflow(workflow: "task" | "scout" | "be-to-fe", args: string, ctx: any) {
+    const request = String(args ?? "").trim();
+    if (!request) {
+      ctx.ui.notify(`Usage: /fresh-${workflow} <request>`, "warning");
+      return;
+    }
+
+    const label = shortTaskLabel(request);
+    const command = `/${workflow} ${request}`;
+    const result = await ctx.newSession({
+      withSession: async (nextCtx) => {
+        pi.setSessionName(`pi:${workflow}:${label}`);
+        await nextCtx.sendUserMessage(command);
+      }
+    });
+    if (result.cancelled) {
+      ctx.ui.notify(`Fresh ${workflow} session cancelled`, "warning");
+    }
+  }
+
+  pi.registerCommand("fresh-task", {
+    description: "Start a fresh governed session and run /task with the request",
+    handler: async (args, ctx) => {
+      await startFreshWorkflow("task", String(args ?? ""), ctx);
+    }
+  });
+
+  pi.registerCommand("fresh-scout", {
+    description: "Start a fresh governed session and run /scout read-only with the request",
+    handler: async (args, ctx) => {
+      await startFreshWorkflow("scout", String(args ?? ""), ctx);
+    }
+  });
+
+  pi.registerCommand("fresh-be-to-fe", {
+    description: "Start a fresh governed session and run /be-to-fe with the request",
+    handler: async (args, ctx) => {
+      await startFreshWorkflow("be-to-fe", String(args ?? ""), ctx);
     }
   });
 }
