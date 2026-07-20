@@ -2,7 +2,7 @@
 
 ## Mục tiêu
 
-`v0.3.18` định nghĩa bộ kiểm soát runtime để Pi Agent Platform có thể chạy task một cách có kỷ luật cho solo, internal team, và public package.
+`v0.3.19` định nghĩa bộ kiểm soát runtime để Pi Agent Platform có thể chạy task một cách có kỷ luật cho solo, internal team, và public package.
 
 Các module chính:
 
@@ -126,12 +126,14 @@ Gate phân biệt hai mức:
 
 `true`, `echo ok`, hoặc `npm test || true` có thể được ghi trace nếu đã chạy thật, nhưng không đủ để pass final gate trừ khi profile/task verify plan khai đúng command đó.
 
-Từ `v0.3.18`, guard state tự bảo vệ:
+Từ `v0.3.19`, guard state tự bảo vệ:
 
 - raw path-like access vào `.pi/company-state/**` bị block trước khi tool chạy;
 - raw path-like access vào `.pi/company-profile.json` bị block trước khi tool chạy;
 - Pi built-ins `read`, `write`, `edit`, `grep`, `find`, `ls` đi qua cùng protected-path gate;
 - custom/MCP tools cũng bị block nếu tool call chứa path-like string trỏ vào protected path, kể cả nested object, array, và `file://` URI;
+- path-like string được percent-decode một lần trước khi match, nên `%2Eenv` và `.%65nv` không đi vòng qua guard;
+- tool input lồng quá sâu vượt `MAX_TOOL_INPUT_INSPECTION_DEPTH=32` sẽ fail-closed;
 - generic extractor chỉ skip leaf field nội dung đã biết như `content`, `query`, `pattern`, `text`, và `command`;
 - `grep.glob` và `find.pattern` bị block khi pattern nhắm protected path rõ ràng như `.env*`, `auth.json`, `.pi/company-state/**`, hoặc `company-profile.json`; broad glob như `*.json` được phép và để result backstop xử lý;
 - broad `grep`, `find`, và `ls` sweep có thêm `tool_result` backstop để redact content line hoặc path metadata từ protected files;

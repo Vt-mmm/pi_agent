@@ -90,6 +90,8 @@ The ledger and task/profile control files are self-protected:
 - raw path-like tool access to `.pi/company-profile.json` is blocked before execution;
 - the same protected-path gate covers Pi built-ins such as `read`, `write`, `edit`, `grep`, `find`, `ls`;
 - custom/MCP tools are also blocked when a tool call contains path-like strings pointing at a protected path, including nested objects, arrays, and `file://` URIs;
+- path-like strings are percent-decoded once before matching;
+- input nesting above `MAX_TOOL_INPUT_INSPECTION_DEPTH=32` fails closed because an uninspectable input cannot be safely classified;
 - generic extraction skips known leaf content fields such as `content`, `query`, `pattern`, `text`, and `command`, so normal search/edit strings do not become path false positives;
 - `grep.glob` and `find.pattern` are checked when they explicitly name protected targets such as `.env*`, `auth.json`, `.pi/company-state/**`, or `company-profile.json`;
 - broad `grep`, `find`, and `ls` results are filtered through the `tool_result` hook so protected content lines or protected path metadata are redacted before the model sees them;

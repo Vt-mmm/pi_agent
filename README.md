@@ -33,7 +33,7 @@ From there, Pi can onboard the project, select an operating profile, use the rig
 
 ```bash
 npm install -g @earendil-works/pi-coding-agent
-pi install git:github.com/Vt-mmm/pi_agent@v0.3.18
+pi install git:github.com/Vt-mmm/pi_agent@v0.3.19
 ```
 
 Optional Herdr integration:
@@ -222,7 +222,7 @@ Most projects do not need shell init. Use this only when you want to pre-create 
 ```bash
 bash /path/to/pi_agent/scripts/setup.sh /path/to/project \
   --profile be-readonly-fe \
-  --package-source git:github.com/Vt-mmm/pi_agent@v0.3.18 \
+  --package-source git:github.com/Vt-mmm/pi_agent@v0.3.19 \
   --mcp-preset core \
   --subagents-preset safe
 ```
@@ -317,7 +317,7 @@ This repository intentionally excludes:
 
 ## Maturity
 
-Current release: `v0.3.18`.
+Current release: `v0.3.19`.
 
 Ready for:
 
@@ -334,6 +334,7 @@ Security boundary:
 
 - The guard extension is an accident-prevention layer for agent mistakes and common prompt-injection patterns.
 - Raw path-like tool access to protected paths is blocked before execution. This covers Pi built-ins such as `read`, `write`, `edit`, `grep`, `find`, `ls`, and custom/MCP tools when their input contains path-like strings, including nested objects, arrays, and `file://` URIs.
+- Path-like strings are percent-decoded once before matching. Excessively nested tool input fails closed instead of being silently skipped.
 - Known content fields such as `content`, `query`, `pattern`, `text`, and `command` are excluded from generic path extraction to preserve normal search/edit behavior. Tool-specific checks still validate `grep.glob` and `find.pattern` when they explicitly target protected paths.
 - Broad `grep`, `find`, and `ls` sweeps get result-filter backstops: protected file content lines or protected path metadata are redacted before the model sees output.
 - Raw `bash` access to protected paths is blocked through shell path extraction. `.pi/company-state/**` and `.pi/company-profile.json` are self-protected; use `company_context` and company task tools instead.

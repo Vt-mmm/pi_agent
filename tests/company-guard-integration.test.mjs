@@ -150,6 +150,14 @@ function createContext(cwd) {
   };
 }
 
+function nestedInput(depth, leaf) {
+  let value = leaf;
+  for (let index = 0; index < depth; index += 1) {
+    value = { nest: value };
+  }
+  return value;
+}
+
 async function callToolCall(handler, ctx, toolName, input) {
   return await handler({ toolName, input }, ctx) ?? {};
 }
@@ -222,6 +230,10 @@ describe("company guard integration", () => {
       ["mcp__fs__read", { paths: [".env"] }],
       ["mcp__fs__read", { files: [".env"] }],
       ["mcp__fs__read", { uri: pathToFileURL(path.join(cwd, ".env")).href }],
+      ["mcp__fs__read", { uri: "%2Eenv" }],
+      ["mcp__fs__read", { location: ".%65nv" }],
+      ["mcp__fs__read", nestedInput(32, { path: ".env" })],
+      ["mcp__fs__read", nestedInput(33, { path: "README.md" })],
       ["write", { path: ".env", content: "x" }],
       ["write", { path: ".pi/company-state/observed-bash.jsonl", content: "x" }],
       ["write", { file_path: ".pi/company-state/observed-bash.jsonl", content: "x" }],
@@ -245,6 +257,7 @@ describe("company guard integration", () => {
       ["find", { pattern: "*.json", path: "." }],
       ["ls", { path: "src" }],
       ["custom_reader", { path: "README.md" }],
+      ["custom_reader", nestedInput(20, { path: "README.md" })],
       ["custom_search", { query: ".env", pattern: ".env", content: "cat .env", command: "cat .env", text: ".env" }],
       ["write", { path: "src/index.ts", content: "export {};\n" }],
       ["edit", { path: "README.md", old: "Fixture", new: "Fixture" }]

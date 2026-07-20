@@ -18,7 +18,7 @@ Global install mặc định sẽ cài adapter và seed preset `core` nếu dùn
 ```bash
 bash /path/to/pi_agent/scripts/setup.sh . \
   --profile auto \
-  --package-source git:github.com/Vt-mmm/pi_agent@v0.3.18 \
+  --package-source git:github.com/Vt-mmm/pi_agent@v0.3.19 \
   --mcp-preset core
 ```
 
@@ -229,7 +229,7 @@ Default `toolRegistry=advisory`: agent nhận warning khi tool chưa map capabil
 
 Protected-path gate độc lập với registry mode. Dù tool registry đang `advisory`, mọi raw tool call có path-like string trỏ vào protected path sẽ bị block trước khi tool chạy. Cơ chế này áp dụng cho Pi built-ins (`read`, `write`, `edit`, `grep`, `find`, `ls`) và custom/MCP tools nếu tool call đi qua Pi `tool_call` hook.
 
-Extractor walk nested object/array và `file://` URI. Field lạ mặc định được coi là path-like; chỉ leaf field nội dung đã biết như `content`, `query`, `pattern`, `text`, và `command` được skip để tránh false positive search/edit.
+Extractor walk nested object/array và `file://` URI. Path-like string được percent-decode một lần trước khi match. Field lạ mặc định được coi là path-like; chỉ leaf field nội dung đã biết như `content`, `query`, `pattern`, `text`, và `command` được skip để tránh false positive search/edit. Input lồng quá sâu vượt `MAX_TOOL_INPUT_INSPECTION_DEPTH=32` sẽ fail-closed.
 
 Search/list channels cũng được kiểm:
 

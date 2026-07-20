@@ -364,6 +364,11 @@ function loadProfileFromContext(ctx: ExtensionContext): ProjectProfile {
 function normalizeRelative(cwd: string, candidate: unknown): string | undefined {
   if (typeof candidate !== "string" || candidate.trim().length === 0) return undefined;
   let raw = candidate.trim();
+  try {
+    raw = decodeURIComponent(raw);
+  } catch {
+    return undefined;
+  }
   if (/^[A-Za-z][A-Za-z0-9+.-]*:\/\//.test(raw)) {
     if (!raw.toLowerCase().startsWith("file://")) return undefined;
     try {
@@ -469,32 +474,53 @@ function isContentInputField(field: string | undefined): boolean {
   return field !== undefined && CONTENT_INPUT_FIELDS.has(field.toLowerCase().replace(/[-_]/g, ""));
 }
 
-function walkStringInputs(value: unknown, keyPath: string[] = [], depth = 0): Array<{ field: string; value: string }> {
-  if (depth > 10) return [];
+const MAX_TOOL_INPUT_INSPECTION_DEPTH = 32;
+
+type StringInputWalkResult = {
+  items: Array<{ field: string; value: string }>;
+  maxDepthExceeded?: string;
+};
+
+function walkStringInputs(value: unknown, keyPath: string[] = [], depth = 0): StringInputWalkResult {
+  if (depth > MAX_TOOL_INPUT_INSPECTION_DEPTH) {
+    return { items: [], maxDepthExceeded: keyPath.join(".") || "(input)" };
+  }
 
   if (typeof value === "string") {
     const field = keyPath.at(-1);
-    if (isContentInputField(field)) return [];
-    return [{ field: keyPath.join(".") || "(input)", value }];
+    if (isContentInputField(field)) return { items: [] };
+    return { items: [{ field: keyPath.join(".") || "(input)", value }] };
   }
 
   if (Array.isArray(value)) {
-    return value.flatMap((item) => walkStringInputs(item, keyPath, depth + 1));
+    const result: StringInputWalkResult = { items: [] };
+    for (const item of value) {
+      const child = walkStringInputs(item, keyPath, depth + 1);
+      result.items.push(...child.items);
+      if (child.maxDepthExceeded) result.maxDepthExceeded ??= child.maxDepthExceeded;
+    }
+    return result;
   }
 
-  if (!value || typeof value !== "object") return [];
+  if (!value || typeof value !== "object") return { items: [] };
 
-  const items: Array<{ field: string; value: string }> = [];
+  const result: StringInputWalkResult = { items: [] };
   for (const [key, child] of Object.entries(value as Record<string, unknown>)) {
-    items.push(...walkStringInputs(child, [...keyPath, key], depth + 1));
+    const childResult = walkStringInputs(child, [...keyPath, key], depth + 1);
+    result.items.push(...childResult.items);
+    if (childResult.maxDepthExceeded) result.maxDepthExceeded ??= childResult.maxDepthExceeded;
   }
-  return items;
+  return result;
 }
 
-function extractPathInputsFromInput(cwd: string, input: Record<string, unknown>): Array<{ field: string; path: string }> {
+function inspectPathInputsFromInput(cwd: string, input: Record<string, unknown>): {
+  paths: Array<{ field: string; path: string }>;
+  maxDepthExceeded?: string;
+} {
   const paths: Array<{ field: string; path: string }> = [];
   const seen = new Set<string>();
-  for (const item of walkStringInputs(input)) {
+  const walked = walkStringInputs(input);
+  for (const item of walked.items) {
     const normalized = normalizeRelative(cwd, item.value);
     if (normalized === undefined) continue;
     const key = `${item.field}\0${normalized}`;
@@ -502,7 +528,11 @@ function extractPathInputsFromInput(cwd: string, input: Record<string, unknown>)
     seen.add(key);
     paths.push({ field: item.field, path: normalized });
   }
-  return paths;
+  return { paths, maxDepthExceeded: walked.maxDepthExceeded };
+}
+
+function extractPathInputsFromInput(cwd: string, input: Record<string, unknown>): Array<{ field: string; path: string }> {
+  return inspectPathInputsFromInput(cwd, input).paths;
 }
 
 function extractLikelyPathFromInput(cwd: string, input: Record<string, unknown>): string | undefined {
@@ -643,7 +673,15 @@ function evaluatePathLikeToolAccess(
   protectedPaths: string[],
   shellProtectedPaths: string[]
 ): { block: boolean; reason?: string } {
-  for (const item of extractPathInputsFromInput(cwd, input)) {
+  const inspection = inspectPathInputsFromInput(cwd, input);
+  if (inspection.maxDepthExceeded) {
+    return {
+      block: true,
+      reason: `Blocked ${toolName}: tool input nesting exceeds inspection depth at ${inspection.maxDepthExceeded}`
+    };
+  }
+
+  for (const item of inspection.paths) {
     const shellMatched = matchesAnyPath(item.path, shellProtectedPaths);
     if (shellMatched) {
       return {
