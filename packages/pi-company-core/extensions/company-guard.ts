@@ -220,6 +220,16 @@ const CONTEXT_FRESH_PERCENT = 82;
 const LONG_INPUT_CHARS = 8000;
 const BOILERPLATE_COLLAPSE_CHARS = 300;
 const MAX_INLINE_COLLAPSED_TASK_CHARS = 2200;
+const MAX_CHAT_IMAGE_ATTACHMENTS = 4;
+const MAX_CHAT_IMAGE_BYTES = 8 * 1024 * 1024;
+const IMAGE_EXTENSIONS = ["png", "jpg", "jpeg", "gif", "webp", "bmp"] as const;
+
+type ChatImageAttachmentResult = {
+  text: string;
+  images: Array<{ type: "image"; data: string; mimeType: string }>;
+  attached: Array<{ marker: string; path: string; mimeType: string; bytes: number }>;
+  skipped: Array<{ path: string; reason: string }>;
+};
 
 const DEFAULT_MEMORY_SETTINGS: Required<MemorySettings> = {
   enabled: true,
@@ -1586,6 +1596,149 @@ function shortTaskLabel(text: string): string {
   return compact || "company task";
 }
 
+function escapeRegExp(input: string): string {
+  return input.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function supportedImageMimeType(filePath: string, bytes: Buffer): string | undefined {
+  if (bytes.length >= 8 && bytes.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]))) {
+    return "image/png";
+  }
+  if (bytes.length >= 3 && bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff) {
+    return "image/jpeg";
+  }
+  if (bytes.length >= 6) {
+    const head = bytes.subarray(0, 6).toString("ascii");
+    if (head === "GIF87a" || head === "GIF89a") return "image/gif";
+  }
+  if (bytes.length >= 12 && bytes.subarray(0, 4).toString("ascii") === "RIFF" && bytes.subarray(8, 12).toString("ascii") === "WEBP") {
+    return "image/webp";
+  }
+  if (bytes.length >= 2 && bytes[0] === 0x42 && bytes[1] === 0x4d) {
+    return "image/bmp";
+  }
+  const ext = path.extname(filePath).toLowerCase().replace(/^\./, "");
+  if (ext === "png") return "image/png";
+  if (ext === "jpg" || ext === "jpeg") return "image/jpeg";
+  if (ext === "gif") return "image/gif";
+  if (ext === "webp") return "image/webp";
+  if (ext === "bmp") return "image/bmp";
+  return undefined;
+}
+
+function normalizeImagePathCandidate(candidate: string, cwd: string, options: { allowBareRelative?: boolean } = {}): string | undefined {
+  let raw = candidate.trim().replace(/^['"`<]+|['"`>,.;:!?]+$/g, "");
+  if (!raw) return undefined;
+  const allowBareRelative = options.allowBareRelative !== false;
+  const hasExplicitPathPrefix = raw.startsWith("file://") || raw.startsWith("~/") || path.isAbsolute(raw) || raw.startsWith("./") || raw.startsWith("../");
+  if (!allowBareRelative && !hasExplicitPathPrefix) return undefined;
+  try {
+    if (raw.startsWith("file://")) raw = fileURLToPath(raw);
+  } catch {
+    return undefined;
+  }
+  if (raw.startsWith("~/")) {
+    const home = process.env.HOME;
+    if (!home) return undefined;
+    raw = path.join(home, raw.slice(2));
+  }
+  const ext = path.extname(raw).toLowerCase().replace(/^\./, "");
+  if (!IMAGE_EXTENSIONS.includes(ext as typeof IMAGE_EXTENSIONS[number])) return undefined;
+  const absolute = path.isAbsolute(raw) ? raw : path.resolve(cwd, raw);
+  return absolute;
+}
+
+function extractLocalImagePathCandidates(text: string, cwd: string): string[] {
+  const candidates = new Set<string>();
+  const imageExt = "(?:png|jpe?g|gif|webp|bmp)";
+  const wholeTextPath = normalizeImagePathCandidate(text, cwd, { allowBareRelative: false });
+  if (wholeTextPath) candidates.add(wholeTextPath);
+
+  const quoted = new RegExp(`(?:path=)?["']([^"']+\\.${imageExt})["']`, "gi");
+  for (const match of text.matchAll(quoted)) {
+    const normalized = normalizeImagePathCandidate(match[1], cwd);
+    if (normalized) candidates.add(normalized);
+  }
+
+  const fileUrl = new RegExp(`file://[^\\s"'<>]+\\.${imageExt}`, "gi");
+  for (const match of text.matchAll(fileUrl)) {
+    const normalized = normalizeImagePathCandidate(match[0], cwd);
+    if (normalized) candidates.add(normalized);
+  }
+
+  const linePathPattern = '\\s((?:/|~\\/|\\.\\.?/)[^\\n\\r"\\\'<>]*?\\.' + imageExt + ')(?=$|\\s|["\\\'`)>])';
+  const linePath = new RegExp(linePathPattern, "gi");
+  for (const match of text.matchAll(linePath)) {
+    const normalized = normalizeImagePathCandidate(match[1], cwd);
+    if (normalized) candidates.add(normalized);
+  }
+
+  return [...candidates];
+}
+
+function attachLocalImagesFromText(text: string, existingImages: unknown[] | undefined, cwd: string): ChatImageAttachmentResult | undefined {
+  const imagePaths = extractLocalImagePathCandidates(text, cwd);
+  if (imagePaths.length === 0) return undefined;
+
+  const existing = Array.isArray(existingImages) ? existingImages : [];
+  const images: ChatImageAttachmentResult["images"] = [];
+  const attached: ChatImageAttachmentResult["attached"] = [];
+  const skipped: ChatImageAttachmentResult["skipped"] = [];
+  let nextText = text;
+
+  for (const imagePath of imagePaths) {
+    if (images.length + existing.length >= MAX_CHAT_IMAGE_ATTACHMENTS) {
+      skipped.push({ path: imagePath, reason: `attachment limit ${MAX_CHAT_IMAGE_ATTACHMENTS} reached` });
+      continue;
+    }
+    try {
+      const stat = fs.statSync(imagePath);
+      if (!stat.isFile()) {
+        skipped.push({ path: imagePath, reason: "not a file" });
+        continue;
+      }
+      if (stat.size <= 0) {
+        skipped.push({ path: imagePath, reason: "empty file" });
+        continue;
+      }
+      if (stat.size > MAX_CHAT_IMAGE_BYTES) {
+        skipped.push({ path: imagePath, reason: `image is ${formatCount(stat.size)} bytes > ${formatCount(MAX_CHAT_IMAGE_BYTES)} byte limit; use read on the file so Pi can resize it` });
+        continue;
+      }
+      const bytes = fs.readFileSync(imagePath);
+      const mimeType = supportedImageMimeType(imagePath, bytes);
+      if (!mimeType) {
+        skipped.push({ path: imagePath, reason: "unsupported image type" });
+        continue;
+      }
+      const marker = `[image${existing.length + images.length + 1}]`;
+      images.push({ type: "image", mimeType, data: bytes.toString("base64") });
+      attached.push({ marker, path: imagePath, mimeType, bytes: stat.size });
+      nextText = nextText.replace(new RegExp(escapeRegExp(imagePath), "g"), marker);
+      nextText = nextText.replace(new RegExp(escapeRegExp(`file://${imagePath}`), "g"), marker);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      skipped.push({ path: imagePath, reason: message });
+    }
+  }
+
+  if (attached.length === 0) {
+    return skipped.length > 0 ? { text, images: [], attached, skipped } : undefined;
+  }
+
+  const attachmentLines = attached.map((item) => `- ${item.marker}: ${path.basename(item.path)} (${item.mimeType}, ${formatCount(item.bytes)} bytes)`);
+  const skippedLines = skipped.map((item) => `- skipped ${path.basename(item.path)}: ${item.reason}`);
+  nextText = [
+    nextText.trim(),
+    "",
+    "Attached local image(s):",
+    ...attachmentLines,
+    ...(skippedLines.length > 0 ? ["", "Skipped local image path(s):", ...skippedLines] : [])
+  ].join("\n").trim();
+
+  return { text: nextText, images, attached, skipped };
+}
+
 function appendTrace(cwd: string, payload: Record<string, unknown>): void {
   ensureStateDirs(cwd);
   const safePayload = redactForStorage(payload) as Record<string, unknown>;
@@ -1742,31 +1895,50 @@ export default function companyGuard(pi: ExtensionAPI) {
   });
 
   pi.on("input", async (event, ctx) => {
-    if (event.source === "extension") return { action: "continue" };
     const text = event.text.trim();
     if (!text || isFreshOrUtilityInput(text)) return { action: "continue" };
 
+    const imageAttachment = attachLocalImagesFromText(text, event.images, ctx.cwd);
+    if (imageAttachment?.attached.length) {
+      ctx.ui.notify(`Company image input: attached ${imageAttachment.attached.map((item) => item.marker).join(", ")}`, "info");
+    } else if (imageAttachment?.skipped.length) {
+      ctx.ui.notify(`Company image input: skipped ${imageAttachment.skipped.length} local image path(s)`, "warning");
+    }
+
+    const inputText = imageAttachment?.text ?? text;
+    const canRewriteWorkflow = event.source !== "extension";
     const snapshot = buildUsageSnapshot(ctx, String(pi.getThinkingLevel()));
-    const preflight = buildContextPreflight(snapshot, chooseFreshWorkflow(text, text), text.length);
-    const hasBoilerplate = looksLikeGovernedBoilerplate(text);
+    const preflight = buildContextPreflight(snapshot, chooseFreshWorkflow(inputText, inputText), inputText.length);
+    const hasBoilerplate = looksLikeGovernedBoilerplate(inputText);
     const shouldFreshen =
+      canRewriteWorkflow &&
       preflight.recommendation === "fresh-session" &&
-      (hasBoilerplate || isCompanyWorkflowInput(text) || text.length >= LONG_INPUT_CHARS);
-    const shouldCollapseBoilerplate = hasBoilerplate && text.length >= BOILERPLATE_COLLAPSE_CHARS;
+      (hasBoilerplate || isCompanyWorkflowInput(inputText) || inputText.length >= LONG_INPUT_CHARS);
+    const shouldCollapseBoilerplate = canRewriteWorkflow && hasBoilerplate && inputText.length >= BOILERPLATE_COLLAPSE_CHARS;
 
-    if (!shouldFreshen && !shouldCollapseBoilerplate) return { action: "continue" };
+    const outgoingImages = [
+      ...(Array.isArray(event.images) ? event.images : []),
+      ...(imageAttachment?.images ?? [])
+    ];
 
-    const task = extractTaskRequest(text);
-    const workflow = chooseFreshWorkflow(text, task);
+    if (!shouldFreshen && !shouldCollapseBoilerplate) {
+      if (imageAttachment?.attached.length) return { action: "transform", text: inputText, images: outgoingImages };
+      return { action: "continue" };
+    }
+
+    const task = extractTaskRequest(inputText);
+    const workflow = chooseFreshWorkflow(inputText, task);
     const reason = shouldFreshen
       ? "Current session is near context limits; use a fresh governed session."
       : "Mandatory flow boilerplate is already part of the platform; collapse it to the task request.";
     const command = shouldFreshen
-      ? buildFreshCommand(ctx.cwd, workflow, text, reason)
+      ? buildFreshCommand(ctx.cwd, workflow, inputText, reason)
       : `/${workflow} ${trimTaskForInline(task)}`;
 
     ctx.ui.notify(`Company preflight: ${reason}`, "warning");
-    return { action: "transform", text: command };
+    return outgoingImages.length > 0
+      ? { action: "transform", text: command, images: outgoingImages }
+      : { action: "transform", text: command };
   });
 
   pi.on("tool_result", async (event, ctx) => {

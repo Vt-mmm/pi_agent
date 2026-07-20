@@ -70,6 +70,7 @@ Pi settings template dùng:
 - Nếu context vượt budget, tạo summary theo module thay vì nhồi full files.
 - File context vượt hard cap phải được summarize hoặc đọc targeted slices, không inject full.
 - Nếu input quá dài thật, lưu intake vào file project/local gitignored rồi reference file; không dán toàn bộ spec vào một turn.
+- Nếu input chứa local screenshot/image path, để input guard attach thành `[image1]` thay vì đọc ảnh như text context. Ảnh lớn hơn giới hạn chat nên dùng Pi `read` để resize.
 - Memory chỉ là hint. Phải verify bằng source hiện tại trước khi sửa code.
 
 ## Nguồn

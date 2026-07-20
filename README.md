@@ -19,6 +19,7 @@ From there, Pi can onboard the project, select an operating profile, use the rig
 - Explicit project memory via `/memory-policy` and `company_memory_*` tools.
 - MCP setup helpers for Context7, Chrome DevTools, GitHub, Playwright, and Figma.
 - Subagent setup helpers for read-only scouting, planning, implementation, review, and risk challenge.
+- Chat image-path intake: paste a local screenshot path into the Pi chat box and the guard attaches it as `[image1]` before the model sees the prompt.
 - Runtime policy tools:
   - `company_exec_policy_check`
   - `company_context_budget`
@@ -34,7 +35,7 @@ From there, Pi can onboard the project, select an operating profile, use the rig
 
 ```bash
 npm install -g @earendil-works/pi-coding-agent
-pi install git:github.com/Vt-mmm/pi_agent@v0.3.21
+pi install git:github.com/Vt-mmm/pi_agent@v0.3.22
 ```
 
 Optional Herdr integration:
@@ -122,6 +123,22 @@ When the current session is already heavy, use the fresh workflow commands. They
 ```
 
 The input guard also collapses pasted mandatory-flow boilerplate automatically. Users should not paste the full company checklist into every task.
+
+### Screenshots and local images
+
+If a chat box paste or screen capture produces a local image path instead of a native Pi image attachment, paste the path directly in the task:
+
+```text
+/scout Check this UI state from screenshot /var/folders/.../screenshot.png
+```
+
+The input guard converts supported local image paths (`.png`, `.jpg`, `.jpeg`, `.gif`, `.webp`, `.bmp`) into Pi image attachments and rewrites the prompt to:
+
+```text
+/scout Check this UI state from screenshot [image1]
+```
+
+Limits: up to 4 chat images, 8 MB each. For oversized images, use Pi's `read` tool on the file so Pi can resize it.
 
 ### Project improvement
 
@@ -241,7 +258,7 @@ Most projects do not need shell init. Use this only when you want to pre-create 
 ```bash
 bash /path/to/pi_agent/scripts/setup.sh /path/to/project \
   --profile be-readonly-fe \
-  --package-source git:github.com/Vt-mmm/pi_agent@v0.3.21 \
+  --package-source git:github.com/Vt-mmm/pi_agent@v0.3.22 \
   --mcp-preset core \
   --subagents-preset safe
 ```
@@ -339,7 +356,7 @@ This repository intentionally excludes:
 
 ## Maturity
 
-Current release: `v0.3.21`.
+Current release: `v0.3.22`.
 
 Ready for:
 

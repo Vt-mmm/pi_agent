@@ -75,8 +75,13 @@ function createProject(root) {
   const cwd = path.join(root, "project");
   fs.mkdirSync(path.join(cwd, ".pi", "company-state", "tasks"), { recursive: true });
   fs.mkdirSync(path.join(cwd, "src"), { recursive: true });
+  fs.mkdirSync(path.join(cwd, "screenshots"), { recursive: true });
   fs.writeFileSync(path.join(cwd, ".env"), "TOKEN=fake-token\n");
   fs.writeFileSync(path.join(cwd, "README.md"), "# Fixture\n");
+  fs.writeFileSync(path.join(cwd, "screenshots", "Ảnh màn hình 2026-07-20 lúc 12.00.00.png"), Buffer.from(
+    "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/p9sAAAAASUVORK5CYII=",
+    "base64"
+  ));
   fs.writeFileSync(path.join(cwd, ".pi", "company-profile.json"), `${JSON.stringify({
     schemaVersion: 1,
     projectId: "integration-project",
@@ -240,6 +245,48 @@ describe("company guard integration", () => {
 
     assert.equal(result.action, "transform");
     assert.match(result.text, /^\/fresh-scout Scout payment FE mapping/);
+  });
+
+  it("attaches local image paths from chat input and replaces them with image markers", async () => {
+    const { root, companyGuard } = await loadGuardFixture();
+    const cwd = createProject(root);
+    const ctx = createContext(cwd);
+    const harness = createPiHarness();
+    companyGuard(harness.pi);
+    const input = harness.handlers.get("input");
+    const imagePath = path.join(cwd, "screenshots", "Ảnh màn hình 2026-07-20 lúc 12.00.00.png");
+
+    const result = await input({
+      text: `Scout UI bug from screenshot: ${imagePath}`,
+      source: "interactive"
+    }, ctx);
+
+    assert.equal(result.action, "transform");
+    assert.match(result.text, /\[image1\]/);
+    assert.doesNotMatch(result.text, new RegExp(imagePath.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
+    assert.equal(result.images.length, 1);
+    assert.equal(result.images[0].type, "image");
+    assert.equal(result.images[0].mimeType, "image/png");
+    assert.ok(result.images[0].data.length > 0);
+  });
+
+  it("also attaches image paths for extension-delivered fresh workflow prompts", async () => {
+    const { root, companyGuard } = await loadGuardFixture();
+    const cwd = createProject(root);
+    const ctx = createContext(cwd);
+    const harness = createPiHarness();
+    companyGuard(harness.pi);
+    const input = harness.handlers.get("input");
+    const imagePath = path.join(cwd, "screenshots", "Ảnh màn hình 2026-07-20 lúc 12.00.00.png");
+
+    const result = await input({
+      text: `/scout Check this screenshot ${imagePath}`,
+      source: "extension"
+    }, ctx);
+
+    assert.equal(result.action, "transform");
+    assert.match(result.text, /^\/scout Check this screenshot \[image1\]/);
+    assert.equal(result.images.length, 1);
   });
 
   it("blocks raw access to secrets, guard state, and guard profile without false positives", async () => {

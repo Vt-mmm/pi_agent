@@ -47,13 +47,13 @@ Options:
   -h, --help
 
 Package source examples:
-  git:github.com/Vt-mmm/pi_agent@v0.3.21
+  git:github.com/Vt-mmm/pi_agent@v0.3.22
   https://github.com/Vt-mmm/pi_agent
-  npm:@company/pi_agent@0.3.21
+  npm:@company/pi_agent@0.3.22
   /absolute/path/to/pi_agent
 
 One-command team setup example:
-  bash /path/to/pi_agent/scripts/setup.sh . --profile auto --package-source git:github.com/Vt-mmm/pi_agent@v0.3.21
+  bash /path/to/pi_agent/scripts/setup.sh . --profile auto --package-source git:github.com/Vt-mmm/pi_agent@v0.3.22
 USAGE
 }
 

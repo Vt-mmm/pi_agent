@@ -10,6 +10,7 @@ Shared Pi package for reusable project workflows.
 - `skills/company-source-cache/`: local cache for user-provided external source repositories.
 - `subagents/*.md`: company roles for `pi-subagents`.
 - `policies/base-policy.json`: default runtime policy, including protected path and shell protected path defaults.
+- input hook support for local screenshot/image paths pasted into chat; supported images are attached as `[image1]`, `[image2]`, ...
 
 ## Runtime quality tools
 
@@ -62,7 +63,7 @@ When `pi-subagents` is installed, this package exposes:
 ## Install
 
 ```bash
-pi install git:github.com/Vt-mmm/pi_agent@v0.3.21
+pi install git:github.com/Vt-mmm/pi_agent@v0.3.22
 ```
 
 ## Project profile
@@ -94,3 +95,5 @@ Passing final gates require an observed exit `0` command that exactly matches on
 Raw path-like tool access to protected paths is blocked before execution. This includes Pi built-ins (`read`, `write`, `edit`, `grep`, `find`, `ls`) and custom/MCP tools with nested path-like strings, arrays, or `file://` URIs. Path-like strings are percent-decoded once, and input nesting above `MAX_TOOL_INPUT_INSPECTION_DEPTH=32` fails closed. Known content fields such as `content`, `query`, `pattern`, `text`, and `command` are excluded from generic extraction. `grep.glob` and `find.pattern` are checked when they explicitly target protected paths, while broad `grep`, `find`, and `ls` results are filtered so protected content lines or path metadata are redacted before reaching the model.
 
 Raw `bash` access to protected paths is blocked through shell path extraction. `.pi/company-state/**` and `.pi/company-profile.json` are self-protected; use `company_context` and company task tools for governed access.
+
+The input hook also detects local image paths in chat prompts. Supported formats are `.png`, `.jpg`, `.jpeg`, `.gif`, `.webp`, and `.bmp`, including macOS screenshot paths under `/var/folders/...`. Up to 4 images are attached per input, with an 8 MB per-image cap. Oversized images should be read through Pi's `read` tool so Pi can resize them.

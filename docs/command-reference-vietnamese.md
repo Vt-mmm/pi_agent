@@ -96,6 +96,16 @@ Các command này đến từ package `pi-company-core`.
 | `/discuss` | Trao đổi/làm rõ | Khi chưa nên sửa code. | Giải thích option/tradeoff, không tự implement. |
 | `/review` | Review current diff/source | Khi cần audit read-only trước final/merge. | Findings theo severity, file/area, required fix. |
 
+## Image/screenshot input
+
+| Tình huống | Cách dùng | Kết quả |
+|---|---|---|
+| Chat box trả ra local path ảnh | `/scout Check screenshot /var/folders/.../screenshot.png` | Platform attach ảnh và rewrite path thành `[image1]`. |
+| Nhiều ảnh trong cùng prompt | Dán tối đa 4 path ảnh | Prompt có `[image1]`, `[image2]`, ... |
+| Ảnh quá lớn | Dùng Pi `read` tool trên file ảnh hoặc resize ảnh trước | Tránh nhồi ảnh quá lớn vào chat input. |
+
+Định dạng hỗ trợ: `.png`, `.jpg`, `.jpeg`, `.gif`, `.webp`, `.bmp`. Giới hạn mặc định: 4 ảnh/input, 8 MB/ảnh.
+
 Profile name nên biết:
 
 | Profile | Dùng khi nào |
@@ -315,7 +325,7 @@ Các lệnh này chạy ngoài Pi.
 | Command | Dùng khi nào |
 |---|---|
 | `npm install -g @earendil-works/pi-coding-agent` | Cài Pi CLI lần đầu. |
-| `pi install git:github.com/Vt-mmm/pi_agent@v0.3.21` | Cài package platform từ GitHub. |
+| `pi install git:github.com/Vt-mmm/pi_agent@v0.3.22` | Cài package platform từ GitHub. |
 | `pi list --approve` | Xem package Pi đã install. |
 | `pi --list-models` | Xem model Pi thấy được theo credentials hiện tại. |
 | `pi-company-install --with-mcp --with-subagents` | Cài global package + MCP + subagent baseline từ package bin. |

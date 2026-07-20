@@ -2,7 +2,7 @@
 
 ## Mục tiêu
 
-`v0.3.21` định nghĩa bộ kiểm soát runtime để Pi Agent Platform có thể chạy task một cách có kỷ luật cho solo, internal team, và public package.
+`v0.3.22` định nghĩa bộ kiểm soát runtime để Pi Agent Platform có thể chạy task một cách có kỷ luật cho solo, internal team, và public package.
 
 Các module chính:
 
@@ -126,7 +126,7 @@ Gate phân biệt hai mức:
 
 `true`, `echo ok`, hoặc `npm test || true` có thể được ghi trace nếu đã chạy thật, nhưng không đủ để pass final gate trừ khi profile/task verify plan khai đúng command đó.
 
-Từ `v0.3.21`, guard state tự bảo vệ:
+Từ `v0.3.22`, guard state tự bảo vệ:
 
 - raw path-like access vào `.pi/company-state/**` bị block trước khi tool chạy;
 - raw path-like access vào `.pi/company-profile.json` bị block trước khi tool chạy;
