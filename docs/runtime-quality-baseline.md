@@ -2,7 +2,7 @@
 
 ## Mục tiêu
 
-`v0.3.17` định nghĩa bộ kiểm soát runtime để Pi Agent Platform có thể chạy task một cách có kỷ luật cho solo, internal team, và public package.
+`v0.3.18` định nghĩa bộ kiểm soát runtime để Pi Agent Platform có thể chạy task một cách có kỷ luật cho solo, internal team, và public package.
 
 Các module chính:
 
@@ -126,14 +126,15 @@ Gate phân biệt hai mức:
 
 `true`, `echo ok`, hoặc `npm test || true` có thể được ghi trace nếu đã chạy thật, nhưng không đủ để pass final gate trừ khi profile/task verify plan khai đúng command đó.
 
-Từ `v0.3.17`, guard state tự bảo vệ:
+Từ `v0.3.18`, guard state tự bảo vệ:
 
 - raw path-like access vào `.pi/company-state/**` bị block trước khi tool chạy;
 - raw path-like access vào `.pi/company-profile.json` bị block trước khi tool chạy;
 - Pi built-ins `read`, `write`, `edit`, `grep`, `find`, `ls` đi qua cùng protected-path gate;
-- custom/MCP tools cũng bị block nếu tool call có field dạng `path`, `filePath`, `targetPath`, `target`, `filename`, hoặc `file` trỏ vào protected path;
-- `grep.glob` và `find.pattern` bị block nếu pattern có thể target protected path;
-- broad `grep` sweep có thêm `tool_result` backstop để redact các dòng trả về từ protected files;
+- custom/MCP tools cũng bị block nếu tool call chứa path-like string trỏ vào protected path, kể cả nested object, array, và `file://` URI;
+- generic extractor chỉ skip leaf field nội dung đã biết như `content`, `query`, `pattern`, `text`, và `command`;
+- `grep.glob` và `find.pattern` bị block khi pattern nhắm protected path rõ ràng như `.env*`, `auth.json`, `.pi/company-state/**`, hoặc `company-profile.json`; broad glob như `*.json` được phép và để result backstop xử lý;
+- broad `grep`, `find`, và `ls` sweep có thêm `tool_result` backstop để redact content line hoặc path metadata từ protected files;
 - `company_task_start`, `company_verify_record`, và `tool_result` hook vẫn ghi state được qua internal extension path.
 
 ## 5. Local verification
@@ -154,7 +155,7 @@ pi list --approve
 - package manifests;
 - JSON parse;
 - required docs/scripts/prompts;
-- protected-path, shell protected path, path-like tool access, `grep/find/ls`, guard-state self-protection, exec-policy, observed-verify, cross-process ledger, profile verify-command matching, and redaction regression tests;
+- protected-path, shell protected path, recursive path-like tool access, `grep/find/ls` result backstops, guard-state self-protection, exec-policy, observed-verify, cross-process ledger, profile verify-command matching, and redaction regression tests;
 - profile doctor;
 - team doctor;
 - TypeScript syntax for extension;

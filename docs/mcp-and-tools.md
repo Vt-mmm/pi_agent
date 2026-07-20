@@ -18,7 +18,7 @@ Global install mặc định sẽ cài adapter và seed preset `core` nếu dùn
 ```bash
 bash /path/to/pi_agent/scripts/setup.sh . \
   --profile auto \
-  --package-source git:github.com/Vt-mmm/pi_agent@v0.3.17 \
+  --package-source git:github.com/Vt-mmm/pi_agent@v0.3.18 \
   --mcp-preset core
 ```
 
@@ -227,13 +227,16 @@ company_tool_policy_check
 
 Default `toolRegistry=advisory`: agent nhận warning khi tool chưa map capability. Project ổn định có thể bật `toolRegistry=enforce` trong `.pi/company-profile.json`.
 
-Protected-path gate độc lập với registry mode. Dù tool registry đang `advisory`, mọi raw tool call có field dạng `path`, `filePath`, `targetPath`, `target`, `filename`, hoặc `file` trỏ vào protected path sẽ bị block trước khi tool chạy. Cơ chế này áp dụng cho Pi built-ins (`read`, `write`, `edit`, `grep`, `find`, `ls`) và custom/MCP tools nếu tool call đi qua Pi `tool_call` hook.
+Protected-path gate độc lập với registry mode. Dù tool registry đang `advisory`, mọi raw tool call có path-like string trỏ vào protected path sẽ bị block trước khi tool chạy. Cơ chế này áp dụng cho Pi built-ins (`read`, `write`, `edit`, `grep`, `find`, `ls`) và custom/MCP tools nếu tool call đi qua Pi `tool_call` hook.
+
+Extractor walk nested object/array và `file://` URI. Field lạ mặc định được coi là path-like; chỉ leaf field nội dung đã biết như `content`, `query`, `pattern`, `text`, và `command` được skip để tránh false positive search/edit.
 
 Search/list channels cũng được kiểm:
 
-- `grep.glob` bị block nếu glob có thể target protected path;
-- `find.pattern` bị block nếu pattern có thể target protected path;
-- broad `grep path:"."` được phép chạy khi không target trực tiếp, nhưng `tool_result` sẽ redact các dòng match từ protected files trước khi model thấy output.
+- `grep.glob` bị block nếu glob nhắm protected path rõ ràng như `.env*`, `auth.json`, `.pi/company-state/**`, hoặc `company-profile.json`;
+- `find.pattern` bị block nếu pattern nhắm protected path rõ ràng;
+- broad pattern như `*.json` được phép để không phá search workflow phổ biến;
+- broad `grep/find/ls` được phép chạy khi không target trực tiếp, nhưng `tool_result` sẽ redact content line hoặc path metadata từ protected files trước khi model thấy output.
 
 | Mode | Allowed intent |
 |---|---|

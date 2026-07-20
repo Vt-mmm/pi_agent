@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { execFileSync } from "node:child_process";
+import { fileURLToPath } from "node:url";
 import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
 import { isToolCallEventType } from "@earendil-works/pi-coding-agent";
 import { StringEnum } from "@earendil-works/pi-ai";
@@ -362,7 +363,16 @@ function loadProfileFromContext(ctx: ExtensionContext): ProjectProfile {
 
 function normalizeRelative(cwd: string, candidate: unknown): string | undefined {
   if (typeof candidate !== "string" || candidate.trim().length === 0) return undefined;
-  const absolute = path.isAbsolute(candidate) ? candidate : path.resolve(cwd, candidate);
+  let raw = candidate.trim();
+  if (/^[A-Za-z][A-Za-z0-9+.-]*:\/\//.test(raw)) {
+    if (!raw.toLowerCase().startsWith("file://")) return undefined;
+    try {
+      raw = fileURLToPath(raw);
+    } catch {
+      return undefined;
+    }
+  }
+  const absolute = path.isAbsolute(raw) ? raw : path.resolve(cwd, raw);
   return path.relative(cwd, absolute).split(path.sep).join("/");
 }
 
@@ -435,24 +445,62 @@ function evaluateToolPolicy(toolName: string, profile: ProjectProfile, policy: B
   };
 }
 
-const PATH_INPUT_FIELDS = [
-  "path",
-  "filePath",
-  "file_path",
-  "targetPath",
-  "target_path",
-  "target",
-  "filename",
-  "file"
-] as const;
+const CONTENT_INPUT_FIELDS = new Set([
+  "body",
+  "command",
+  "content",
+  "description",
+  "message",
+  "new",
+  "newtext",
+  "old",
+  "oldtext",
+  "pattern",
+  "prompt",
+  "query",
+  "reason",
+  "regex",
+  "replacement",
+  "summary",
+  "text"
+]);
+
+function isContentInputField(field: string | undefined): boolean {
+  return field !== undefined && CONTENT_INPUT_FIELDS.has(field.toLowerCase().replace(/[-_]/g, ""));
+}
+
+function walkStringInputs(value: unknown, keyPath: string[] = [], depth = 0): Array<{ field: string; value: string }> {
+  if (depth > 10) return [];
+
+  if (typeof value === "string") {
+    const field = keyPath.at(-1);
+    if (isContentInputField(field)) return [];
+    return [{ field: keyPath.join(".") || "(input)", value }];
+  }
+
+  if (Array.isArray(value)) {
+    return value.flatMap((item) => walkStringInputs(item, keyPath, depth + 1));
+  }
+
+  if (!value || typeof value !== "object") return [];
+
+  const items: Array<{ field: string; value: string }> = [];
+  for (const [key, child] of Object.entries(value as Record<string, unknown>)) {
+    items.push(...walkStringInputs(child, [...keyPath, key], depth + 1));
+  }
+  return items;
+}
 
 function extractPathInputsFromInput(cwd: string, input: Record<string, unknown>): Array<{ field: string; path: string }> {
   const paths: Array<{ field: string; path: string }> = [];
-  for (const field of PATH_INPUT_FIELDS) {
-    const normalized = normalizeRelative(cwd, input[field]);
-    if (normalized !== undefined) {
-      paths.push({ field, path: normalized });
-    }
+  const seen = new Set<string>();
+  for (const item of walkStringInputs(input)) {
+    const normalized = normalizeRelative(cwd, item.value);
+    if (normalized === undefined) continue;
+    const key = `${item.field}\0${normalized}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    paths.push({ field: item.field, path: normalized });
   }
   return paths;
 }
@@ -531,6 +579,38 @@ function protectedPatternExamples(pattern: string): string[] {
   return [...examples];
 }
 
+function protectedLiteralHints(pattern: string): string[] {
+  const normalized = normalizePathCandidate(pattern).toLowerCase();
+  if (!normalized) return [];
+
+  const hints = new Set<string>();
+  const add = (value: string | undefined) => {
+    const cleaned = normalizePathCandidate(value ?? "").toLowerCase().replace(/\/$/, "");
+    if (cleaned && cleaned !== "**" && cleaned !== "." && cleaned.length >= 3) hints.add(cleaned);
+  };
+
+  const withoutLeadingGlob = normalized.replace(/^\*\*\//, "");
+  const wildcardIndex = withoutLeadingGlob.search(/[*?{\[]/);
+  if (wildcardIndex > 0) add(withoutLeadingGlob.slice(0, wildcardIndex));
+  if (wildcardIndex < 0) add(withoutLeadingGlob);
+
+  for (const example of protectedPatternExamples(pattern)) {
+    if (/[*?{\[\]]/.test(example)) continue;
+    add(example);
+    add(path.posix.basename(example));
+  }
+
+  if (normalized.includes(".env")) add(".env");
+
+  return [...hints].sort((left, right) => right.length - left.length);
+}
+
+function globMentionsProtectedHint(candidateGlob: string, pattern: string): boolean {
+  const normalizedGlob = normalizePathCandidate(candidateGlob).toLowerCase();
+  if (!normalizedGlob) return false;
+  return protectedLiteralHints(pattern).some((hint) => normalizedGlob.includes(hint));
+}
+
 function globTargetsProtectedPath(glob: unknown, protectedPatterns: string[]): { glob: string; pattern: string; example: string } | undefined {
   const values = Array.isArray(glob) ? glob : [glob];
   for (const value of values) {
@@ -540,6 +620,7 @@ function globTargetsProtectedPath(glob: unknown, protectedPatterns: string[]): {
 
     for (const candidateGlob of expandSimpleGlobAlternatives(trimmed)) {
       for (const pattern of protectedPatterns) {
+        if (!globMentionsProtectedHint(candidateGlob, pattern)) continue;
         for (const example of protectedPatternExamples(pattern)) {
           if (
             globMatchesPath(candidateGlob, example)
@@ -642,6 +723,64 @@ function filterGrepProtectedContent(content: unknown, protectedPatterns: string[
     const nextText = kept.join("\n").trim().length > 0
       ? `${kept.join("\n")}\n${notice}`
       : `No matches found in non-protected paths.\n${notice}`;
+    return { ...block, text: nextText };
+  });
+
+  return { changed, content: filtered, redactedLines };
+}
+
+function resultLineProtectedPathCandidates(cwd: string, basePath: string, line: string): string[] {
+  const trimmed = line.trim();
+  if (!trimmed || trimmed.startsWith("[") || trimmed.startsWith("No ") || trimmed === "(empty directory)") return [];
+  const entry = trimmed.replace(/[\\/]+$/, "");
+  const candidates = new Set<string>();
+  const add = (value: string | undefined) => {
+    if (value !== undefined) candidates.add(value);
+  };
+
+  add(normalizeRelative(cwd, entry));
+  add(normalizeRelative(cwd, path.posix.join(basePath || ".", entry)));
+  return [...candidates];
+}
+
+function filterProtectedPathListContent(
+  cwd: string,
+  content: unknown,
+  protectedPatterns: string[],
+  basePath: string,
+  toolName: string
+): {
+  changed: boolean;
+  content?: unknown;
+  redactedLines: number;
+} {
+  if (!Array.isArray(content)) return { changed: false, redactedLines: 0 };
+
+  let changed = false;
+  let redactedLines = 0;
+  const filtered = content.map((block) => {
+    if (!block || typeof block !== "object") return block;
+    const text = (block as { type?: unknown; text?: unknown }).text;
+    if ((block as { type?: unknown }).type !== "text" || typeof text !== "string") return block;
+
+    const kept: string[] = [];
+    let blockRedactedLines = 0;
+    for (const line of text.split(/\r?\n/)) {
+      const candidates = resultLineProtectedPathCandidates(cwd, basePath, line);
+      if (candidates.some((candidate) => matchesAnyPath(candidate, protectedPatterns))) {
+        changed = true;
+        redactedLines += 1;
+        blockRedactedLines += 1;
+        continue;
+      }
+      kept.push(line);
+    }
+
+    if (blockRedactedLines === 0) return block;
+    const notice = `[Company Pi guard redacted ${blockRedactedLines} protected ${toolName} line${blockRedactedLines === 1 ? "" : "s"}.]`;
+    const nextText = kept.join("\n").trim().length > 0
+      ? `${kept.join("\n")}\n${notice}`
+      : `No entries found in non-protected paths.\n${notice}`;
     return { ...block, text: nextText };
   });
 
@@ -1375,6 +1514,20 @@ export default function companyGuard(pi: ExtensionAPI) {
         const details = event.details && typeof event.details === "object"
           ? { ...event.details, protectedMatchesRedacted: filtered.redactedLines }
           : { protectedMatchesRedacted: filtered.redactedLines };
+        return { content: filtered.content, details };
+      }
+    }
+
+    if (event.toolName === "find" || event.toolName === "ls") {
+      const input = event.input && typeof event.input === "object"
+        ? event.input as Record<string, unknown>
+        : {};
+      const basePath = extractLikelyPathFromInput(ctx.cwd, input) || ".";
+      const filtered = filterProtectedPathListContent(ctx.cwd, event.content, shellProtectedPaths, basePath, event.toolName);
+      if (filtered.changed) {
+        const details = event.details && typeof event.details === "object"
+          ? { ...event.details, protectedPathsRedacted: filtered.redactedLines }
+          : { protectedPathsRedacted: filtered.redactedLines };
         return { content: filtered.content, details };
       }
     }

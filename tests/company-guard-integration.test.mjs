@@ -205,6 +205,23 @@ describe("company guard integration", () => {
       ["ls", { path: ".pi/company-state" }],
       ["custom_reader", { path: ".env" }],
       ["custom_reader", { targetPath: ".pi/company-profile.json" }],
+      ["mcp__fs__read", { dir: ".env" }],
+      ["mcp__fs__read", { directory: ".env" }],
+      ["mcp__fs__read", { source: ".env" }],
+      ["mcp__fs__read", { src: ".env" }],
+      ["mcp__fs__read", { dest: ".env" }],
+      ["mcp__fs__read", { destination: ".env" }],
+      ["mcp__fs__read", { output: ".env" }],
+      ["mcp__fs__read", { outputPath: ".env" }],
+      ["mcp__fs__read", { uri: ".env" }],
+      ["mcp__fs__read", { location: ".env" }],
+      ["mcp__fs__read", { notebook_path: ".env" }],
+      ["mcp__fs__read", { absolute_path: ".env" }],
+      ["mcp__fs__read", { path: [".env"] }],
+      ["mcp__fs__read", { args: { path: ".env" } }],
+      ["mcp__fs__read", { paths: [".env"] }],
+      ["mcp__fs__read", { files: [".env"] }],
+      ["mcp__fs__read", { uri: pathToFileURL(path.join(cwd, ".env")).href }],
       ["write", { path: ".env", content: "x" }],
       ["write", { path: ".pi/company-state/observed-bash.jsonl", content: "x" }],
       ["write", { file_path: ".pi/company-state/observed-bash.jsonl", content: "x" }],
@@ -223,9 +240,12 @@ describe("company guard integration", () => {
       ["read", { path: "README.md" }],
       ["grep", { pattern: "Fixture", path: "README.md" }],
       ["grep", { pattern: "Fixture", path: ".", glob: "*.md" }],
+      ["grep", { pattern: "name", path: ".", glob: "*.json" }],
       ["find", { pattern: "*.md", path: "." }],
+      ["find", { pattern: "*.json", path: "." }],
       ["ls", { path: "src" }],
       ["custom_reader", { path: "README.md" }],
+      ["custom_search", { query: ".env", pattern: ".env", content: "cat .env", command: "cat .env", text: ".env" }],
       ["write", { path: "src/index.ts", content: "export {};\n" }],
       ["edit", { path: "README.md", old: "Fixture", new: "Fixture" }]
     ];
@@ -270,6 +290,51 @@ describe("company guard integration", () => {
     assert.equal(protectedOnly.details.protectedMatchesRedacted, 1);
     assert.match(protectedOnly.content[0].text, /No matches found in non-protected paths/);
     assert.doesNotMatch(protectedOnly.content[0].text, /fake-token/);
+  });
+
+  it("redacts protected find and ls metadata from broad result output", async () => {
+    const { root, companyGuard } = await loadGuardFixture();
+    const cwd = createProject(root);
+    const ctx = createContext(cwd);
+    const harness = createPiHarness();
+    companyGuard(harness.pi);
+    const toolResult = harness.handlers.get("tool_result");
+
+    const findResult = await callToolResult(toolResult, ctx, "find", { pattern: "*.json", path: "." }, [
+      {
+        type: "text",
+        text: [
+          "auth.json",
+          "package.json",
+          ".pi/company-profile.json",
+          "src/config.json"
+        ].join("\n")
+      }
+    ]);
+
+    assert.equal(findResult.details.protectedPathsRedacted, 2);
+    assert.match(findResult.content[0].text, /package\.json/);
+    assert.match(findResult.content[0].text, /src\/config\.json/);
+    assert.match(findResult.content[0].text, /redacted 2 protected find lines/);
+    assert.doesNotMatch(findResult.content[0].text, /auth\.json/);
+    assert.doesNotMatch(findResult.content[0].text, /\.pi\/company-profile\.json/);
+
+    const lsResult = await callToolResult(toolResult, ctx, "ls", { path: ".pi" }, [
+      {
+        type: "text",
+        text: [
+          "company-profile.json",
+          "company-state/",
+          "mcp.json"
+        ].join("\n")
+      }
+    ]);
+
+    assert.equal(lsResult.details.protectedPathsRedacted, 2);
+    assert.match(lsResult.content[0].text, /mcp\.json/);
+    assert.match(lsResult.content[0].text, /redacted 2 protected ls lines/);
+    assert.doesNotMatch(lsResult.content[0].text, /company-profile\.json/);
+    assert.doesNotMatch(lsResult.content[0].text, /company-state/);
   });
 
   it("still lets company tools and hooks write governed state internally", async () => {
