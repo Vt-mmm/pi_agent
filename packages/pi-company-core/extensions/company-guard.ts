@@ -8,6 +8,8 @@ import { Type } from "typebox";
 import {
   evaluateExecPolicyCore,
   findProtectedPathInCommand,
+  globMatchesPath,
+  normalizePathCandidate,
   matchesAnyPath
 } from "./policy-core.js";
 import {
@@ -433,8 +435,217 @@ function evaluateToolPolicy(toolName: string, profile: ProjectProfile, policy: B
   };
 }
 
+const PATH_INPUT_FIELDS = [
+  "path",
+  "filePath",
+  "file_path",
+  "targetPath",
+  "target_path",
+  "target",
+  "filename",
+  "file"
+] as const;
+
+function extractPathInputsFromInput(cwd: string, input: Record<string, unknown>): Array<{ field: string; path: string }> {
+  const paths: Array<{ field: string; path: string }> = [];
+  for (const field of PATH_INPUT_FIELDS) {
+    const normalized = normalizeRelative(cwd, input[field]);
+    if (normalized !== undefined) {
+      paths.push({ field, path: normalized });
+    }
+  }
+  return paths;
+}
+
 function extractLikelyPathFromInput(cwd: string, input: Record<string, unknown>): string | undefined {
-  return normalizeRelative(cwd, input.path ?? input.filePath ?? input.file_path ?? input.targetPath ?? input.target_path ?? input.target ?? input.filename ?? input.file);
+  return extractPathInputsFromInput(cwd, input)[0]?.path;
+}
+
+function expandSimpleGlobAlternatives(pattern: string, max = 24): string[] {
+  let results = [pattern];
+  let changed = true;
+
+  while (changed) {
+    changed = false;
+    const expanded: string[] = [];
+    for (const item of results) {
+      const match = item.match(/\{([^{}]+)\}/);
+      if (!match) {
+        expanded.push(item);
+        continue;
+      }
+      changed = true;
+      const options = match[1].split(",").map((option) => option.trim()).filter(Boolean);
+      for (const option of options) {
+        expanded.push(`${item.slice(0, match.index)}${option}${item.slice((match.index ?? 0) + match[0].length)}`);
+        if (expanded.length >= max) break;
+      }
+      if (expanded.length >= max) break;
+    }
+    results = expanded.slice(0, max);
+  }
+
+  return results;
+}
+
+function protectedPatternExamples(pattern: string): string[] {
+  const normalized = normalizePathCandidate(pattern);
+  if (!normalized) return [];
+
+  const examples = new Set<string>();
+  const add = (value: string | undefined) => {
+    const normalizedValue = normalizePathCandidate(value ?? "");
+    if (normalizedValue) examples.add(normalizedValue);
+  };
+
+  add(normalized);
+
+  if (normalized.endsWith("/**")) {
+    const base = normalized.slice(0, -3);
+    add(base);
+    add(`${base}/probe`);
+  }
+
+  if (normalized.startsWith("**/")) {
+    const tail = normalized.slice(3);
+    const concreteTail = tail
+      .replace(/\*\*/g, "nested")
+      .replace(/\*/g, tail.includes(".env.") ? "local" : "probe");
+    add(tail);
+    add(concreteTail);
+    add(`nested/${concreteTail}`);
+  }
+
+  const concrete = normalized
+    .replace(/^\*\*\//, "")
+    .replace(/\/\*\*$/, "/probe")
+    .replace(/\*\*/g, "nested")
+    .replace(/\*/g, normalized.includes(".env.") ? "local" : "probe");
+  add(concrete);
+
+  for (const example of [...examples]) {
+    const base = path.posix.basename(example);
+    if (base && base !== "probe") examples.add(base);
+  }
+
+  return [...examples];
+}
+
+function globTargetsProtectedPath(glob: unknown, protectedPatterns: string[]): { glob: string; pattern: string; example: string } | undefined {
+  const values = Array.isArray(glob) ? glob : [glob];
+  for (const value of values) {
+    if (typeof value !== "string") continue;
+    const trimmed = value.trim();
+    if (!trimmed || trimmed.startsWith("!")) continue;
+
+    for (const candidateGlob of expandSimpleGlobAlternatives(trimmed)) {
+      for (const pattern of protectedPatterns) {
+        for (const example of protectedPatternExamples(pattern)) {
+          if (
+            globMatchesPath(candidateGlob, example)
+            || globMatchesPath(`**/${candidateGlob}`, example)
+            || globMatchesPath(candidateGlob, path.posix.basename(example))
+          ) {
+            return { glob: trimmed, pattern, example };
+          }
+        }
+      }
+    }
+  }
+  return undefined;
+}
+
+function evaluatePathLikeToolAccess(
+  cwd: string,
+  toolName: string,
+  input: Record<string, unknown>,
+  protectedPaths: string[],
+  shellProtectedPaths: string[]
+): { block: boolean; reason?: string } {
+  for (const item of extractPathInputsFromInput(cwd, input)) {
+    const shellMatched = matchesAnyPath(item.path, shellProtectedPaths);
+    if (shellMatched) {
+      return {
+        block: true,
+        reason: `Blocked ${toolName} access to protected path from ${item.field}: ${item.path} matches ${shellMatched}`
+      };
+    }
+
+    if (["write", "edit"].includes(toolName)) {
+      const writeMatched = matchesAnyPath(item.path, protectedPaths);
+      if (writeMatched) {
+        return {
+          block: true,
+          reason: `Blocked ${toolName} write to protected path from ${item.field}: ${item.path} matches ${writeMatched}`
+        };
+      }
+    }
+  }
+
+  if (toolName === "grep") {
+    const hit = globTargetsProtectedPath(input.glob, shellProtectedPaths);
+    if (hit) {
+      return {
+        block: true,
+        reason: `Blocked grep glob targeting protected path: ${hit.glob} can match ${hit.example} via ${hit.pattern}`
+      };
+    }
+  }
+
+  if (toolName === "find") {
+    const hit = globTargetsProtectedPath(input.pattern, shellProtectedPaths);
+    if (hit) {
+      return {
+        block: true,
+        reason: `Blocked find pattern targeting protected path: ${hit.glob} can match ${hit.example} via ${hit.pattern}`
+      };
+    }
+  }
+
+  return { block: false };
+}
+
+function grepOutputLinePath(line: string): string | undefined {
+  const match = line.match(/^(.+?)(?::\d+:|-\d+-)/);
+  return match?.[1];
+}
+
+function filterGrepProtectedContent(content: unknown, protectedPatterns: string[]): {
+  changed: boolean;
+  content?: unknown;
+  redactedLines: number;
+} {
+  if (!Array.isArray(content)) return { changed: false, redactedLines: 0 };
+
+  let changed = false;
+  let redactedLines = 0;
+  const filtered = content.map((block) => {
+    if (!block || typeof block !== "object") return block;
+    const text = (block as { type?: unknown; text?: unknown }).text;
+    if ((block as { type?: unknown }).type !== "text" || typeof text !== "string") return block;
+
+    const kept: string[] = [];
+    let blockRedactedLines = 0;
+    for (const line of text.split(/\r?\n/)) {
+      const linePath = grepOutputLinePath(line);
+      if (linePath && matchesAnyPath(linePath, protectedPatterns)) {
+        changed = true;
+        redactedLines += 1;
+        blockRedactedLines += 1;
+        continue;
+      }
+      kept.push(line);
+    }
+
+    if (blockRedactedLines === 0) return block;
+    const notice = `[Company Pi guard redacted ${blockRedactedLines} protected grep line${blockRedactedLines === 1 ? "" : "s"}.]`;
+    const nextText = kept.join("\n").trim().length > 0
+      ? `${kept.join("\n")}\n${notice}`
+      : `No matches found in non-protected paths.\n${notice}`;
+    return { ...block, text: nextText };
+  });
+
+  return { changed, content: filtered, redactedLines };
 }
 
 function stateRoot(cwd: string): string {
@@ -1138,6 +1349,12 @@ export default function companyGuard(pi: ExtensionAPI) {
   });
 
   pi.on("tool_result", async (event, ctx) => {
+    const profile = loadProfileFromContext(ctx);
+    const shellProtectedPaths = [
+      ...(policy.shellProtectedPaths ?? policy.protectedPaths),
+      ...((profile.shellProtectedPaths ?? profile.protectedPaths) ?? [])
+    ];
+
     const observed = observedBashResultFromToolResultEvent(event, ctx.cwd);
     if (observed) {
       bashResults.record(observed);
@@ -1149,6 +1366,16 @@ export default function companyGuard(pi: ExtensionAPI) {
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
         ctx.ui.notify(`Company Pi guard could not persist bash evidence ledger: ${message}`, "warn");
+      }
+    }
+
+    if (event.toolName === "grep") {
+      const filtered = filterGrepProtectedContent(event.content, shellProtectedPaths);
+      if (filtered.changed) {
+        const details = event.details && typeof event.details === "object"
+          ? { ...event.details, protectedMatchesRedacted: filtered.redactedLines }
+          : { protectedMatchesRedacted: filtered.redactedLines };
+        return { content: filtered.content, details };
       }
     }
   });
@@ -1168,6 +1395,9 @@ export default function companyGuard(pi: ExtensionAPI) {
     if (toolDecision.decision === "block") {
       return { block: true, reason: `Tool registry blocked ${event.toolName}: ${toolDecision.reason}` };
     }
+    const toolInput = event.input && typeof event.input === "object"
+      ? event.input as Record<string, unknown>
+      : {};
 
     if (isToolCallEventType("bash", event)) {
       const command = String(event.input.command ?? "");
@@ -1190,24 +1420,15 @@ export default function companyGuard(pi: ExtensionAPI) {
       }
     }
 
-    if (["write", "edit"].includes(event.toolName)) {
-      const relativePath = extractLikelyPathFromInput(ctx.cwd, event.input as Record<string, unknown>);
-      if (relativePath) {
-        const matched = matchesAnyPath(relativePath, protectedPaths);
-        if (matched) {
-          return { block: true, reason: `Blocked write to protected path: ${relativePath} matches ${matched}` };
-        }
-      }
-    }
-
-    if (event.toolName === "read") {
-      const relativePath = extractLikelyPathFromInput(ctx.cwd, event.input as Record<string, unknown>);
-      if (relativePath) {
-        const matched = matchesAnyPath(relativePath, shellProtectedPaths);
-        if (matched) {
-          return { block: true, reason: `Blocked read of protected path: ${relativePath} matches ${matched}` };
-        }
-      }
+    const pathDecision = evaluatePathLikeToolAccess(
+      ctx.cwd,
+      event.toolName,
+      toolInput,
+      protectedPaths,
+      shellProtectedPaths
+    );
+    if (pathDecision.block) {
+      return { block: true, reason: pathDecision.reason };
     }
 
     if (runtime.contextBudget !== "off" && ["write", "edit"].includes(event.toolName)) {

@@ -86,9 +86,15 @@ This file-based ledger is intentionally shared by parent and subagent processes 
 
 The ledger and task/profile control files are self-protected:
 
-- raw `read`, `write`, `edit`, and `bash` access to `.pi/company-state/**` is blocked;
-- raw `read`, `write`, `edit`, and `bash` access to `.pi/company-profile.json` is blocked;
+- raw path-like tool access to `.pi/company-state/**` is blocked before execution;
+- raw path-like tool access to `.pi/company-profile.json` is blocked before execution;
+- the same protected-path gate covers Pi built-ins such as `read`, `write`, `edit`, `grep`, `find`, `ls`;
+- custom/MCP tools are also blocked when a tool call exposes common path fields such as `path`, `filePath`, `targetPath`, `target`, `filename`, or `file` pointing at a protected path;
+- `grep.glob` and `find.pattern` are checked because they can target protected files even when the direct `path` is `.` or another broad directory;
+- broad `grep` results are filtered through the `tool_result` hook so protected match lines are redacted before the model sees them;
 - company tools still write/read these files through internal extension code, so normal task evidence and profile workflows continue to work.
+
+This gate is independent from the tool registry. The registry can stay `advisory` for compatibility with changing Pi/MCP tool names, while protected-path access remains fail-closed whenever the event exposes a path-like input.
 
 Final-gate semantics are stricter than simple observation:
 

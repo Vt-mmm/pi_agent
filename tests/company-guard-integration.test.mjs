@@ -154,6 +154,10 @@ async function callToolCall(handler, ctx, toolName, input) {
   return await handler({ toolName, input }, ctx) ?? {};
 }
 
+async function callToolResult(handler, ctx, toolName, input, content) {
+  return await handler({ toolName, input, content, isError: false }, ctx) ?? {};
+}
+
 describe("company guard integration", () => {
   it("loads the extension and registers runtime hooks/tools/commands", async () => {
     const { root, companyGuard } = await loadGuardFixture();
@@ -187,6 +191,20 @@ describe("company guard integration", () => {
       ["read", { path: ".pi/company-profile.json" }],
       ["read", { file_path: ".pi/company-profile.json" }],
       ["read", { path: ".pi/company-state/tasks/x.json" }],
+      ["grep", { pattern: ".", path: ".env", context: 5 }],
+      ["grep", { pattern: ".", path: "auth.json", context: 5 }],
+      ["grep", { pattern: ".", path: ".pi/company-profile.json", context: 5 }],
+      ["grep", { pattern: ".", path: ".pi/company-state/observed-bash.jsonl", context: 5 }],
+      ["grep", { pattern: "TOKEN", path: ".", glob: ".env*" }],
+      ["grep", { pattern: "TOKEN", path: ".", glob: "**/.env*" }],
+      ["grep", { pattern: "TOKEN", path: ".", glob: "{README.md,.env}" }],
+      ["find", { pattern: ".env*", path: "." }],
+      ["find", { pattern: "auth.json", path: "." }],
+      ["find", { pattern: "company-profile.json", path: "." }],
+      ["find", { pattern: "*", path: ".pi/company-state" }],
+      ["ls", { path: ".pi/company-state" }],
+      ["custom_reader", { path: ".env" }],
+      ["custom_reader", { targetPath: ".pi/company-profile.json" }],
       ["write", { path: ".env", content: "x" }],
       ["write", { path: ".pi/company-state/observed-bash.jsonl", content: "x" }],
       ["write", { file_path: ".pi/company-state/observed-bash.jsonl", content: "x" }],
@@ -203,6 +221,11 @@ describe("company guard integration", () => {
     const allowed = [
       ["bash", { command: "echo ok" }],
       ["read", { path: "README.md" }],
+      ["grep", { pattern: "Fixture", path: "README.md" }],
+      ["grep", { pattern: "Fixture", path: ".", glob: "*.md" }],
+      ["find", { pattern: "*.md", path: "." }],
+      ["ls", { path: "src" }],
+      ["custom_reader", { path: "README.md" }],
       ["write", { path: "src/index.ts", content: "export {};\n" }],
       ["edit", { path: "README.md", old: "Fixture", new: "Fixture" }]
     ];
@@ -211,6 +234,42 @@ describe("company guard integration", () => {
       const result = await callToolCall(toolCall, ctx, toolName, input);
       assert.notEqual(result.block, true, `${toolName} ${JSON.stringify(input)} should be allowed`);
     }
+  });
+
+  it("redacts protected grep result lines from broad searches", async () => {
+    const { root, companyGuard } = await loadGuardFixture();
+    const cwd = createProject(root);
+    const ctx = createContext(cwd);
+    const harness = createPiHarness();
+    companyGuard(harness.pi);
+    const toolResult = harness.handlers.get("tool_result");
+
+    const mixed = await callToolResult(toolResult, ctx, "grep", { pattern: "runtimePolicy", path: "." }, [
+      {
+        type: "text",
+        text: [
+          ".pi/company-profile.json:3: runtimePolicy secret",
+          "README.md:1: Fixture runtimePolicy mention"
+        ].join("\n")
+      }
+    ]);
+
+    assert.equal(mixed.details.protectedMatchesRedacted, 1);
+    assert.match(mixed.content[0].text, /README\.md:1/);
+    assert.match(mixed.content[0].text, /redacted 1 protected grep line/);
+    assert.doesNotMatch(mixed.content[0].text, /\.pi\/company-profile\.json/);
+    assert.doesNotMatch(mixed.content[0].text, /runtimePolicy secret/);
+
+    const protectedOnly = await callToolResult(toolResult, ctx, "grep", { pattern: "TOKEN", path: "." }, [
+      {
+        type: "text",
+        text: ".env:1: TOKEN=fake-token"
+      }
+    ]);
+
+    assert.equal(protectedOnly.details.protectedMatchesRedacted, 1);
+    assert.match(protectedOnly.content[0].text, /No matches found in non-protected paths/);
+    assert.doesNotMatch(protectedOnly.content[0].text, /fake-token/);
   });
 
   it("still lets company tools and hooks write governed state internally", async () => {

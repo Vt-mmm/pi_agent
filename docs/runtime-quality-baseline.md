@@ -2,7 +2,7 @@
 
 ## Mục tiêu
 
-`v0.3.16` định nghĩa bộ kiểm soát runtime để Pi Agent Platform có thể chạy task một cách có kỷ luật cho solo, internal team, và public package.
+`v0.3.17` định nghĩa bộ kiểm soát runtime để Pi Agent Platform có thể chạy task một cách có kỷ luật cho solo, internal team, và public package.
 
 Các module chính:
 
@@ -126,10 +126,14 @@ Gate phân biệt hai mức:
 
 `true`, `echo ok`, hoặc `npm test || true` có thể được ghi trace nếu đã chạy thật, nhưng không đủ để pass final gate trừ khi profile/task verify plan khai đúng command đó.
 
-Từ `v0.3.16`, guard state tự bảo vệ:
+Từ `v0.3.17`, guard state tự bảo vệ:
 
-- raw `read/write/edit/bash` vào `.pi/company-state/**` bị block;
-- raw `read/write/edit/bash` vào `.pi/company-profile.json` bị block;
+- raw path-like access vào `.pi/company-state/**` bị block trước khi tool chạy;
+- raw path-like access vào `.pi/company-profile.json` bị block trước khi tool chạy;
+- Pi built-ins `read`, `write`, `edit`, `grep`, `find`, `ls` đi qua cùng protected-path gate;
+- custom/MCP tools cũng bị block nếu tool call có field dạng `path`, `filePath`, `targetPath`, `target`, `filename`, hoặc `file` trỏ vào protected path;
+- `grep.glob` và `find.pattern` bị block nếu pattern có thể target protected path;
+- broad `grep` sweep có thêm `tool_result` backstop để redact các dòng trả về từ protected files;
 - `company_task_start`, `company_verify_record`, và `tool_result` hook vẫn ghi state được qua internal extension path.
 
 ## 5. Local verification
@@ -150,7 +154,7 @@ pi list --approve
 - package manifests;
 - JSON parse;
 - required docs/scripts/prompts;
-- protected-path, shell protected path, guard-state self-protection, exec-policy, observed-verify, cross-process ledger, profile verify-command matching, and redaction regression tests;
+- protected-path, shell protected path, path-like tool access, `grep/find/ls`, guard-state self-protection, exec-policy, observed-verify, cross-process ledger, profile verify-command matching, and redaction regression tests;
 - profile doctor;
 - team doctor;
 - TypeScript syntax for extension;

@@ -20,6 +20,6 @@ echo "  /login"
 echo
 echo "Then link a project:"
 echo
-echo "  bash \"$PLATFORM_ROOT/scripts/init-project.sh\" /path/to/project --profile generic --package-source git:github.com/Vt-mmm/pi_agent@v0.3.16"
+echo "  bash \"$PLATFORM_ROOT/scripts/init-project.sh\" /path/to/project --profile generic --package-source git:github.com/Vt-mmm/pi_agent@v0.3.17"
 echo "  cd /path/to/project"
 echo "  pi"
