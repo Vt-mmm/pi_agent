@@ -18,7 +18,7 @@ Global install mặc định sẽ cài adapter và seed preset `core` nếu dùn
 ```bash
 bash /path/to/pi_agent/scripts/setup.sh . \
   --profile auto \
-  --package-source git:github.com/Vt-mmm/pi_agent@v0.3.15 \
+  --package-source git:github.com/Vt-mmm/pi_agent@v0.3.16 \
   --mcp-preset core
 ```
 

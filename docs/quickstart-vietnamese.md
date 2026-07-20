@@ -15,7 +15,7 @@ Phần còn lại — OAuth, package, context, harness, MCP, tool-call guard —
 
 ```bash
 npm install -g @earendil-works/pi-coding-agent
-pi install git:github.com/Vt-mmm/pi_agent@v0.3.15
+pi install git:github.com/Vt-mmm/pi_agent@v0.3.16
 ```
 
 Sau bước này, project mới không cần chạy bash init profile. Chỉ cần:
@@ -109,7 +109,7 @@ File này là snapshot context cho task sau. Nếu file còn `Generated: not yet
 bash /path/to/pi_agent/scripts/setup.sh /path/to/project \
   --project-only \
   --profile auto \
-  --package-source git:github.com/Vt-mmm/pi_agent@v0.3.15 \
+  --package-source git:github.com/Vt-mmm/pi_agent@v0.3.16 \
   --mcp-preset core \
   --subagents-preset safe
 ```
@@ -130,7 +130,7 @@ Script bash chỉ dùng khi muốn preseed config vào repo:
 ```bash
 bash /path/to/pi_agent/scripts/setup.sh /path/to/project \
   --profile be-readonly-fe \
-  --package-source git:github.com/Vt-mmm/pi_agent@v0.3.15 \
+  --package-source git:github.com/Vt-mmm/pi_agent@v0.3.16 \
   --mcp-preset core \
   --subagents-preset safe
 ```
@@ -155,7 +155,7 @@ Prompt mẫu khi đã rõ task:
 /task Implement this request. Use company_context, company_task_start, company_context_budget, company_exec_policy_check when shell is needed, company_verify_record, company_trace_record, and company_task_gate_check before done.
 ```
 
-Từ `v0.3.15`, `/task` có auto-delegation policy. Với task đủ lớn, parent agent phải tự cân nhắc dùng `company-scout`, `company-planner`, hoặc `company-reviewer`; anh không cần tự gọi `/run` nếu không muốn ép orchestration.
+Từ `v0.3.16`, `/task` có auto-delegation policy. Với task đủ lớn, parent agent phải tự cân nhắc dùng `company-scout`, `company-planner`, hoặc `company-reviewer`; anh không cần tự gọi `/run` nếu không muốn ép orchestration.
 
 Các workflow package đáng dùng khi muốn ép rõ shape:
 

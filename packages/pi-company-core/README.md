@@ -58,7 +58,7 @@ When `pi-subagents` is installed, this package exposes:
 ## Install
 
 ```bash
-pi install git:github.com/Vt-mmm/pi_agent@v0.3.15
+pi install git:github.com/Vt-mmm/pi_agent@v0.3.16
 ```
 
 ## Project profile
@@ -85,3 +85,5 @@ Runtime task tools write local state to:
 Project-local state belongs in `.pi/.gitignore`.
 
 Passing final gates require an observed exit `0` command that exactly matches one entry in `task.verifyCommands`. Other observed commands are traceable but advisory.
+
+Raw `read`/`write`/`edit`/`bash` access to `.pi/company-state/**` and `.pi/company-profile.json` is blocked. Use `company_context` and company task tools for governed access.

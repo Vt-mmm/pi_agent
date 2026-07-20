@@ -84,6 +84,12 @@ The ledger stores cwd, timestamp, status, a hash of the normalized command, and 
 
 This file-based ledger is intentionally shared by parent and subagent processes that run in the same project cwd. If a worker subagent runs `npm test`, the parent can later record that exact verify command without depending on process-local memory.
 
+The ledger and task/profile control files are self-protected:
+
+- raw `read`, `write`, `edit`, and `bash` access to `.pi/company-state/**` is blocked;
+- raw `read`, `write`, `edit`, and `bash` access to `.pi/company-profile.json` is blocked;
+- company tools still write/read these files through internal extension code, so normal task evidence and profile workflows continue to work.
+
 Final-gate semantics are stricter than simple observation:
 
 - `observed=true`: Pi actually saw a matching bash result after `task.createdAt`;

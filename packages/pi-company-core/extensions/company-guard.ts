@@ -434,7 +434,7 @@ function evaluateToolPolicy(toolName: string, profile: ProjectProfile, policy: B
 }
 
 function extractLikelyPathFromInput(cwd: string, input: Record<string, unknown>): string | undefined {
-  return normalizeRelative(cwd, input.path ?? input.filePath ?? input.target ?? input.filename);
+  return normalizeRelative(cwd, input.path ?? input.filePath ?? input.file_path ?? input.targetPath ?? input.target_path ?? input.target ?? input.filename ?? input.file);
 }
 
 function stateRoot(cwd: string): string {
@@ -1196,6 +1196,16 @@ export default function companyGuard(pi: ExtensionAPI) {
         const matched = matchesAnyPath(relativePath, protectedPaths);
         if (matched) {
           return { block: true, reason: `Blocked write to protected path: ${relativePath} matches ${matched}` };
+        }
+      }
+    }
+
+    if (event.toolName === "read") {
+      const relativePath = extractLikelyPathFromInput(ctx.cwd, event.input as Record<string, unknown>);
+      if (relativePath) {
+        const matched = matchesAnyPath(relativePath, shellProtectedPaths);
+        if (matched) {
+          return { block: true, reason: `Blocked read of protected path: ${relativePath} matches ${matched}` };
         }
       }
     }

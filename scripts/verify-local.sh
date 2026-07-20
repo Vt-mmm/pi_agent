@@ -2,6 +2,35 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+OFFLINE=false
+
+usage() {
+  cat <<'USAGE'
+Usage:
+  scripts/verify-local.sh [--offline]
+
+Options:
+  --offline   Skip checks that require a local Pi login/model catalog.
+USAGE
+}
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --offline)
+      OFFLINE=true
+      shift
+      ;;
+    -h|--help)
+      usage
+      exit 0
+      ;;
+    *)
+      echo "Unknown argument: $1" >&2
+      usage >&2
+      exit 2
+      ;;
+  esac
+done
 
 required_files=(
   "$ROOT/README.md"
@@ -95,6 +124,7 @@ required_files=(
   "$ROOT/scripts/configure-model-scope.sh"
   "$ROOT/scripts/configure-mcp.sh"
   "$ROOT/scripts/configure-subagents.sh"
+  "$ROOT/tests/company-guard-integration.test.mjs"
   "$ROOT/tests/policy-core.test.mjs"
   "$ROOT/tests/redaction-core.test.mjs"
   "$ROOT/tests/runtime-evidence.test.mjs"
@@ -268,7 +298,11 @@ bash -n "$ROOT/scripts/pi-model-catalog.sh"
 bash -n "$ROOT/scripts/configure-model-scope.sh"
 bash -n "$ROOT/scripts/configure-mcp.sh"
 bash -n "$ROOT/scripts/configure-subagents.sh"
-bash "$ROOT/scripts/pi-model-catalog.sh" --json >/dev/null
+if [[ "$OFFLINE" == true || "${PI_COMPANY_VERIFY_OFFLINE:-}" == "1" || "${CI:-}" == "true" ]]; then
+  echo "WARN: skipping local Pi model catalog check in offline/CI mode" >&2
+else
+  bash "$ROOT/scripts/pi-model-catalog.sh" --json >/dev/null
+fi
 bash "$ROOT/scripts/configure-model-scope.sh" --dry-run --preset full --default-model openai-codex/gpt-5.5:xhigh >/dev/null
 bash "$ROOT/scripts/configure-mcp.sh" --list >/dev/null
 bash "$ROOT/scripts/configure-mcp.sh" --dry-run --preset popular --scope project --project "$ROOT" >/dev/null

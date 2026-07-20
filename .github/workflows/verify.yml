@@ -28,4 +28,4 @@ jobs:
         run: npm test
 
       - name: Run local verification
-        run: bash scripts/verify-local.sh
+        run: bash scripts/verify-local.sh --offline

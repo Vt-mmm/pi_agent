@@ -7,13 +7,17 @@
     "**/.env",
     "**/.env.*",
     "**/node_modules/**",
-    "**/dist/**"
+    "**/dist/**",
+    ".pi/company-state/**",
+    ".pi/company-profile.json"
   ],
   "shellProtectedPaths": [
     ".git/**",
     "**/auth.json",
     "**/.env",
-    "**/.env.*"
+    "**/.env.*",
+    ".pi/company-state/**",
+    ".pi/company-profile.json"
   ],
   "blockedCommandPatterns": [
     "rm -rf /",
