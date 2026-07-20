@@ -33,7 +33,7 @@ From there, Pi can onboard the project, select an operating profile, use the rig
 
 ```bash
 npm install -g @earendil-works/pi-coding-agent
-pi install git:github.com/Vt-mmm/pi_agent@v0.3.19
+pi install git:github.com/Vt-mmm/pi_agent@v0.3.20
 ```
 
 Optional Herdr integration:
@@ -177,7 +177,7 @@ Keep secrets in environment variables, never in committed config:
 
 ```bash
 export CONTEXT7_API_KEY=ctx7sk_...
-export GITHUB_PERSONAL_ACCESS_TOKEN=github_pat_...
+export GITHUB_PERSONAL_ACCESS_TOKEN=<github-token>
 ```
 
 ## Subagents
@@ -222,7 +222,7 @@ Most projects do not need shell init. Use this only when you want to pre-create 
 ```bash
 bash /path/to/pi_agent/scripts/setup.sh /path/to/project \
   --profile be-readonly-fe \
-  --package-source git:github.com/Vt-mmm/pi_agent@v0.3.19 \
+  --package-source git:github.com/Vt-mmm/pi_agent@v0.3.20 \
   --mcp-preset core \
   --subagents-preset safe
 ```
@@ -290,6 +290,7 @@ This repository intentionally excludes:
 
 ## Documentation
 
+- [Operator manual tiếng Việt](docs/operator-manual-vietnamese.md)
 - [Quickstart tiếng Việt](docs/quickstart-vietnamese.md)
 - [Command reference tiếng Việt](docs/command-reference-vietnamese.md)
 - [Team onboarding](docs/team-onboarding.md)
@@ -317,7 +318,7 @@ This repository intentionally excludes:
 
 ## Maturity
 
-Current release: `v0.3.19`.
+Current release: `v0.3.20`.
 
 Ready for:
 

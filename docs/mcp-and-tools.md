@@ -18,7 +18,7 @@ Global install mặc định sẽ cài adapter và seed preset `core` nếu dùn
 ```bash
 bash /path/to/pi_agent/scripts/setup.sh . \
   --profile auto \
-  --package-source git:github.com/Vt-mmm/pi_agent@v0.3.19 \
+  --package-source git:github.com/Vt-mmm/pi_agent@v0.3.20 \
   --mcp-preset core
 ```
 
@@ -212,7 +212,7 @@ Playwright:
 Token không được commit:
 
 ```bash
-export GITHUB_PERSONAL_ACCESS_TOKEN=github_pat_...
+export GITHUB_PERSONAL_ACCESS_TOKEN=<github-token>
 ```
 
 ## Tool policy
