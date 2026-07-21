@@ -12,10 +12,56 @@ const TOKEN_PATTERNS = [
   /\beyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\b/g
 ];
 
-const CONNECTION_URL_PATTERN = /\b((?:postgres(?:ql)?|mysql|mariadb|mongodb(?:\+srv)?|redis):\/\/[^:\s/"']+:)([^@\s/"']+)(@[^\s"'<>]+)/gi;
+const CONNECTION_URL_PATTERN = /\b((?:https?|ftp|postgres(?:ql)?|mysql|mariadb|mongodb(?:\+srv)?|redis):\/\/[^:\s/"']+:)([^@\s/"']+)(@[^\s"'<>]+)/gi;
 const BEARER_PATTERN = /\b(Bearer\s+)([A-Za-z0-9._~+/=-]{20,})\b/gi;
-const SECRET_ASSIGNMENT_PATTERN = /(^|[\s{[,(;])((?:"|')?(?:[A-Za-z0-9_]*_)?(?:api[_-]?key|token|password|passwd|pwd|secret|credential|client_secret|access[_-]?token|refresh[_-]?token|secret_access_key|aws_secret_access_key)(?:"|')?\s*)(:|=(?!=))\s*(["']?)([^"'\s,;}]+)/gim;
+const BASIC_AUTH_PATTERN = /\b(Basic\s+)([A-Za-z0-9+/]{12,}={0,2})(?=$|[\s,;}])/gi;
+const AUTHORIZATION_HEADER_PATTERN = /\b(Authorization\s*:\s*)([A-Za-z][A-Za-z0-9_-]{0,31})(\s+)([^\r\n]+)/gi;
+const QUERY_SECRET_PATTERN = /([?&])([A-Za-z][A-Za-z0-9_.-]{0,80})(=)([^&#\s]+)/gi;
+const DOUBLE_QUOTED_SECRET_ASSIGNMENT_PATTERN = /(^|[\s{[,(;])((?:"|')?[A-Za-z][A-Za-z0-9_.-]{0,80}(?:"|')?\s*)(:|=(?!=))\s*"((?:\\.|[^"\\\r\n])*)"/gim;
+const SINGLE_QUOTED_SECRET_ASSIGNMENT_PATTERN = /(^|[\s{[,(;])((?:"|')?[A-Za-z][A-Za-z0-9_.-]{0,80}(?:"|')?\s*)(:|=(?!=))\s*'((?:\\.|[^'\\\r\n])*)'/gim;
+const SECRET_ASSIGNMENT_PATTERN = /(^|[\s{[,(;])((?:"|')?[A-Za-z][A-Za-z0-9_.-]{0,80}(?:"|')?\s*)(:|=(?!=))\s*([^"'\s,;}]+)/gim;
 const WHITESPACE_SECRET_ASSIGNMENT_PATTERN = /(^|[\s{[,(;])((?:"|')?(?:aws_)?secret_access_key(?:"|')?\s+)(["']?)([A-Za-z0-9/+=]{20,})/gim;
+
+const SENSITIVE_KEY_TERMS = [
+  "api_key",
+  "token",
+  "password",
+  "passwd",
+  "pwd",
+  "secret",
+  "credential",
+  "client_secret",
+  "access_token",
+  "refresh_token",
+  "secret_access_key",
+  "passphrase",
+  "private_key",
+  "signing_key",
+  "authorization"
+];
+const SENSITIVE_PLURAL_KEYS = new Set([
+  "tokens",
+  "api_keys",
+  "passwords",
+  "secrets",
+  "credentials",
+  "client_secrets",
+  "access_tokens",
+  "refresh_tokens",
+  "session_tokens",
+  "passphrases",
+  "private_keys",
+  "signing_keys",
+  "authorizations"
+]);
+const LOWER_THRESHOLD_PLURAL_KEYS = new Set([
+  "passwords",
+  "secrets",
+  "credentials",
+  "passphrases",
+  "private_keys",
+  "signing_keys"
+]);
 
 function normalizeSecretValue(value) {
   return String(value ?? "")
@@ -35,8 +81,27 @@ function looksLikeKnownSecret(value) {
     || patternMatches(BEARER_PATTERN, value);
 }
 
+function normalizeSecretKey(key) {
+  return String(key ?? "")
+    .trim()
+    .replace(/^["']|["']$/g, "")
+    .replace(/([a-z0-9])([A-Z])/g, "$1_$2")
+    .replace(/[^A-Za-z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "")
+    .toLowerCase();
+}
+
+function keyLooksSensitive(key) {
+  const normalized = normalizeSecretKey(key);
+  return SENSITIVE_PLURAL_KEYS.has(normalized) || SENSITIVE_KEY_TERMS.some((term) => normalized === term
+    || normalized.endsWith(`_${term}`));
+}
+
 function keyRequiresLowerThreshold(key) {
-  return /password|passwd|pwd|secret|credential/i.test(key);
+  const normalized = normalizeSecretKey(key);
+  return LOWER_THRESHOLD_PLURAL_KEYS.has(normalized)
+    || ["password", "passwd", "pwd", "secret", "credential", "passphrase", "private_key", "signing_key"]
+      .some((term) => normalized === term || normalized.endsWith(`_${term}`));
 }
 
 function valueLooksPlaceholder(value) {
@@ -44,6 +109,7 @@ function valueLooksPlaceholder(value) {
   if (!clean) return true;
   if (/^(?:null|undefined|none|false|true|0|""|'')$/i.test(clean)) return true;
   if (/^<[^>\n]{1,80}>$/.test(clean)) return true;
+  if (/^\[REDACTED_SECRET\]$/i.test(clean)) return true;
   if (/^(?:not-set|unset|placeholder|example|changeme|change-me|redacted|xxx|\*{3,})$/i.test(clean)) return true;
   if (/^your[-_][a-z0-9][a-z0-9_-]*$/i.test(clean)) return true;
   return false;
@@ -54,7 +120,7 @@ function valueLooksSensitive(key, value) {
   if (!clean || valueLooksPlaceholder(clean)) return false;
   if (looksLikeKnownSecret(clean)) return true;
   if (keyRequiresLowerThreshold(key)) return clean.length >= 8;
-  return clean.length >= 12 && /[A-Za-z]/.test(clean) && /[0-9_\-+/=]/.test(clean);
+  return keyLooksSensitive(key) && clean.length >= 12;
 }
 
 export function redactSensitiveText(input) {
@@ -63,12 +129,32 @@ export function redactSensitiveText(input) {
 
   text = text.replace(CONNECTION_URL_PATTERN, (_match, prefix, _password, suffix) => `${prefix}${REDACTION}${suffix}`);
   text = text.replace(BEARER_PATTERN, (_match, prefix) => `${prefix}${REDACTION}`);
+  text = text.replace(BASIC_AUTH_PATTERN, (_match, prefix) => `${prefix}${REDACTION}`);
+  text = text.replace(AUTHORIZATION_HEADER_PATTERN, (match, prefix, scheme, spacing, value) => {
+    if (!valueLooksSensitive("authorization", value)) return match;
+    return `${prefix}${scheme}${spacing}${REDACTION}`;
+  });
 
   for (const pattern of TOKEN_PATTERNS) text = text.replace(pattern, REDACTION);
 
-  text = text.replace(SECRET_ASSIGNMENT_PATTERN, (match, prefix, key, separator, quote, value) => {
-    if (!valueLooksSensitive(key, value)) return match;
-    return `${prefix}${key}${separator} ${quote}${REDACTION}`;
+  text = text.replace(QUERY_SECRET_PATTERN, (match, prefix, key, separator, value) => {
+    if (!keyLooksSensitive(key) || !valueLooksSensitive(key, value)) return match;
+    return `${prefix}${key}${separator}${REDACTION}`;
+  });
+
+  text = text.replace(DOUBLE_QUOTED_SECRET_ASSIGNMENT_PATTERN, (match, prefix, key, separator, value) => {
+    if (!keyLooksSensitive(key) || !valueLooksSensitive(key, value)) return match;
+    return `${prefix}${key}${separator} "${REDACTION}"`;
+  });
+
+  text = text.replace(SINGLE_QUOTED_SECRET_ASSIGNMENT_PATTERN, (match, prefix, key, separator, value) => {
+    if (!keyLooksSensitive(key) || !valueLooksSensitive(key, value)) return match;
+    return `${prefix}${key}${separator} '${REDACTION}'`;
+  });
+
+  text = text.replace(SECRET_ASSIGNMENT_PATTERN, (match, prefix, key, separator, value) => {
+    if (!keyLooksSensitive(key) || !valueLooksSensitive(key, value)) return match;
+    return `${prefix}${key}${separator} ${REDACTION}`;
   });
 
   text = text.replace(WHITESPACE_SECRET_ASSIGNMENT_PATTERN, (match, prefix, key, quote, value) => {
@@ -87,7 +173,7 @@ function redactStorageValue(value, key) {
   if (typeof value === "string") {
     const redacted = redactSensitiveText(value);
     if (redacted.redacted) return redacted.text;
-    return key && valueLooksSensitive(key, value) ? REDACTION : value;
+    return key && keyLooksSensitive(key) && valueLooksSensitive(key, value) ? REDACTION : value;
   }
   if (Array.isArray(value)) return value.map((item) => redactStorageValue(item, key));
   if (!value || typeof value !== "object") return value;

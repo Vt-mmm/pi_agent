@@ -52,7 +52,7 @@ pi-company-auto --read-only -p "Scout payment mapping. Do not edit source."
 
 ```bash
 npm install -g @earendil-works/pi-coding-agent@0.80.10
-pi install git:github.com/Vt-mmm/pi_agent@v0.4.1
+pi install git:github.com/Vt-mmm/pi_agent@v0.4.2
 ```
 
 Optional Herdr integration:
@@ -293,7 +293,7 @@ Most projects do not need shell init. Use this only when you want to pre-create 
 ```bash
 bash /path/to/pi_agent/scripts/setup.sh /path/to/project \
   --profile be-readonly-fe \
-  --package-source git:github.com/Vt-mmm/pi_agent@v0.4.1 \
+  --package-source git:github.com/Vt-mmm/pi_agent@v0.4.2 \
   --mcp-preset core \
   --subagents-preset safe
 ```
@@ -320,6 +320,7 @@ pi_agent/
 npm ci --ignore-scripts --legacy-peer-deps
 npm run typecheck
 npm test
+npm run benchmark:redaction
 bash scripts/verify-local.sh
 bash scripts/team-doctor.sh . --strict-share
 pi list --approve
@@ -335,6 +336,12 @@ bash scripts/quality-benchmark.sh /path/to/project --record \
   --result pass \
   --tokens 12345 \
   --verify "npm test"
+```
+
+Sensitive-data redaction benchmark:
+
+```bash
+npm run benchmark:redaction
 ```
 
 Usage / token follow-up:
@@ -389,12 +396,13 @@ This repository intentionally excludes:
 - [Usage observability](docs/usage-observability.md)
 - [Model options](docs/model-options.md)
 - [Quality benchmark guide](docs/quality-benchmark.md)
+- [Sensitive-data redaction benchmark](docs/security-redaction-benchmark.md)
 - [Runtime policy design](docs/runtime-policy-design.md)
 - [Package architecture notes](docs/package-architecture-notes.md)
 
 ## Maturity
 
-Current release: `v0.4.1`.
+Current release: `v0.4.2`.
 
 Ready for:
 
@@ -415,6 +423,7 @@ Security boundary:
 - Path-like strings are percent-decoded once before matching. Excessively nested tool input fails closed instead of being silently skipped.
 - Known content fields such as `content`, `query`, `pattern`, `text`, and `command` are excluded from generic path extraction to preserve normal search/edit behavior. Tool-specific checks still validate `grep.glob` and `find.pattern` when they explicitly target protected paths.
 - Broad `grep`, `find`, and `ls` sweeps get result-filter backstops: protected file content lines or protected path metadata are redacted before the model sees output. Text tool results and JSON-like result details also pass through shared sensitive-data redaction; image, audio, and resource payloads are left intact.
+- The redaction release gate measures contextual recall, benign preservation, structured fields, and bounded large output with synthetic data. Opaque entropy without a credential-bearing context remains observational rather than being redacted indiscriminately.
 - Raw `bash` access to protected paths is blocked through shell operand extraction. The guard covers partial shell globs, bare filenames, canonical symbolic-link aliases, and attached input/output redirections. `.pi/company-state/**` and `.pi/company-profile.json` are self-protected; use `company_context` and company task tools instead.
 - Verify evidence is accepted only when it matches an observed Pi bash tool result after task start. The observed ledger is persisted under `.pi/company-state/observed-bash.jsonl`, so parent agents can validate bash results produced by guarded subagent processes.
 - Observed command identity is retained as a SHA-256 hash while sensitive command text is redacted at both the in-memory and persisted evidence boundaries.

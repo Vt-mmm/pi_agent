@@ -2,7 +2,7 @@
 
 ## Mục tiêu
 
-`v0.4.1` định nghĩa bộ kiểm soát runtime để Pi Agent Platform có thể chạy task một cách có kỷ luật cho solo, internal team, và public package.
+`v0.4.2` định nghĩa bộ kiểm soát runtime để Pi Agent Platform có thể chạy task một cách có kỷ luật cho solo, internal team, và public package.
 
 Các module chính:
 
@@ -140,6 +140,7 @@ Guard state tự bảo vệ:
 - `grep.glob` và `find.pattern` bị block khi pattern nhắm protected path rõ ràng như `.env*`, `auth.json`, `.pi/company-state/**`, hoặc `company-profile.json`; broad glob như `*.json` được phép và để result backstop xử lý;
 - broad `grep`, `find`, và `ls` sweep có thêm `tool_result` backstop để redact content line hoặc path metadata từ protected files;
 - mọi text block trong `tool_result` và string leaf trong JSON-like `details` có thêm shared sensitive-data redaction; key như `password`, `token`, `credential` được dùng làm context phát hiện;
+- `npm run benchmark:redaction` gate contextual recall, benign preservation, structured objects/arrays, và large-output correctness bằng synthetic data; opaque entropy không có credential context được báo riêng và không gate release;
 - bash evidence chỉ giữ command text đã redact ở memory/disk; raw command hash vẫn dùng để exact-match verify evidence;
 - `company_task_start`, `company_verify_record`, và `tool_result` hook vẫn ghi state được qua internal extension path.
 
@@ -150,6 +151,7 @@ Platform verification:
 ```bash
 npm run typecheck
 npm test
+npm run benchmark:redaction
 bash scripts/verify-local.sh
 bash scripts/verify-local.sh --offline  # CI / clean machine without Pi login catalog
 bash scripts/team-doctor.sh . --strict-share

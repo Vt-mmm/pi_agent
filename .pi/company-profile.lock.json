@@ -99,18 +99,18 @@
   ],
   "core": {
     "apiVersion": 1,
-    "packageDigest": "sha256:b86c3cda148979e249d76582a10a161f874c819377ecc467264de3becfcc02ca",
+    "packageDigest": "sha256:467a22a9f8b4205743e26b790c47ff3c29ec52ccf96d724a0f63b5a4fffe15c9",
     "packageSource": "../",
-    "packageVersion": "0.4.1",
+    "packageVersion": "0.4.2",
     "runtimeFiles": [
       {
-        "byteSize": 2908,
-        "digest": "sha256:2e9c7ae3e5e24626be6e3b6ab12499f0a5d1483db0f3179038a9a97985db3632",
+        "byteSize": 2975,
+        "digest": "sha256:8d69990d4c1ca172222bd0c6ee920052185ee04db783d0638697de024963108b",
         "path": "package.json"
       },
       {
         "byteSize": 734,
-        "digest": "sha256:aee846a6d88727ce7bf3f40040b7e82059d3cde0abc7997232e6e5a43a5dd7ce",
+        "digest": "sha256:0e90b7dcc0354d2701b88dcb634445f378336d59f1eb7dd08d030f274868c87d",
         "path": "packages/pi-company-core/package.json"
       },
       {
@@ -119,8 +119,8 @@
         "path": "packages/pi-company-core/capabilities/capability-core.js"
       },
       {
-        "byteSize": 4141,
-        "digest": "sha256:0921f94f8e3ebb113006641ea55f0e84b19154644d7ca3dc903103d37735ff7f",
+        "byteSize": 7082,
+        "digest": "sha256:9fd0f0334c1b247ae2baf111b2d5b700cbb98820f3659152ee02120ec19d1d83",
         "path": "packages/pi-company-core/security/sensitive-data.js"
       },
       {

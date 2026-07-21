@@ -74,7 +74,7 @@ When `pi-subagents` is installed, this package exposes:
 ## Install
 
 ```bash
-pi install git:github.com/Vt-mmm/pi_agent@v0.4.1
+pi install git:github.com/Vt-mmm/pi_agent@v0.4.2
 ```
 
 ## Project profile
