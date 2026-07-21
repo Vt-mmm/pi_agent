@@ -3,6 +3,7 @@
   "projectId": "devops-project",
   "displayName": "DevOps / Infrastructure Project",
   "mode": "devops",
+  "permissionProfile": "workspace-write",
   "rootMarkers": [
     "AGENTS.md",
     "README.md",

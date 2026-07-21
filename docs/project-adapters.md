@@ -12,6 +12,7 @@ Adapter mô tả project cho Pi core. Core không biết domain/project cụ th�
   "projectId": "my-project",
   "displayName": "My Project",
   "mode": "web-frontend",
+  "permissionProfile": "workspace-write",
   "rootMarkers": ["AGENTS.md", "package.json"],
   "protectedPaths": [".git/**", "**/auth.json"],
   "shellProtectedPaths": [".git/**", "**/auth.json"],

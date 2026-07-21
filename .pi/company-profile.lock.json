@@ -1,8 +1,8 @@
 {
   "artifacts": [
     {
-      "byteSize": 1859,
-      "digest": "sha256:b622344f2eb050876b15c2309790aaf1b2a948aea17df8029c0a2a018a9bbe1b",
+      "byteSize": 1901,
+      "digest": "sha256:5ee5f42e877537f286f54f2b222754ef8695f07b677f6d127fb23704625d456f",
       "id": "generic",
       "kind": "adapters",
       "pack": "engineering-base@0.1.0",
@@ -17,8 +17,8 @@
       "path": "evals/scenarios/capability-resolution.json"
     },
     {
-      "byteSize": 3439,
-      "digest": "sha256:e40c9ac62b71b6e646a944e371ae55fb1f3ffc58ccd15885eeded509e06e7aba",
+      "byteSize": 3643,
+      "digest": "sha256:783f7648855f7486ce717e73f8a282a627d969c40f97d1fee8babbc9eb059412",
       "id": "base-policy",
       "kind": "policies",
       "pack": "engineering-base@0.1.0",
@@ -99,18 +99,18 @@
   ],
   "core": {
     "apiVersion": 1,
-    "packageDigest": "sha256:467a22a9f8b4205743e26b790c47ff3c29ec52ccf96d724a0f63b5a4fffe15c9",
+    "packageDigest": "sha256:0f7be825958035fae99145a4e6088f967d294c73ae25b8108fdcd77845b9176e",
     "packageSource": "../",
-    "packageVersion": "0.4.2",
+    "packageVersion": "0.4.4",
     "runtimeFiles": [
       {
         "byteSize": 2975,
-        "digest": "sha256:8d69990d4c1ca172222bd0c6ee920052185ee04db783d0638697de024963108b",
+        "digest": "sha256:d4c7e143fc7d30fcd982a501bee88dac1594ab82a3500362dbfa5303d4494c77",
         "path": "package.json"
       },
       {
         "byteSize": 734,
-        "digest": "sha256:0e90b7dcc0354d2701b88dcb634445f378336d59f1eb7dd08d030f274868c87d",
+        "digest": "sha256:37714bc3c807acda055a4fc1479a641c1b02c4cfd5653fa595ed01d3fb0520d3",
         "path": "packages/pi-company-core/package.json"
       },
       {
@@ -124,8 +124,8 @@
         "path": "packages/pi-company-core/security/sensitive-data.js"
       },
       {
-        "byteSize": 132878,
-        "digest": "sha256:9d54b2afb1fc9019919c8e349a9e9be91ced7351c87bba2e7c2790463b800cc7",
+        "byteSize": 146524,
+        "digest": "sha256:ec34b4bc01371b17ee9857806a922c6124ce9077fbfb546120a34989c0e325df",
         "path": "packages/pi-company-core/extensions/company-guard.ts"
       },
       {

@@ -19,12 +19,30 @@ The root package exposes `pi-company-auto`:
 ```bash
 pi-company-auto
 pi-company-auto --read-only -p "Scout payment mapping. Do not edit source."
+pi-company-auto --full-access -p "Run the trusted local benchmark suite."
 ```
 
 This is a wrapper for `pi --approve` on the current run. It loads trusted project-local resources without turning off Company guardrails.
 
+The wrapper can set `PI_COMPANY_PERMISSION_PROFILE` for one run:
+
+- `read-only`: allow `read`, `grep`, `find`, `ls`, and company state tools; block shell/write/unknown tools.
+- `workspace-write`: normal guarded implementation mode.
+- `trusted-full-access`: trusted automation mode; protected paths, secret redaction, capability lock integrity, and destructive/external confirmations stay active.
+
+Inside Pi, slash commands can switch the current session without writing the project profile:
+
+```text
+/permission-status
+/read-only
+/workspace-write
+/full-access
+/full-access Implement the requested trusted repo task.
+```
+
 ## Runtime quality tools
 
+- `company_permission_status`
 - `company_exec_policy_check`
 - `company_context_budget`
 - `company_tool_policy_check`
@@ -47,6 +65,7 @@ This is a wrapper for `pi --approve` on the current run. It loads trusted projec
 ## Prompt recipes
 
 - `/company-commands`: explain terminal, Pi, MCP, model, memory, and subagent commands in Vietnamese.
+- `/permission-status`, `/read-only`, `/workspace-write`, `/full-access`: inspect or switch the current session permission profile.
 - `/onboard-project`: first-run project context snapshot after login/model selection.
 - `/profiles`: show or switch the active project profile inside Pi.
 - `/memory-policy`: inspect project memory policy and explicit remember workflow.
@@ -74,7 +93,7 @@ When `pi-subagents` is installed, this package exposes:
 ## Install
 
 ```bash
-pi install git:github.com/Vt-mmm/pi_agent@v0.4.2
+pi install git:github.com/Vt-mmm/pi_agent@v0.4.4
 ```
 
 ## Project profile
@@ -85,6 +104,8 @@ The extension reads profile data in this order:
 2. `<project>/.pi/company-profile.json` when project-local trust is active in Pi
 
 If no trusted profile is available, the extension still applies baseline secret and destructive-command guards.
+
+`permissionProfile` defaults to `workspace-write` when omitted. `PI_COMPANY_PERMISSION_PROFILE` can override it for a single trusted run; invalid values fail closed to `read-only`.
 
 ## Task state
 

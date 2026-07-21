@@ -3,6 +3,7 @@
   "projectId": "web-frontend",
   "displayName": "Web Frontend Project",
   "mode": "web-frontend",
+  "permissionProfile": "workspace-write",
   "rootMarkers": [
     "AGENTS.md",
     "package.json"

@@ -31,8 +31,14 @@ Mandatory flow:
    - `/task-preflight` checks whether to proceed, compact, or fresh-session.
    - `/fresh-task`, `/fresh-scout`, and `/fresh-be-to-fe` open a new governed session and replay the compact workflow prompt.
    - `/scout` is the read-only audit/scout workflow.
-8. If the user asks about screenshots/images, explain that local image paths pasted into chat are auto-attached as `[image1]` when supported and below size limits.
-9. Do not claim token/cost savings unless benchmark evidence exists. Point to `/company-usage`, `/task-preflight`, `/subagent-cost`, and `pi-company-usage <project>`.
+8. Explain runtime permission commands when relevant:
+   - `/permission-status` shows the current profile and boundaries.
+   - `/read-only` switches the current session to read-only.
+   - `/workspace-write` switches back to governed implementation mode.
+   - `/full-access` switches the current session to trusted full-access.
+   - `/full-access <task>` switches the current session and forwards `<task>` as the next user request.
+9. If the user asks about screenshots/images, explain that local image paths pasted into chat are auto-attached as `[image1]` when supported and below size limits.
+10. Do not claim token/cost savings unless benchmark evidence exists. Point to `/company-usage`, `/task-preflight`, `/subagent-cost`, and `pi-company-usage <project>`.
 
 Output format:
 

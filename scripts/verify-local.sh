@@ -234,6 +234,8 @@ NODE
 
 grep -R "auth.json" "$ROOT/docs" "$ROOT/packages/pi-company-core" "$ROOT/templates" >/dev/null
 grep -R "company_context" "$ROOT/packages/pi-company-core" >/dev/null
+grep -R "company_permission_status" "$ROOT/packages/pi-company-core" "$ROOT/docs" "$ROOT/README.md" >/dev/null
+grep -R "/full-access" "$ROOT/docs" "$ROOT/README.md" "$ROOT/packages/pi-company-core/README.md" >/dev/null
 grep -R "company_exec_policy_check" "$ROOT/packages/pi-company-core" "$ROOT/docs" "$ROOT/templates/project/AGENTS.md" >/dev/null
 grep -R "company_context_budget" "$ROOT/packages/pi-company-core" "$ROOT/docs" "$ROOT/templates/project/AGENTS.md" >/dev/null
 grep -R "company_tool_policy_check" "$ROOT/packages/pi-company-core" "$ROOT/docs" "$ROOT/templates/project/AGENTS.md" >/dev/null

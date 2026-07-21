@@ -3,6 +3,7 @@
   "projectId": "python-project",
   "displayName": "Python Project",
   "mode": "python",
+  "permissionProfile": "workspace-write",
   "rootMarkers": [
     "pyproject.toml",
     "README.md"

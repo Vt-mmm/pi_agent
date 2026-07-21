@@ -32,6 +32,14 @@
       "type": "string",
       "minLength": 1
     },
+    "permissionProfile": {
+      "description": "Runtime permission profile. workspace-write is the default; trusted-full-access still keeps Company protected-path and destructive/external confirmation gates.",
+      "enum": [
+        "read-only",
+        "workspace-write",
+        "trusted-full-access"
+      ]
+    },
     "rootMarkers": {
       "type": "array",
       "items": {

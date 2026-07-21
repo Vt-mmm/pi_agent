@@ -24,6 +24,12 @@ Read-only scout mode:
 pi-company-auto --read-only -p "Scout payment mapping. Do not edit source."
 ```
 
+Trusted full-access style run:
+
+```bash
+pi-company-auto --full-access -p "Run the trusted local benchmark suite."
+```
+
 `pi-company-auto` is a convenience wrapper for Pi project trust (`pi --approve`). It does not bypass protected-path checks, destructive shell checks, task gates, or verification evidence.
 
 ## What it provides
@@ -37,6 +43,7 @@ pi-company-auto --read-only -p "Scout payment mapping. Do not edit source."
 - Chat image-path intake: paste a local screenshot path into the Pi chat box and the guard attaches it as `[image1]` before the model sees the prompt.
 - Trusted-run wrapper: `pi-company-auto` launches Pi with `--approve` for the current run while keeping company guardrails active.
 - Runtime policy tools:
+  - `company_permission_status`
   - `company_exec_policy_check`
   - `company_context_budget`
   - `company_tool_policy_check`
@@ -48,11 +55,35 @@ pi-company-auto --read-only -p "Scout payment mapping. Do not edit source."
 - Built-in profiles for frontend, backend, fullstack, BE-readonly/FE-write, data, DevOps, mobile, docs, Python, and Node TypeScript.
 - Versioned capability packs with deterministic catalog, profile resolution, integrity lock, and permission checks.
 
+## Permission profiles
+
+Project profiles can declare a runtime `permissionProfile`:
+
+| Profile | Use when | Guard behavior |
+|---|---|---|
+| `read-only` | Scout, audit, review | Allows `read`, `grep`, `find`, `ls`, and company state tools; blocks shell, write/edit, and unknown tools. |
+| `workspace-write` | Normal implementation | Default profile. Keeps current protected-path, shell, capability, task, and verify gates. |
+| `trusted-full-access` | Trusted local automation | Expands workspace tool/scope autonomy, but still enforces protected paths, secret redaction, capability lock integrity, and destructive/external confirmation. |
+
+For one run, set `PI_COMPANY_PERMISSION_PROFILE=read-only|workspace-write|trusted-full-access`, or use `pi-company-auto --read-only`, `--workspace-write`, or `--full-access`.
+
+Inside an active Pi session, use slash commands for a session-local switch:
+
+```text
+/permission-status
+/read-only
+/workspace-write
+/full-access
+/full-access Implement the requested trusted repo task.
+```
+
+`/full-access` also accepts a task after the command. The guard switches the current session to `trusted-full-access`, then forwards the remaining text as the next user request.
+
 ## Install once
 
 ```bash
 npm install -g @earendil-works/pi-coding-agent@0.80.10
-pi install git:github.com/Vt-mmm/pi_agent@v0.4.2
+pi install git:github.com/Vt-mmm/pi_agent@v0.4.4
 ```
 
 Optional Herdr integration:
@@ -293,7 +324,7 @@ Most projects do not need shell init. Use this only when you want to pre-create 
 ```bash
 bash /path/to/pi_agent/scripts/setup.sh /path/to/project \
   --profile be-readonly-fe \
-  --package-source git:github.com/Vt-mmm/pi_agent@v0.4.2 \
+  --package-source git:github.com/Vt-mmm/pi_agent@v0.4.4 \
   --mcp-preset core \
   --subagents-preset safe
 ```
@@ -402,7 +433,7 @@ This repository intentionally excludes:
 
 ## Maturity
 
-Current release: `v0.4.2`.
+Current release: `v0.4.4`.
 
 Ready for:
 
@@ -419,6 +450,7 @@ Security boundary:
 
 - The guard extension is an accident-prevention layer for agent mistakes and common prompt-injection patterns.
 - Raw path-like tool access to protected paths is blocked before execution. This covers Pi built-ins such as `read`, `write`, `edit`, `grep`, `find`, `ls`, and custom/MCP tools when their input contains path-like strings, including nested objects, arrays, and `file://` URIs.
+- Runtime permission profiles control autonomy: `read-only`, `workspace-write`, and `trusted-full-access`. The full-access profile is explicit and auditable; it does not disable protected-path checks, secret redaction, capability lock integrity, or destructive/external confirmations.
 - Protected paths are matched case-insensitively, existing aliases are resolved to their canonical repository path, and scope-aware filesystem tools reject repository escape or symbolic-link traversal.
 - Path-like strings are percent-decoded once before matching. Excessively nested tool input fails closed instead of being silently skipped.
 - Known content fields such as `content`, `query`, `pattern`, `text`, and `command` are excluded from generic path extraction to preserve normal search/edit behavior. Tool-specific checks still validate `grep.glob` and `find.pattern` when they explicitly target protected paths.

@@ -3,6 +3,7 @@
   "projectId": "backend-api-project",
   "displayName": "Backend API Project",
   "mode": "backend-api",
+  "permissionProfile": "workspace-write",
   "rootMarkers": [
     "AGENTS.md",
     "README.md",

@@ -2,18 +2,34 @@
 
 ## Mục tiêu
 
-`v0.4.2` định nghĩa bộ kiểm soát runtime để Pi Agent Platform có thể chạy task một cách có kỷ luật cho solo, internal team, và public package.
+`v0.4.4` định nghĩa bộ kiểm soát runtime để Pi Agent Platform có thể chạy task một cách có kỷ luật cho solo, internal team, và public package.
 
 Các module chính:
 
-1. Exec policy
-2. Context budget
-3. Tool registry
-4. Final task gate
-5. Local verification
-6. Quality benchmark
+1. Permission profile
+2. Exec policy
+3. Context budget
+4. Tool registry
+5. Final task gate
+6. Local verification
+7. Quality benchmark
 
 Trạng thái hiện tại: platform đã có runtime modules đủ cho guarded implementation task. Các tuyên bố về chất lượng, token, cost, hoặc tốc độ phải dựa trên benchmark theo project/model thật.
+
+## 0. Permission profile
+
+Tool:
+
+```text
+company_permission_status
+```
+
+Runtime behavior:
+
+- `read-only` chặn shell, write/edit, và unknown non-company tools;
+- `workspace-write` là default cho implementation có guard;
+- `trusted-full-access` nới tool/scope autonomy trong môi trường trusted nhưng không tắt protected paths, redaction, capability lock, hoặc human gate cho destructive/external action.
+- `/full-access <task>` bật `trusted-full-access` cho session hiện tại rồi gửi phần task còn lại cho agent; `/permission-status` hiển thị mode và boundary đang active.
 
 ## 1. Exec policy
 

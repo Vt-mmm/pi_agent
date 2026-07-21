@@ -17,7 +17,7 @@ Phần còn lại — OAuth, package, context, harness, MCP, tool-call guard —
 
 ```bash
 npm install -g @earendil-works/pi-coding-agent@0.80.10
-pi install git:github.com/Vt-mmm/pi_agent@v0.4.2
+pi install git:github.com/Vt-mmm/pi_agent@v0.4.4
 ```
 
 Sau bước này, project mới không cần chạy bash init profile. Chỉ cần:
@@ -39,7 +39,22 @@ Read-only auto-run:
 pi-company-auto --read-only -p "Scout payment mapping. Do not edit source."
 ```
 
-Wrapper này không bypass company guard; nó chỉ tương đương `pi --approve`.
+Trusted full-access style run cho repo đã kiểm soát:
+
+```bash
+pi-company-auto --full-access -p "Run the trusted local benchmark suite."
+```
+
+Wrapper này không bypass company guard; nó wrap `pi --approve` và set permission profile cho lần chạy. Dù dùng `--full-access`, protected paths, redaction, destructive shell checks, task gate, và verify evidence vẫn chạy.
+
+Nếu đã ở trong Pi session, dùng slash command cho nhanh:
+
+```text
+/permission-status
+/full-access Implement/refactor task trong repo trusted này.
+```
+
+`/full-access <task>` chỉ bật full-access cho session hiện tại, không tự ghi `.pi/company-profile.json`.
 
 Nếu chat box/ảnh chụp trả về local path thay vì attachment ảnh, dán path đó trực tiếp vào prompt:
 
@@ -133,7 +148,7 @@ File này là snapshot context cho task sau. Nếu file còn `Generated: not yet
 bash /path/to/pi_agent/scripts/setup.sh /path/to/project \
   --project-only \
   --profile auto \
-  --package-source git:github.com/Vt-mmm/pi_agent@v0.4.2 \
+  --package-source git:github.com/Vt-mmm/pi_agent@v0.4.4 \
   --mcp-preset core \
   --subagents-preset safe
 ```
@@ -154,7 +169,7 @@ Script bash chỉ dùng khi muốn preseed config vào repo:
 ```bash
 bash /path/to/pi_agent/scripts/setup.sh /path/to/project \
   --profile be-readonly-fe \
-  --package-source git:github.com/Vt-mmm/pi_agent@v0.4.2 \
+  --package-source git:github.com/Vt-mmm/pi_agent@v0.4.4 \
   --mcp-preset core \
   --subagents-preset safe
 ```

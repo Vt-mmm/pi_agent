@@ -3,6 +3,7 @@
   "projectId": "node-typescript-project",
   "displayName": "Node TypeScript Project",
   "mode": "node-typescript",
+  "permissionProfile": "workspace-write",
   "rootMarkers": [
     "package.json",
     "tsconfig.json"

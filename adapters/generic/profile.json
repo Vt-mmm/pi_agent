@@ -3,6 +3,7 @@
   "projectId": "generic-project",
   "displayName": "Generic Project",
   "mode": "generic",
+  "permissionProfile": "workspace-write",
   "rootMarkers": [
     "AGENTS.md",
     "README.md",

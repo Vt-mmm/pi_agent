@@ -3,6 +3,7 @@
   "projectId": "mobile-project",
   "displayName": "Mobile Project",
   "mode": "mobile",
+  "permissionProfile": "workspace-write",
   "rootMarkers": [
     "AGENTS.md",
     "README.md",

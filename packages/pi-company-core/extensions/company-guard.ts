@@ -39,6 +39,7 @@ type ProjectProfile = {
   projectId?: string;
   displayName?: string;
   mode?: string;
+  permissionProfile?: PermissionProfileMode;
   protectedPaths?: string[];
   shellProtectedPaths?: string[];
   requiredContext?: string[];
@@ -75,6 +76,21 @@ type RuntimePolicySettings = {
   contextBudget?: "off" | "advisory" | "enforce";
   toolRegistry?: "off" | "advisory" | "enforce";
   finalGate?: "off" | "advisory" | "enforce";
+};
+
+type PermissionProfileMode = "read-only" | "workspace-write" | "trusted-full-access";
+
+type PermissionProfilesConfig = {
+  defaultMode?: PermissionProfileMode;
+  allowedModes?: PermissionProfileMode[];
+};
+
+type ResolvedPermissionProfile = {
+  mode: PermissionProfileMode;
+  source: "env" | "command" | "profile" | "default" | "invalid-env" | "invalid-profile" | "policy-fallback";
+  requested?: string;
+  warning?: string;
+  runtimeEquivalent: string;
 };
 
 type ProfileOption = {
@@ -140,6 +156,7 @@ type BasePolicy = {
   blockedCommandPatterns: string[];
   requireConfirmationPatterns: string[];
   defaultRequiredContext: string[];
+  permissionProfiles?: PermissionProfilesConfig;
   execPolicy?: ExecPolicyConfig;
   contextBudget?: ContextBudgetConfig;
   toolRegistry?: ToolRegistryConfig;
@@ -268,12 +285,36 @@ const DEFAULT_RUNTIME_POLICY: Required<RuntimePolicySettings> = {
   finalGate: "enforce"
 };
 
+const PERMISSION_PROFILE_MODES = ["read-only", "workspace-write", "trusted-full-access"] as const;
+const PERMISSION_PROFILE_ALIASES: Record<string, PermissionProfileMode> = {
+  readonly: "read-only",
+  "read_only": "read-only",
+  "read-only": "read-only",
+  workspace: "workspace-write",
+  "workspace_write": "workspace-write",
+  "workspace-write": "workspace-write",
+  "full-access": "trusted-full-access",
+  "full_access": "trusted-full-access",
+  "trusted-full-access": "trusted-full-access",
+  "trusted_full_access": "trusted-full-access",
+  "danger-full-access": "trusted-full-access",
+  "danger_full_access": "trusted-full-access"
+};
+const READ_ONLY_TOOL_NAMES = new Set(["read", "grep", "find", "ls"]);
+const WRITE_TOOL_NAMES = new Set(["write", "edit"]);
+const SHELL_TOOL_NAMES = new Set(["bash", "shell", "exec"]);
+const SESSION_PERMISSION_OVERRIDES = new Map<string, PermissionProfileMode>();
+
 const DEFAULT_POLICY: BasePolicy = {
   protectedPaths: [".git/**", "**/auth.json", "**/.env", "**/.env.*", ".pi/settings.json", ".pi/company-profile.json", ".pi/company-profile.lock.json"],
   shellProtectedPaths: [".git/**", "**/auth.json", "**/.env", "**/.env.*", ".pi/settings.json", ".pi/company-profile.json", ".pi/company-profile.lock.json"],
   blockedCommandPatterns: ["rm -rf /", "rm -rf ~", "rm -rf $HOME", "git reset --hard", "git clean -fd"],
   requireConfirmationPatterns: ["deploy", "release", "publish", "migration", "gh pr merge", "git push"],
   defaultRequiredContext: ["AGENTS.md", "README.md"],
+  permissionProfiles: {
+    defaultMode: "workspace-write",
+    allowedModes: ["read-only", "workspace-write", "trusted-full-access"]
+  },
   execPolicy: {
     defaultMode: "enforce",
     bannedPrefixSuggestions: [
@@ -304,6 +345,7 @@ const DEFAULT_POLICY: BasePolicy = {
     defaultMode: "advisory",
     alwaysAllowedTools: [
       "company_context",
+      "company_permission_status",
       "company_exec_policy_check",
       "company_context_budget",
       "company_tool_policy_check",
@@ -1241,6 +1283,108 @@ function resolveRuntimePolicy(profile: ProjectProfile): Required<RuntimePolicySe
     ...DEFAULT_RUNTIME_POLICY,
     ...(profile.runtimePolicy ?? {})
   };
+}
+
+function normalizePermissionProfileMode(value: unknown): PermissionProfileMode | undefined {
+  if (typeof value !== "string") return undefined;
+  const normalized = value.trim().toLowerCase();
+  if (!normalized) return undefined;
+  return PERMISSION_PROFILE_ALIASES[normalized];
+}
+
+function runtimeEquivalentForPermissionProfile(mode: PermissionProfileMode): string {
+  if (mode === "read-only") return "sandbox_mode=read-only";
+  if (mode === "trusted-full-access") return "sandbox_mode=danger-full-access + approval_policy=never, with Company protected-path and human-action gates still enforced";
+  return "sandbox_mode=workspace-write + approval_policy=on-request";
+}
+
+function sessionPermissionOverrideKey(ctx: ExtensionContext): string {
+  return `${ctx.cwd}\u0000${ctx.sessionManager.getSessionId()}`;
+}
+
+function permissionOverrideFromContext(ctx: ExtensionContext): PermissionProfileMode | undefined {
+  return SESSION_PERMISSION_OVERRIDES.get(sessionPermissionOverrideKey(ctx));
+}
+
+function setPermissionOverrideForContext(ctx: ExtensionContext, mode: PermissionProfileMode): void {
+  SESSION_PERMISSION_OVERRIDES.set(sessionPermissionOverrideKey(ctx), mode);
+}
+
+function permissionProfilesConfig(policy: BasePolicy): Required<PermissionProfilesConfig> {
+  const configuredDefault = normalizePermissionProfileMode(policy.permissionProfiles?.defaultMode)
+    ?? normalizePermissionProfileMode(DEFAULT_POLICY.permissionProfiles?.defaultMode)
+    ?? "workspace-write";
+  const configuredAllowed = policy.permissionProfiles?.allowedModes
+    ?.map((item) => normalizePermissionProfileMode(item))
+    .filter((item): item is PermissionProfileMode => item !== undefined)
+    ?? DEFAULT_POLICY.permissionProfiles?.allowedModes
+    ?? ["read-only", "workspace-write"];
+  const allowedModes = Array.from(new Set(configuredAllowed));
+  if (!allowedModes.length) return { defaultMode: "read-only", allowedModes: ["read-only"] };
+  return {
+    defaultMode: allowedModes.includes(configuredDefault) ? configuredDefault : "read-only",
+    allowedModes
+  };
+}
+
+function resolvePermissionProfile(
+  profile: ProjectProfile,
+  policy: BasePolicy,
+  commandOverride?: PermissionProfileMode
+): ResolvedPermissionProfile {
+  const config = permissionProfilesConfig(policy);
+  const envOverride = process.env.PI_COMPANY_PERMISSION_PROFILE?.trim();
+  const requested = envOverride || commandOverride || profile.permissionProfile;
+  const source = envOverride ? "env" : commandOverride ? "command" : profile.permissionProfile ? "profile" : "default";
+  const resolved = requested ? normalizePermissionProfileMode(requested) : config.defaultMode;
+
+  if (!resolved) {
+    const mode: PermissionProfileMode = "read-only";
+    return {
+      mode,
+      source: envOverride ? "invalid-env" : "invalid-profile",
+      requested: String(requested),
+      warning: `Invalid permission profile ${String(requested)}; failed closed to read-only.`,
+      runtimeEquivalent: runtimeEquivalentForPermissionProfile(mode)
+    };
+  }
+
+  if (!config.allowedModes.includes(resolved)) {
+    const mode: PermissionProfileMode = config.allowedModes.includes("read-only") ? "read-only" : config.allowedModes[0];
+    return {
+      mode,
+      source: "policy-fallback",
+      requested: String(requested ?? resolved),
+      warning: `Permission profile ${resolved} is not allowed by policy; using ${mode}.`,
+      runtimeEquivalent: runtimeEquivalentForPermissionProfile(mode)
+    };
+  }
+
+  return {
+    mode: resolved,
+    source,
+    requested: requested ? String(requested) : undefined,
+    runtimeEquivalent: runtimeEquivalentForPermissionProfile(resolved)
+  };
+}
+
+function isCompanyTool(toolName: string): boolean {
+  return toolName.startsWith("company_");
+}
+
+function evaluatePermissionProfileToolAccess(
+  toolName: string,
+  permissionProfile: ResolvedPermissionProfile
+): { block: boolean; reason?: string } {
+  if (permissionProfile.mode !== "read-only") return { block: false };
+  if (isCompanyTool(toolName) || READ_ONLY_TOOL_NAMES.has(toolName)) return { block: false };
+  if (WRITE_TOOL_NAMES.has(toolName)) {
+    return { block: true, reason: `Permission profile read-only blocked ${toolName}: filesystem writes are disabled.` };
+  }
+  if (SHELL_TOOL_NAMES.has(toolName)) {
+    return { block: true, reason: `Permission profile read-only blocked ${toolName}: shell execution is disabled.` };
+  }
+  return { block: true, reason: `Permission profile read-only blocked ${toolName}: only read, grep, find, ls, and company tools are allowed.` };
 }
 
 function contextBudgetConfig(policy: BasePolicy): Required<ContextBudgetConfig> {
@@ -2209,13 +2353,19 @@ export default function companyGuard(pi: ExtensionAPI) {
     const snapshot = buildUsageSnapshot(ctx, String(pi.getThinkingLevel()));
     const preflight = buildContextPreflight(snapshot, "task", 0);
     const capabilityState = verifyProjectCapabilityState(extensionDir, ctx.cwd);
+    const permissionProfile = resolvePermissionProfile(profile, policy, permissionOverrideFromContext(ctx));
     const contextHint = preflight.recommendation === "fresh-session"
       ? " Context is high; use /fresh-task or /fresh-scout for new work."
       : preflight.recommendation === "compact"
         ? " Context is warm; run /task-preflight before large work."
         : "";
-    ctx.ui.notify(`Company Pi guard loaded: ${name}${profileHint}${contextHint}`, preflight.recommendation === "fresh-session" ? "warning" : "info");
+    const permissionHint = ` permission=${permissionProfile.mode}`;
+    ctx.ui.notify(`Company Pi guard loaded: ${name}${profileHint}${permissionHint}${contextHint}`, preflight.recommendation === "fresh-session" ? "warning" : "info");
     if (!capabilityState.ok) ctx.ui.notify(capabilityState.reason ?? "Capability validation failed.", "warning");
+    if (permissionProfile.warning) ctx.ui.notify(permissionProfile.warning, "warning");
+    if (permissionProfile.mode === "trusted-full-access") {
+      ctx.ui.notify("Company permission profile trusted-full-access is active; protected paths, secret redaction, and destructive/external confirmations remain enforced.", "warning");
+    }
   });
 
   pi.on("input", async (event, ctx) => {
@@ -2343,6 +2493,7 @@ export default function companyGuard(pi: ExtensionAPI) {
     }
     const profile = loadProfileFromContext(ctx);
     const runtime = resolveRuntimePolicy(profile);
+    const permissionProfile = resolvePermissionProfile(profile, policy, permissionOverrideFromContext(ctx));
     const protectedPaths = [
       ...policy.protectedPaths,
       ...(profile.protectedPaths ?? [])
@@ -2351,8 +2502,12 @@ export default function companyGuard(pi: ExtensionAPI) {
       ...(policy.shellProtectedPaths ?? policy.protectedPaths),
       ...((profile.shellProtectedPaths ?? profile.protectedPaths) ?? [])
     ];
+    const permissionDecision = evaluatePermissionProfileToolAccess(event.toolName, permissionProfile);
+    if (permissionDecision.block) {
+      return { block: true, reason: permissionDecision.reason };
+    }
     const toolDecision = evaluateToolPolicy(event.toolName, profile, policy);
-    if (toolDecision.decision === "block") {
+    if (toolDecision.decision === "block" && permissionProfile.mode !== "trusted-full-access") {
       return { block: true, reason: `Tool registry blocked ${event.toolName}: ${toolDecision.reason}` };
     }
     const toolInput = event.input && typeof event.input === "object"
@@ -2400,8 +2555,8 @@ export default function companyGuard(pi: ExtensionAPI) {
       toolInput,
       protectedPaths,
       shellProtectedPaths,
-      capabilityState.filesystemRead,
-      capabilityState.filesystemWrite
+      permissionProfile.mode === "trusted-full-access" ? undefined : capabilityState.filesystemRead,
+      permissionProfile.mode === "trusted-full-access" ? undefined : capabilityState.filesystemWrite
     );
     if (pathDecision.block) {
       return { block: true, reason: pathDecision.reason };
@@ -2433,6 +2588,7 @@ export default function companyGuard(pi: ExtensionAPI) {
     async execute(_toolCallId, params, _signal, _onUpdate, ctx) {
       const detail = params.detail ?? "concise";
       const profile = loadProfileFromContext(ctx);
+      const permissionProfile = resolvePermissionProfile(profile, policy, permissionOverrideFromContext(ctx));
       const requiredContext = [
         ...policy.defaultRequiredContext,
         ...(profile.requiredContext ?? [])
@@ -2456,9 +2612,11 @@ export default function companyGuard(pi: ExtensionAPI) {
         requiredContext: Array.from(new Set(requiredContext)),
         verifyCommands: profile.verifyCommands ?? {},
         mcpCapabilities: profile.mcpCapabilities ?? [],
+        permissionProfile,
         memory: resolveMemorySettings(profile),
         runtimePolicy: resolveRuntimePolicy(profile),
         policy: {
+          permissionProfiles: permissionProfilesConfig(policy),
           execPolicy: execPolicyConfig(policy),
           contextBudget: contextBudgetConfig(policy),
           toolRegistry: toolRegistryConfig(policy),
@@ -2476,6 +2634,7 @@ export default function companyGuard(pi: ExtensionAPI) {
         `requiredContext: ${payload.requiredContext.join(", ") || "none"}`,
         `verifyCommands: ${Object.keys(payload.verifyCommands).join(", ") || "none"}`,
         `mcpCapabilities: ${payload.mcpCapabilities.join(", ") || "none"}`,
+        `permissionProfile: ${payload.permissionProfile.mode} (${payload.permissionProfile.runtimeEquivalent})`,
         `memory: ${payload.memory.enabled ? payload.memory.mode : "off"} (${payload.memory.summaryFile})`,
         `runtimePolicy: exec=${payload.runtimePolicy.execPolicy}, context=${payload.runtimePolicy.contextBudget}, tools=${payload.runtimePolicy.toolRegistry}, final=${payload.runtimePolicy.finalGate}`
       ].join("\n");
@@ -2488,7 +2647,48 @@ export default function companyGuard(pi: ExtensionAPI) {
   });
 
   pi.registerTool({
-    name: "company_exec_policy_check",
+    name: "company_permission_status",
+    label: "Company Permission Status",
+    description: "Return the active runtime permission profile and the Company guard boundaries that still apply.",
+    promptSnippet: "Use this when deciding whether the current session is read-only, workspace-write, or trusted-full-access.",
+    parameters: Type.Object({
+      detail: Type.Optional(StringEnum(["concise", "full"] as const))
+    }),
+    async execute(_toolCallId, params, _signal, _onUpdate, ctx) {
+      const profile = loadProfileFromContext(ctx);
+      const permissionProfile = resolvePermissionProfile(profile, policy, permissionOverrideFromContext(ctx));
+      const config = permissionProfilesConfig(policy);
+      const payload = {
+        permissionProfile,
+        allowedModes: config.allowedModes,
+        profileValue: profile.permissionProfile,
+        envOverrideActive: Boolean(process.env.PI_COMPANY_PERMISSION_PROFILE?.trim()),
+        commandOverrideActive: Boolean(permissionOverrideFromContext(ctx)),
+        boundaries: {
+          protectedPaths: "enforced",
+          shellProtectedPaths: "enforced",
+          secretRedaction: "enforced",
+          capabilityLock: "enforced when profile declares capabilityPacks",
+          destructiveExternalConfirmation: "enforced"
+        },
+        readOnlyAllowedTools: [...READ_ONLY_TOOL_NAMES].sort()
+      };
+      const text = params.detail === "full"
+        ? JSON.stringify(payload, null, 2)
+        : [
+            `permissionProfile: ${permissionProfile.mode}`,
+            `source: ${permissionProfile.source}${permissionProfile.requested ? ` (${permissionProfile.requested})` : ""}`,
+            `runtimeEquivalent: ${permissionProfile.runtimeEquivalent}`,
+            `allowedModes: ${config.allowedModes.join(", ")}`,
+            `warning: ${permissionProfile.warning ?? "none"}`,
+            "boundaries: protected-paths, secret redaction, capability lock, and destructive/external confirmations remain enforced"
+          ].join("\n");
+      return { content: [{ type: "text", text }], details: payload };
+    }
+  });
+
+	  pi.registerTool({
+	    name: "company_exec_policy_check",
     label: "Company Exec Policy Check",
     description: "Evaluate a shell command against company exec policy before running it.",
     promptSnippet: "Use this before high-impact, complex, generated, or unfamiliar shell commands.",
@@ -3143,6 +3343,87 @@ export default function companyGuard(pi: ExtensionAPI) {
       };
     }
   });
+
+  function permissionStatusText(permissionProfile: ResolvedPermissionProfile, config: Required<PermissionProfilesConfig>): string {
+    return [
+      `permissionProfile: ${permissionProfile.mode}`,
+      `source: ${permissionProfile.source}${permissionProfile.requested ? ` (${permissionProfile.requested})` : ""}`,
+      `runtimeEquivalent: ${permissionProfile.runtimeEquivalent}`,
+      `allowedModes: ${config.allowedModes.join(", ")}`,
+      `warning: ${permissionProfile.warning ?? "none"}`,
+      "boundaries: protected-paths, secret redaction, capability lock, and destructive/external confirmations remain enforced"
+    ].join("\n");
+  }
+
+  function emitPermissionStatus(ctx: ExtensionContext, permissionProfile: ResolvedPermissionProfile): void {
+    const config = permissionProfilesConfig(policy);
+    pi.sendMessage(
+      {
+        customType: "company-permission-profile",
+        content: permissionStatusText(permissionProfile, config),
+        display: true,
+        details: {
+          permissionProfile,
+          allowedModes: config.allowedModes,
+          envOverrideActive: Boolean(process.env.PI_COMPANY_PERMISSION_PROFILE?.trim()),
+          commandOverrideActive: Boolean(permissionOverrideFromContext(ctx)),
+          boundaries: {
+            protectedPaths: "enforced",
+            shellProtectedPaths: "enforced",
+            secretRedaction: "enforced",
+            capabilityLock: "enforced when profile declares capabilityPacks",
+            destructiveExternalConfirmation: "enforced"
+          }
+        }
+      },
+      { triggerTurn: false }
+    );
+  }
+
+  function registerPermissionProfileCommand(
+    name: string,
+    mode: PermissionProfileMode,
+    description: string
+  ): void {
+    pi.registerCommand(name, {
+      description,
+      handler: async (args, ctx) => {
+        const request = String(args ?? "").trim();
+        setPermissionOverrideForContext(ctx, mode);
+        const profile = loadProfileFromContext(ctx);
+        const permissionProfile = resolvePermissionProfile(profile, policy, permissionOverrideFromContext(ctx));
+        const isActive = permissionProfile.mode === mode && !permissionProfile.warning;
+        const level = !isActive || mode === "trusted-full-access" ? "warning" : "info";
+        const message = isActive
+          ? `Company permission profile set to ${mode} for this session.`
+          : `Requested ${mode}, but active profile is ${permissionProfile.mode}.`;
+        ctx.ui.notify(message, level);
+        if (permissionProfile.warning) ctx.ui.notify(permissionProfile.warning, "warning");
+        if (permissionProfile.mode === "trusted-full-access") {
+          ctx.ui.notify("Trusted full access is active; protected paths, secret redaction, and destructive/external confirmations remain enforced.", "warning");
+        }
+        emitPermissionStatus(ctx, permissionProfile);
+        if (request) {
+          pi.sendUserMessage(request, { deliverAs: "followUp" });
+        }
+      }
+    });
+  }
+
+  pi.registerCommand("permission-status", {
+    description: "Show the active runtime permission profile and guard boundaries",
+    handler: async (_args, ctx) => {
+      const profile = loadProfileFromContext(ctx);
+      const permissionProfile = resolvePermissionProfile(profile, policy, permissionOverrideFromContext(ctx));
+      ctx.ui.notify(`Company permission profile: ${permissionProfile.mode}`, permissionProfile.mode === "trusted-full-access" ? "warning" : "info");
+      emitPermissionStatus(ctx, permissionProfile);
+    }
+  });
+
+  registerPermissionProfileCommand("read-only", "read-only", "Switch this session to read-only permission profile");
+  registerPermissionProfileCommand("workspace-write", "workspace-write", "Switch this session to workspace-write permission profile");
+  registerPermissionProfileCommand("full-access", "trusted-full-access", "Switch this session to trusted full-access permission profile");
+  registerPermissionProfileCommand("trusted-full-access", "trusted-full-access", "Alias for /full-access");
 
   pi.registerCommand("company-status", {
     description: "Show company Pi profile and guard state",

@@ -3,6 +3,7 @@
   "projectId": "be-readonly-fe-project",
   "displayName": "Backend Readonly / Frontend Write Project",
   "mode": "be-readonly-fe",
+  "permissionProfile": "workspace-write",
   "rootMarkers": [
     "AGENTS.md",
     "README.md",

@@ -33,7 +33,7 @@ Một lệnh setup đầy đủ:
 ```bash
 bash /path/to/pi_agent/scripts/setup.sh . \
   --profile auto \
-  --package-source git:github.com/Vt-mmm/pi_agent@v0.4.2 \
+  --package-source git:github.com/Vt-mmm/pi_agent@v0.4.4 \
   --mcp-preset core \
   --subagents-preset safe
 ```
@@ -41,7 +41,7 @@ bash /path/to/pi_agent/scripts/setup.sh . \
 Nếu chỉ cài global:
 
 ```bash
-pi install git:github.com/Vt-mmm/pi_agent@v0.4.2
+pi install git:github.com/Vt-mmm/pi_agent@v0.4.4
 pi install npm:pi-subagents@0.35.1
 bash /path/to/pi_agent/scripts/configure-subagents.sh --preset safe
 ```

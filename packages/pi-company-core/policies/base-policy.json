@@ -46,6 +46,14 @@
     "AGENTS.md",
     "README.md"
   ],
+  "permissionProfiles": {
+    "defaultMode": "workspace-write",
+    "allowedModes": [
+      "read-only",
+      "workspace-write",
+      "trusted-full-access"
+    ]
+  },
   "execPolicy": {
     "defaultMode": "enforce",
     "bannedPrefixSuggestions": [
@@ -98,6 +106,7 @@
     "defaultMode": "advisory",
     "alwaysAllowedTools": [
       "company_context",
+      "company_permission_status",
       "company_exec_policy_check",
       "company_context_budget",
       "company_tool_policy_check",

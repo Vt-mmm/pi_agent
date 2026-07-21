@@ -77,6 +77,11 @@ Các command này đến từ package `pi-company-core`.
 | Command | Dịch nghĩa | Dùng khi nào | Kết quả mong đợi |
 |---|---|---|---|
 | `/company-commands` | Bảng hướng dẫn command | Khi không nhớ command hoặc muốn giải thích cho team mới. | Agent tóm tắt command theo đúng ngữ cảnh project. |
+| `/permission-status` | Xem quyền runtime | Khi muốn biết session đang là read-only, workspace-write, hay full-access. | Hiện active permission profile và guard boundary còn giữ. |
+| `/read-only` | Chuyển session sang read-only | Khi chỉ muốn scout/audit/review, không sửa source. | Shell/write/unknown tool bị chặn trước execution. |
+| `/workspace-write` | Chuyển session sang write chuẩn | Khi quay về mode implement bình thường. | Guard trở về profile implementation mặc định. |
+| `/full-access` | Bật trusted full-access | Khi repo đã trusted và muốn agent có quyền workspace rộng hơn. | Tool/scope autonomy được nới trong session; protected paths/redaction/human gates vẫn bật. |
+| `/full-access <task>` | Bật full-access rồi chạy task | Khi muốn một lệnh vừa cấp quyền vừa giao việc. | Session chuyển sang `trusted-full-access`, phần `<task>` được gửi tiếp cho agent. |
 | `/onboard-project` | Đọc project lần đầu | Lần đầu gắn repo vào Pi, sau `/login` và `/model`. | Tạo/cập nhật `.pi/company-profile.json`, `.pi/project-context.md`, `.pi/memory/*`. |
 | `/profiles` | Xem/chọn profile | Khi muốn đổi role làm việc: FE, BE, fullstack, docs, data, DevOps. | Hiện profile có sẵn và tradeoff. |
 | `/profiles apply <profile>` | Áp profile | Khi đã biết profile muốn dùng. | Ghi profile vào `.pi/company-profile.json`. |
@@ -325,10 +330,12 @@ Các lệnh này chạy ngoài Pi.
 | Command | Dùng khi nào |
 |---|---|
 | `npm install -g @earendil-works/pi-coding-agent` | Cài Pi CLI lần đầu. |
-| `pi install git:github.com/Vt-mmm/pi_agent@v0.4.2` | Cài package platform từ GitHub. |
+| `pi install git:github.com/Vt-mmm/pi_agent@v0.4.4` | Cài package platform từ GitHub. |
 | `pi list --approve` | Xem package Pi đã install. |
 | `pi-company-auto` | Mở Pi với project trust `--approve` cho lần chạy hiện tại; guard vẫn bật. |
-| `pi-company-auto --read-only -p "<task>"` | Auto-run scout/read-only với tool set `read,grep,find,ls`. |
+| `pi-company-auto --read-only -p "<task>"` | Auto-run scout/read-only; guard chặn shell/write/unknown tool. |
+| `pi-company-auto --full-access -p "<task>"` | Trusted automation style; không tắt protected paths/redaction/human gates. |
+| `pi` rồi `/full-access <task>` | Một lệnh trong Pi để bật full-access cho session và giao task. |
 | `pi --list-models` | Xem model Pi thấy được theo credentials hiện tại. |
 | `pi-company-install --with-mcp --with-subagents` | Cài global package + MCP + subagent baseline từ package bin. |
 | `pi-company-setup <project> --profile auto` | Setup đầy đủ cho một project khi muốn preseed bằng bin. |

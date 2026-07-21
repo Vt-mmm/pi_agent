@@ -12,8 +12,8 @@
       },
       "artifacts": [
         {
-          "byteSize": 1859,
-          "digest": "sha256:b622344f2eb050876b15c2309790aaf1b2a948aea17df8029c0a2a018a9bbe1b",
+          "byteSize": 1901,
+          "digest": "sha256:5ee5f42e877537f286f54f2b222754ef8695f07b677f6d127fb23704625d456f",
           "id": "generic",
           "kind": "adapters",
           "path": "adapters/generic/profile.json"
@@ -26,8 +26,8 @@
           "path": "evals/scenarios/capability-resolution.json"
         },
         {
-          "byteSize": 3439,
-          "digest": "sha256:e40c9ac62b71b6e646a944e371ae55fb1f3ffc58ccd15885eeded509e06e7aba",
+          "byteSize": 3643,
+          "digest": "sha256:783f7648855f7486ce717e73f8a282a627d969c40f97d1fee8babbc9eb059412",
           "id": "base-policy",
           "kind": "policies",
           "path": "packages/pi-company-core/policies/base-policy.json"
@@ -135,8 +135,8 @@
       },
       "artifacts": [
         {
-          "byteSize": 1908,
-          "digest": "sha256:e888e72e0f61d64595a79c02bded7fcf3c7e8fbacc3133f9fc761f6f8d8fc584",
+          "byteSize": 1950,
+          "digest": "sha256:78d94699a8b24651799106603ec3c708c427e8a1076467530d0eb18786f2b6a1",
           "id": "web-frontend",
           "kind": "adapters",
           "path": "adapters/web-frontend/profile.json"

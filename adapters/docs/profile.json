@@ -3,6 +3,7 @@
   "projectId": "docs-project",
   "displayName": "Documentation Project",
   "mode": "docs",
+  "permissionProfile": "workspace-write",
   "rootMarkers": [
     "AGENTS.md",
     "README.md",

@@ -95,6 +95,7 @@ function createProject(root) {
       test: ["npm test"]
     },
     mcpCapabilities: ["filesystem-readonly", "filesystem-write", "shell"],
+    permissionProfile: "workspace-write",
     runtimePolicy: {
       execPolicy: "enforce",
       contextBudget: "enforce",
@@ -120,6 +121,9 @@ function createPiHarness() {
     },
     registerCommand(name, command) {
       commands.set(name, command);
+    },
+    sendUserMessage(message, options) {
+      entries.push({ type: "user-message", payload: { message, options } });
     },
     sendMessage(message) {
       entries.push({ type: "message", payload: message });
@@ -191,11 +195,148 @@ describe("company guard integration", () => {
     companyGuard(harness.pi);
     await harness.handlers.get("session_start")({}, ctx);
 
-    assert.equal(harness.tools.size, 19);
-    assert.equal(harness.commands.size, 7);
+    assert.equal(harness.tools.size, 20);
+    assert.equal(harness.commands.size, 12);
     assert.deepEqual([...harness.handlers.keys()].sort(), ["input", "session_start", "tool_call", "tool_result"]);
     assert.equal(harness.getSessionName(), "pi:Integration Project");
     assert.match(ctx.ui.notices[0].message, /Company Pi guard loaded: Integration Project/);
+    assert.match(ctx.ui.notices[0].message, /permission=workspace-write/);
+  });
+
+  it("switches the current session permission profile with slash commands", async () => {
+    const { root, companyGuard } = await loadGuardFixture();
+    const cwd = createProject(root);
+    const profilePath = path.join(cwd, ".pi", "company-profile.json");
+    const profile = JSON.parse(fs.readFileSync(profilePath, "utf8"));
+    profile.permissionProfile = "read-only";
+    fs.writeFileSync(profilePath, `${JSON.stringify(profile, null, 2)}\n`);
+    const ctx = createContext(cwd);
+    const harness = createPiHarness();
+    companyGuard(harness.pi);
+
+    const toolCall = harness.handlers.get("tool_call");
+    const blockedBefore = await callToolCall(toolCall, ctx, "write", { path: "src/index.ts", content: "x" });
+    assert.equal(blockedBefore.block, true);
+    assert.match(blockedBefore.reason, /read-only/);
+
+    await harness.commands.get("full-access").handler("Implement the requested safe change.", ctx);
+
+    const status = await harness.tools.get("company_permission_status").execute(
+      "permission-command-test",
+      { detail: "full" },
+      undefined,
+      () => {},
+      ctx
+    );
+    assert.equal(status.details.permissionProfile.mode, "trusted-full-access");
+    assert.equal(status.details.permissionProfile.source, "command");
+    assert.equal(status.details.commandOverrideActive, true);
+    assert.equal(harness.entries.some((entry) => entry.type === "user-message" && entry.payload.message === "Implement the requested safe change."), true);
+
+    const allowedWrite = await callToolCall(toolCall, ctx, "write", { path: "src/index.ts", content: "x" });
+    const protectedRead = await callToolCall(toolCall, ctx, "read", { path: ".env" });
+    assert.notEqual(allowedWrite.block, true);
+    assert.equal(protectedRead.block, true);
+    assert.match(protectedRead.reason, /protected path/);
+  });
+
+  it("keeps launch environment permission override stronger than slash commands", async () => {
+    const previousPermissionProfile = process.env.PI_COMPANY_PERMISSION_PROFILE;
+    try {
+      process.env.PI_COMPANY_PERMISSION_PROFILE = "read-only";
+      const { root, companyGuard } = await loadGuardFixture();
+      const cwd = createProject(root);
+      const ctx = createContext(cwd);
+      const harness = createPiHarness();
+      companyGuard(harness.pi);
+
+      await harness.commands.get("full-access").handler("", ctx);
+      const status = await harness.tools.get("company_permission_status").execute(
+        "permission-env-precedence-test",
+        { detail: "full" },
+        undefined,
+        () => {},
+        ctx
+      );
+      assert.equal(status.details.permissionProfile.mode, "read-only");
+      assert.equal(status.details.permissionProfile.source, "env");
+      assert.equal(status.details.commandOverrideActive, true);
+
+      const blockedWrite = await callToolCall(harness.handlers.get("tool_call"), ctx, "write", { path: "src/index.ts", content: "x" });
+      assert.equal(blockedWrite.block, true);
+      assert.match(blockedWrite.reason, /read-only/);
+    } finally {
+      if (previousPermissionProfile === undefined) delete process.env.PI_COMPANY_PERMISSION_PROFILE;
+      else process.env.PI_COMPANY_PERMISSION_PROFILE = previousPermissionProfile;
+    }
+  });
+
+  it("reports and enforces a read-only permission profile", async () => {
+    const { root, companyGuard } = await loadGuardFixture();
+    const cwd = createProject(root);
+    const profilePath = path.join(cwd, ".pi", "company-profile.json");
+    const profile = JSON.parse(fs.readFileSync(profilePath, "utf8"));
+    profile.permissionProfile = "read-only";
+    fs.writeFileSync(profilePath, `${JSON.stringify(profile, null, 2)}\n`);
+    const ctx = createContext(cwd);
+    const harness = createPiHarness();
+    companyGuard(harness.pi);
+
+    const status = await harness.tools.get("company_permission_status").execute(
+      "permission-status-test",
+      { detail: "full" },
+      undefined,
+      () => {},
+      ctx
+    );
+    assert.equal(status.details.permissionProfile.mode, "read-only");
+    assert.equal(status.details.permissionProfile.source, "profile");
+
+    const toolCall = harness.handlers.get("tool_call");
+    const allowedRead = await callToolCall(toolCall, ctx, "read", { path: "README.md" });
+    const blockedWrite = await callToolCall(toolCall, ctx, "write", { path: "src/index.ts", content: "x" });
+    const blockedShell = await callToolCall(toolCall, ctx, "bash", { command: "echo ok" });
+    const blockedCustom = await callToolCall(toolCall, ctx, "custom_reader", { path: "README.md" });
+    const allowedCompany = await callToolCall(toolCall, ctx, "company_context", {});
+
+    assert.notEqual(allowedRead.block, true);
+    assert.equal(blockedWrite.block, true);
+    assert.match(blockedWrite.reason, /read-only/);
+    assert.equal(blockedShell.block, true);
+    assert.match(blockedShell.reason, /shell execution is disabled/);
+    assert.equal(blockedCustom.block, true);
+    assert.match(blockedCustom.reason, /only read, grep, find, ls, and company tools/);
+    assert.notEqual(allowedCompany.block, true);
+  });
+
+  it("keeps protected paths and destructive confirmations active under trusted-full-access", async () => {
+    const { root, companyGuard } = await loadGuardFixture();
+    const cwd = createProject(root);
+    const profilePath = path.join(cwd, ".pi", "company-profile.json");
+    const profile = JSON.parse(fs.readFileSync(profilePath, "utf8"));
+    profile.permissionProfile = "trusted-full-access";
+    profile.runtimePolicy.toolRegistry = "enforce";
+    profile.mcpCapabilities = [];
+    fs.writeFileSync(profilePath, `${JSON.stringify(profile, null, 2)}\n`);
+    const ctx = createContext(cwd);
+    const harness = createPiHarness();
+    companyGuard(harness.pi);
+    await harness.handlers.get("session_start")({}, ctx);
+
+    assert.equal(ctx.ui.notices.some((notice) => /trusted-full-access is active/.test(notice.message)), true);
+    const toolCall = harness.handlers.get("tool_call");
+    const customSafeRead = await callToolCall(toolCall, ctx, "custom_reader", { path: "README.md" });
+    const protectedRead = await callToolCall(toolCall, ctx, "custom_reader", { path: ".env" });
+    const protectedShell = await callToolCall(toolCall, ctx, "bash", { command: "cat .env" });
+    const destructivePrompt = await callToolCall(toolCall, ctx, "bash", { command: "git push" });
+
+    assert.notEqual(customSafeRead.block, true);
+    assert.equal(protectedRead.block, true);
+    assert.match(protectedRead.reason, /protected path/);
+    assert.equal(protectedShell.block, true);
+    assert.match(protectedShell.reason, /protected path/);
+    assert.equal(destructivePrompt.block, true);
+    assert.match(destructivePrompt.reason, /User denied command|Confirmation required/);
   });
 
   it("applies a profile with a matching deterministic capability lock", async () => {
@@ -289,6 +430,51 @@ describe("company guard integration", () => {
     assert.equal(symlinkedDirectoryWrite.block, true);
     assert.match(symlinkedDirectoryWrite.reason, /symbolic link/);
     assert.equal(absoluteOutsideRead.block, true);
+  });
+
+  it("lets trusted-full-access use full workspace scope without bypassing protected paths", async () => {
+    const previousPermissionProfile = process.env.PI_COMPANY_PERMISSION_PROFILE;
+    try {
+      const { root, companyGuard } = await loadGuardFixture();
+      const manifestPath = path.join(root, "packs", "engineering-base", "pack.json");
+      const manifest = JSON.parse(fs.readFileSync(manifestPath, "utf8"));
+      manifest.spec.permissions.filesystemRead = ["src/**"];
+      manifest.spec.permissions.filesystemWrite = ["src/**"];
+      fs.writeFileSync(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`);
+      const adapterPath = path.join(root, "adapters", "generic", "profile.json");
+      const adapter = JSON.parse(fs.readFileSync(adapterPath, "utf8"));
+      adapter.capabilityPolicy.allowedFilesystemRead = ["src/**"];
+      adapter.capabilityPolicy.allowedFilesystemWrite = ["src/**"];
+      fs.writeFileSync(adapterPath, `${JSON.stringify(adapter, null, 2)}\n`);
+
+      const cwd = createProject(root);
+      const ctx = createContext(cwd);
+      const harness = createPiHarness();
+      companyGuard(harness.pi);
+      const applied = await harness.tools.get("company_profile_apply").execute(
+        "full-access-scope-profile",
+        { profile: "generic", overwrite: true },
+        undefined,
+        () => {},
+        ctx
+      );
+      assert.equal(applied.isError, undefined);
+
+      const toolCall = harness.handlers.get("tool_call");
+      const scopedRead = await callToolCall(toolCall, ctx, "read", { path: "README.md" });
+      process.env.PI_COMPANY_PERMISSION_PROFILE = "trusted-full-access";
+      const fullAccessRead = await callToolCall(toolCall, ctx, "read", { path: "README.md" });
+      const fullAccessSecret = await callToolCall(toolCall, ctx, "read", { path: ".env" });
+
+      assert.equal(scopedRead.block, true);
+      assert.match(scopedRead.reason, /outside resolved filesystem scope/);
+      assert.notEqual(fullAccessRead.block, true);
+      assert.equal(fullAccessSecret.block, true);
+      assert.match(fullAccessSecret.reason, /protected path/);
+    } finally {
+      if (previousPermissionProfile === undefined) delete process.env.PI_COMPANY_PERMISSION_PROFILE;
+      else process.env.PI_COMPANY_PERMISSION_PROFILE = previousPermissionProfile;
+    }
   });
 
   it("collapses pasted mandatory-flow boilerplate before agent processing", async () => {

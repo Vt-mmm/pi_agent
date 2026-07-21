@@ -3,6 +3,7 @@
   "projectId": "fullstack-project",
   "displayName": "Fullstack Project",
   "mode": "fullstack",
+  "permissionProfile": "workspace-write",
   "rootMarkers": [
     "AGENTS.md",
     "README.md",

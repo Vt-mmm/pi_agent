@@ -3,6 +3,7 @@
   "projectId": "data-project",
   "displayName": "Data / ETL Project",
   "mode": "data",
+  "permissionProfile": "workspace-write",
   "rootMarkers": [
     "AGENTS.md",
     "README.md",
