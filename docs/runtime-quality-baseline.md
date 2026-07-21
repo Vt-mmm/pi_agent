@@ -2,7 +2,7 @@
 
 ## Mục tiêu
 
-`v0.3.23` định nghĩa bộ kiểm soát runtime để Pi Agent Platform có thể chạy task một cách có kỷ luật cho solo, internal team, và public package.
+`v0.4.0` định nghĩa bộ kiểm soát runtime để Pi Agent Platform có thể chạy task một cách có kỷ luật cho solo, internal team, và public package.
 
 Các module chính:
 

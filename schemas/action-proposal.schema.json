@@ -1,0 +1,90 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Vt-mmm/pi_agent/schemas/action-proposal.schema.json",
+  "title": "Pi Company External Action Proposal",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["apiVersion", "kind", "metadata", "spec"],
+  "properties": {
+    "apiVersion": { "const": "pi.company/v1alpha1" },
+    "kind": { "const": "ExternalActionProposal" },
+    "metadata": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "createdAt", "expiresAt"],
+      "properties": {
+        "name": { "$ref": "capability-pack.schema.json#/$defs/name" },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z$"
+        },
+        "expiresAt": {
+          "type": "string",
+          "format": "date-time",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z$"
+        }
+      }
+    },
+    "spec": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["actionType", "target", "summary", "riskLane", "requestedPermissions", "artifacts", "dryRun", "security"],
+      "properties": {
+        "actionType": { "$ref": "capability-pack.schema.json#/$defs/actionType" },
+        "target": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["provider", "resource"],
+          "properties": {
+            "provider": { "$ref": "capability-pack.schema.json#/$defs/name" },
+            "resource": { "type": "string", "minLength": 1, "maxLength": 256 },
+            "environment": { "$ref": "capability-pack.schema.json#/$defs/name" }
+          }
+        },
+        "summary": { "type": "string", "minLength": 1, "maxLength": 500 },
+        "riskLane": { "const": "high-risk" },
+        "requestedPermissions": {
+          "type": "array",
+          "maxItems": 32,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128,
+            "pattern": "^[a-z0-9][a-z0-9:-]{0,127}$"
+          }
+        },
+        "artifacts": {
+          "type": "array",
+          "maxItems": 32,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["path", "digest", "mediaType", "byteSize"],
+            "properties": {
+              "path": { "$ref": "capability-pack.schema.json#/$defs/relativePath" },
+              "digest": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+              "mediaType": {
+                "type": "string",
+                "minLength": 3,
+                "maxLength": 128,
+                "pattern": "^[a-zA-Z0-9][a-zA-Z0-9.+-]*\\/[a-zA-Z0-9][a-zA-Z0-9.+-]*$"
+              },
+              "byteSize": { "type": "integer", "minimum": 0, "maximum": 10485760 }
+            }
+          }
+        },
+        "dryRun": { "const": true },
+        "security": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["containsSecrets"],
+          "properties": {
+            "containsSecrets": { "const": false }
+          }
+        }
+      }
+    }
+  }
+}

@@ -55,10 +55,11 @@ function writeRuntimeStubs(root) {
 
 function copyCompanyPackage(root) {
   const packageRoot = path.join(root, "packages", "pi-company-core");
-  fs.mkdirSync(packageRoot, { recursive: true });
-  fs.copyFileSync(path.join(repoRoot, "packages", "pi-company-core", "package.json"), path.join(packageRoot, "package.json"));
-  fs.cpSync(path.join(repoRoot, "packages", "pi-company-core", "extensions"), path.join(packageRoot, "extensions"), { recursive: true });
-  fs.cpSync(path.join(repoRoot, "packages", "pi-company-core", "policies"), path.join(packageRoot, "policies"), { recursive: true });
+  fs.cpSync(path.join(repoRoot, "packages", "pi-company-core"), packageRoot, { recursive: true });
+  fs.copyFileSync(path.join(repoRoot, "package.json"), path.join(root, "package.json"));
+  fs.cpSync(path.join(repoRoot, "adapters"), path.join(root, "adapters"), { recursive: true });
+  fs.cpSync(path.join(repoRoot, "packs"), path.join(root, "packs"), { recursive: true });
+  fs.cpSync(path.join(repoRoot, "evals"), path.join(root, "evals"), { recursive: true });
   return packageRoot;
 }
 
@@ -197,6 +198,99 @@ describe("company guard integration", () => {
     assert.match(ctx.ui.notices[0].message, /Company Pi guard loaded: Integration Project/);
   });
 
+  it("applies a profile with a matching deterministic capability lock", async () => {
+    const { root, companyGuard } = await loadGuardFixture();
+    const cwd = createProject(root);
+    const ctx = createContext(cwd);
+    const harness = createPiHarness();
+    companyGuard(harness.pi);
+
+    const result = await harness.tools.get("company_profile_apply").execute(
+      "profile-apply-test",
+      { profile: "generic", overwrite: true, projectId: "locked-project", displayName: "Locked Project" },
+      undefined,
+      () => {},
+      ctx
+    );
+
+    assert.equal(result.isError, undefined);
+    assert.match(result.content[0].text, /company-profile.lock.json/);
+    const profile = JSON.parse(fs.readFileSync(path.join(cwd, ".pi", "company-profile.json"), "utf8"));
+    const lock = JSON.parse(fs.readFileSync(path.join(cwd, ".pi", "company-profile.lock.json"), "utf8"));
+    assert.equal(profile.projectId, "locked-project");
+    assert.equal(lock.profile.projectId, "locked-project");
+    assert.deepEqual(lock.packs.map((pack) => pack.name), ["engineering-base"]);
+    assert.deepEqual(lock.permissions.externalActions, []);
+    assert.deepEqual(lock.permissions.networkDomains, []);
+
+    await harness.handlers.get("session_start")({}, ctx);
+    lock.profile.digest = `sha256:${"0".repeat(64)}`;
+    fs.writeFileSync(path.join(cwd, ".pi", "company-profile.lock.json"), `${JSON.stringify(lock, null, 2)}\n`);
+    const blockedAfterTamper = await callToolCall(harness.handlers.get("tool_call"), ctx, "bash", { command: "echo should-not-run" });
+    assert.equal(blockedAfterTamper.block, true);
+    assert.match(blockedAfterTamper.reason, /does not match/);
+  });
+
+  it("enforces resolved filesystem scopes for path-like tools", async () => {
+    const { root, companyGuard } = await loadGuardFixture();
+    const manifestPath = path.join(root, "packs", "engineering-base", "pack.json");
+    const manifest = JSON.parse(fs.readFileSync(manifestPath, "utf8"));
+    manifest.spec.permissions.filesystemRead = ["src/**"];
+    manifest.spec.permissions.filesystemWrite = ["src/**"];
+    fs.writeFileSync(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`);
+    const adapterPath = path.join(root, "adapters", "generic", "profile.json");
+    const adapter = JSON.parse(fs.readFileSync(adapterPath, "utf8"));
+    adapter.capabilityPolicy.allowedFilesystemRead = ["src/**"];
+    adapter.capabilityPolicy.allowedFilesystemWrite = ["src/**"];
+    fs.writeFileSync(adapterPath, `${JSON.stringify(adapter, null, 2)}\n`);
+
+    const cwd = createProject(root);
+    fs.mkdirSync(path.join(cwd, "other-dir"), { recursive: true });
+    fs.symlinkSync("../.env", path.join(cwd, "src", "config-link"));
+    fs.symlinkSync("../other-dir", path.join(cwd, "src", "output-link"));
+    const ctx = createContext(cwd);
+    const harness = createPiHarness();
+    companyGuard(harness.pi);
+    const applied = await harness.tools.get("company_profile_apply").execute(
+      "scoped-profile-test",
+      { profile: "generic", overwrite: true },
+      undefined,
+      () => {},
+      ctx
+    );
+    assert.equal(applied.isError, undefined);
+
+    const toolCall = harness.handlers.get("tool_call");
+    const outsideRead = await callToolCall(toolCall, ctx, "read", { path: "README.md" });
+    const insideRead = await callToolCall(toolCall, ctx, "read", { path: "src/index.ts" });
+    const outsideWrite = await callToolCall(toolCall, ctx, "write", { path: "notes.txt", content: "x" });
+    const insideWrite = await callToolCall(toolCall, ctx, "write", { path: "src/index.ts", content: "x" });
+    const scopedGrep = await callToolCall(toolCall, ctx, "grep", { pattern: "export", path: "src", glob: "*.ts" });
+    const escapingGrep = await callToolCall(toolCall, ctx, "grep", { pattern: "Fixture", path: "src", glob: "../*.md" });
+    const companyEnum = await callToolCall(toolCall, ctx, "company_memory_note", { note: "bounded", source: "explicit-user-request" });
+    const defaultGrep = await callToolCall(toolCall, ctx, "grep", { pattern: "export" });
+    const defaultFind = await callToolCall(toolCall, ctx, "find", { pattern: "*.ts" });
+    const defaultList = await callToolCall(toolCall, ctx, "ls", {});
+    const symlinkedSecretRead = await callToolCall(toolCall, ctx, "read", { path: "src/config-link" });
+    const symlinkedDirectoryWrite = await callToolCall(toolCall, ctx, "write", { path: "src/output-link/file.txt", content: "x" });
+    const absoluteOutsideRead = await callToolCall(toolCall, ctx, "read", { path: path.join(root, "outside.txt") });
+    assert.equal(outsideRead.block, true);
+    assert.notEqual(insideRead.block, true);
+    assert.equal(outsideWrite.block, true);
+    assert.notEqual(insideWrite.block, true);
+    assert.notEqual(scopedGrep.block, true);
+    assert.equal(escapingGrep.block, true);
+    assert.notEqual(companyEnum.block, true);
+    assert.equal(defaultGrep.block, true);
+    assert.equal(defaultFind.block, true);
+    assert.equal(defaultList.block, true);
+    assert.equal(symlinkedSecretRead.block, true);
+    assert.match(symlinkedSecretRead.reason, /symbolic link/);
+    assert.equal(symlinkedDirectoryWrite.block, true);
+    assert.match(symlinkedDirectoryWrite.reason, /symbolic link/);
+    assert.equal(absoluteOutsideRead.block, true);
+  });
+
   it("collapses pasted mandatory-flow boilerplate before agent processing", async () => {
     const { root, companyGuard } = await loadGuardFixture();
     const cwd = createProject(root);
@@ -292,6 +386,7 @@ describe("company guard integration", () => {
   it("blocks raw access to secrets, guard state, and guard profile without false positives", async () => {
     const { root, companyGuard } = await loadGuardFixture();
     const cwd = createProject(root);
+    fs.symlinkSync("../.env", path.join(cwd, "src", "config-link"));
     const ctx = createContext(cwd);
     const harness = createPiHarness();
     companyGuard(harness.pi);
@@ -299,10 +394,19 @@ describe("company guard integration", () => {
 
     const blocked = [
       ["bash", { command: "cat .env" }],
+      ["bash", { command: "cat .ENV" }],
+      ["bash", { command: "printf x > .Env.Local" }],
+      ["bash", { command: "cat src/config-link" }],
       ["bash", { command: "cat .pi/company-profile.json" }],
+      ["bash", { command: "cat .pi/company-profile.lock.json" }],
+      ["bash", { command: "cat .pi/settings.json" }],
       ["bash", { command: "echo forged >> .pi/company-state/observed-bash.jsonl" }],
       ["read", { path: ".env" }],
+      ["read", { path: ".ENV" }],
+      ["read", { path: "src/config-link" }],
       ["read", { path: ".pi/company-profile.json" }],
+      ["read", { path: ".pi/company-profile.lock.json" }],
+      ["read", { path: ".pi/settings.json" }],
       ["read", { file_path: ".pi/company-profile.json" }],
       ["read", { path: ".pi/company-state/tasks/x.json" }],
       ["grep", { pattern: ".", path: ".env", context: 5 }],
@@ -341,11 +445,16 @@ describe("company guard integration", () => {
       ["mcp__fs__read", nestedInput(32, { path: ".env" })],
       ["mcp__fs__read", nestedInput(33, { path: "README.md" })],
       ["write", { path: ".env", content: "x" }],
+      ["write", { path: ".ENV", content: "x" }],
       ["write", { path: ".pi/company-state/observed-bash.jsonl", content: "x" }],
       ["write", { file_path: ".pi/company-state/observed-bash.jsonl", content: "x" }],
       ["write", { path: ".pi/company-state/tasks/x.json", content: "x" }],
       ["write", { path: ".pi/company-profile.json", content: "{}" }],
-      ["edit", { path: ".pi/company-profile.json", old: "x", new: "y" }]
+      ["write", { path: ".pi/company-profile.lock.json", content: "{}" }],
+      ["write", { path: ".pi/settings.json", content: "{}" }],
+      ["edit", { path: ".pi/company-profile.json", old: "x", new: "y" }],
+      ["edit", { path: ".pi/company-profile.lock.json", old: "x", new: "y" }],
+      ["edit", { path: ".pi/settings.json", old: "x", new: "y" }]
     ];
 
     for (const [toolName, input] of blocked) {

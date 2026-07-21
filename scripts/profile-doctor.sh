@@ -47,7 +47,50 @@ const protectedPaths = requireArray("protectedPaths");
 const requiredContext = requireArray("requiredContext");
 const mcpCapabilities = requireArray("mcpCapabilities");
 
-if (!profile.verifyCommands || typeof profile.verifyCommands !== "object") {
+const capabilityPacks = profile.capabilityPacks ?? [];
+if (!Array.isArray(capabilityPacks)) {
+  errors.push("capabilityPacks must be an array");
+} else {
+  const seenPacks = new Set();
+  for (const [index, pack] of capabilityPacks.entries()) {
+    if (!pack || typeof pack !== "object" || Array.isArray(pack)) {
+      errors.push(`capabilityPacks[${index}] must be an object`);
+      continue;
+    }
+    if (!/^[a-z0-9][a-z0-9-]{0,63}$/.test(pack.name ?? "")) {
+      errors.push(`capabilityPacks[${index}].name is invalid`);
+    }
+    if (!/^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-[0-9A-Za-z.-]+)?$/.test(pack.version ?? "")) {
+      errors.push(`capabilityPacks[${index}].version is invalid`);
+    }
+    const key = `${pack.name}@${pack.version}`;
+    if (seenPacks.has(key)) errors.push(`capabilityPacks contains duplicate ${key}`);
+    seenPacks.add(key);
+  }
+}
+
+const defaultCapabilityPolicy = {
+  allowedOwners: [],
+  allowedLifecycles: [],
+  allowedFilesystemRead: [],
+  allowedFilesystemWrite: [],
+  allowedNetworkDomains: [],
+  allowedExternalActions: []
+};
+const capabilityPolicy = profile.capabilityPolicy && typeof profile.capabilityPolicy === "object" && !Array.isArray(profile.capabilityPolicy)
+  ? profile.capabilityPolicy
+  : defaultCapabilityPolicy;
+if (profile.capabilityPolicy !== undefined && capabilityPolicy === defaultCapabilityPolicy) errors.push("capabilityPolicy must be an object");
+for (const key of ["allowedOwners", "allowedLifecycles", "allowedFilesystemRead", "allowedFilesystemWrite", "allowedNetworkDomains", "allowedExternalActions"]) {
+  if (!Array.isArray(capabilityPolicy[key])) errors.push(`capabilityPolicy.${key} must be an array`);
+}
+for (const lifecycle of Array.isArray(capabilityPolicy.allowedLifecycles) ? capabilityPolicy.allowedLifecycles : []) {
+  if (!["experimental", "stable", "deprecated"].includes(lifecycle)) {
+    errors.push(`capabilityPolicy.allowedLifecycles contains invalid value ${lifecycle}`);
+  }
+}
+
+if (!profile.verifyCommands || typeof profile.verifyCommands !== "object" || Array.isArray(profile.verifyCommands)) {
   errors.push("verifyCommands must be an object");
 }
 
@@ -69,13 +112,19 @@ for (const contextPath of requiredContext) {
 if (protectedPaths.length === 0) warnings.push("protectedPaths is empty");
 if (mcpCapabilities.length === 0) warnings.push("mcpCapabilities is empty");
 
-const runtimePolicy = {
+const defaultRuntimePolicy = {
   execPolicy: "enforce",
   contextBudget: "enforce",
   toolRegistry: "advisory",
-  finalGate: "advisory",
-  ...(profile.runtimePolicy ?? {})
+  finalGate: "advisory"
 };
+const runtimePolicyOverrides = profile.runtimePolicy === undefined
+  ? {}
+  : profile.runtimePolicy && typeof profile.runtimePolicy === "object" && !Array.isArray(profile.runtimePolicy)
+    ? profile.runtimePolicy
+    : {};
+if (profile.runtimePolicy !== undefined && runtimePolicyOverrides !== profile.runtimePolicy) errors.push("runtimePolicy must be an object");
+const runtimePolicy = { ...defaultRuntimePolicy, ...runtimePolicyOverrides };
 for (const [key, value] of Object.entries(runtimePolicy)) {
   if (!["off", "advisory", "enforce"].includes(value)) {
     errors.push(`runtimePolicy.${key} must be off, advisory, or enforce`);
@@ -89,8 +138,9 @@ if (verifyEntries.length === 0) {
 for (const [key, commands] of verifyEntries) {
   if (!Array.isArray(commands) || commands.length === 0) {
     errors.push(`verifyCommands.${key} must be a non-empty array`);
+    continue;
   }
-  for (const command of commands ?? []) {
+  for (const command of commands) {
     if (typeof command !== "string" || command.trim().length === 0) {
       errors.push(`verifyCommands.${key} contains an empty command`);
     }
@@ -107,6 +157,12 @@ const report = {
   protectedPathCount: protectedPaths.length,
   verifyProfiles: verifyEntries.map(([key]) => key),
   mcpCapabilities,
+  capabilityPacks: Array.isArray(capabilityPacks)
+    ? capabilityPacks
+      .filter((pack) => pack && typeof pack === "object" && !Array.isArray(pack))
+      .map((pack) => `${String(pack.name ?? "<invalid>")}@${String(pack.version ?? "<invalid>")}`)
+    : [],
+  capabilityPolicy,
   runtimePolicy,
   warnings,
   errors

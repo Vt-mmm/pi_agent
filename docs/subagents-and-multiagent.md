@@ -33,7 +33,7 @@ Một lệnh setup đầy đủ:
 ```bash
 bash /path/to/pi_agent/scripts/setup.sh . \
   --profile auto \
-  --package-source git:github.com/Vt-mmm/pi_agent@v0.3.23 \
+  --package-source git:github.com/Vt-mmm/pi_agent@v0.4.0 \
   --mcp-preset core \
   --subagents-preset safe
 ```
@@ -41,8 +41,8 @@ bash /path/to/pi_agent/scripts/setup.sh . \
 Nếu chỉ cài global:
 
 ```bash
-pi install git:github.com/Vt-mmm/pi_agent@v0.3.23
-pi install npm:pi-subagents
+pi install git:github.com/Vt-mmm/pi_agent@v0.4.0
+pi install npm:pi-subagents@0.35.1
 bash /path/to/pi_agent/scripts/configure-subagents.sh --preset safe
 ```
 
@@ -100,7 +100,7 @@ Sau khi mở session mới hoặc `/reload`:
 Optional research support:
 
 ```bash
-pi install npm:pi-web-access
+pi install npm:pi-web-access@0.13.0
 # hoặc
 bash /path/to/pi_agent/scripts/setup.sh . --with-web-access
 ```

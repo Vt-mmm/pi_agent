@@ -1,0 +1,72 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Vt-mmm/pi_agent/schemas/capability-recipe.schema.json",
+  "title": "Pi Company Capability Recipe",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["apiVersion", "kind", "metadata", "spec"],
+  "properties": {
+    "apiVersion": { "const": "pi.company/v1alpha1" },
+    "kind": { "const": "CapabilityRecipe" },
+    "metadata": { "$ref": "capability-pack.schema.json#/$defs/metadata" },
+    "spec": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["inputs", "steps", "gates"],
+      "properties": {
+        "inputs": {
+          "type": "array",
+          "maxItems": 32,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["name", "description", "required"],
+            "properties": {
+              "name": { "$ref": "capability-pack.schema.json#/$defs/name" },
+              "description": { "type": "string", "minLength": 1, "maxLength": 240 },
+              "required": { "type": "boolean" }
+            }
+          }
+        },
+        "steps": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 64,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["id", "uses", "mode", "needs", "timeoutSeconds", "retries", "outputs"],
+            "properties": {
+              "id": { "$ref": "capability-pack.schema.json#/$defs/name" },
+              "uses": {
+                "type": "string",
+                "maxLength": 128,
+                "pattern": "^(?:capability|recipe):[a-z0-9][a-z0-9._/-]{0,111}$"
+              },
+              "mode": { "enum": ["read-only", "workspace-write", "action-proposal"] },
+              "needs": { "$ref": "capability-pack.schema.json#/$defs/names" },
+              "timeoutSeconds": { "type": "integer", "minimum": 1, "maximum": 3600 },
+              "retries": { "type": "integer", "minimum": 0, "maximum": 3 },
+              "outputs": {
+                "type": "array",
+                "maxItems": 32,
+                "uniqueItems": true,
+                "items": { "$ref": "capability-pack.schema.json#/$defs/identifier" }
+              }
+            }
+          }
+        },
+        "gates": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["context", "verification", "humanApproval"],
+          "properties": {
+            "context": { "type": "boolean" },
+            "verification": { "type": "boolean" },
+            "humanApproval": { "type": "boolean" }
+          }
+        }
+      }
+    }
+  }
+}

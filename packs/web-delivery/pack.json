@@ -1,0 +1,72 @@
+{
+  "apiVersion": "pi.company/v1alpha1",
+  "kind": "CapabilityPack",
+  "metadata": {
+    "name": "web-delivery",
+    "version": "0.1.0",
+    "owner": "platform-maintainers",
+    "lifecycle": "experimental",
+    "license": "MIT",
+    "description": "Web application delivery capabilities with browser-assisted verification.",
+    "tags": [
+      "frontend",
+      "web"
+    ]
+  },
+  "spec": {
+    "coreApiVersion": 1,
+    "requires": {
+      "packs": [
+        {
+          "name": "engineering-base",
+          "version": "0.1.0"
+        }
+      ]
+    },
+    "provides": {
+      "prompts": [],
+      "skills": [],
+      "subagents": [],
+      "policies": [],
+      "adapters": [
+        {
+          "id": "web-frontend",
+          "path": "adapters/web-frontend/profile.json"
+        }
+      ],
+      "recipes": [
+        {
+          "id": "verified-web-change",
+          "path": "packs/web-delivery/recipes/verified-web-change.json"
+        }
+      ],
+      "evals": []
+    },
+    "permissions": {
+      "capabilities": [
+        "browser",
+        "filesystem-readonly",
+        "filesystem-write",
+        "shell"
+      ],
+      "filesystemRead": [
+        "**/*"
+      ],
+      "filesystemWrite": [
+        "**/*"
+      ],
+      "networkDomains": [],
+      "externalActions": []
+    },
+    "activation": {
+      "mode": "profile",
+      "profiles": [
+        "web-frontend"
+      ],
+      "triggers": []
+    },
+    "verification": {
+      "evalScenarios": []
+    }
+  }
+}

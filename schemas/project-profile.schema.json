@@ -79,9 +79,101 @@
     },
     "mcpCapabilities": {
       "type": "array",
+      "uniqueItems": true,
       "items": {
         "type": "string",
         "minLength": 1
+      }
+    },
+    "capabilityPacks": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "name",
+          "version"
+        ],
+        "properties": {
+          "name": {
+            "type": "string",
+            "pattern": "^[a-z0-9][a-z0-9-]{0,63}$"
+          },
+          "version": {
+            "type": "string",
+            "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)(?:-[0-9A-Za-z.-]+)?$"
+          }
+        }
+      }
+    },
+    "capabilityPolicy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "allowedOwners",
+        "allowedLifecycles",
+        "allowedFilesystemRead",
+        "allowedFilesystemWrite",
+        "allowedNetworkDomains",
+        "allowedExternalActions"
+      ],
+      "properties": {
+        "allowedOwners": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "pattern": "^[a-z0-9][a-z0-9-]{0,63}$"
+          }
+        },
+        "allowedLifecycles": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "enum": [
+              "experimental",
+              "stable",
+              "deprecated"
+            ]
+          }
+        },
+        "allowedFilesystemRead": {
+          "type": "array",
+          "maxItems": 128,
+          "uniqueItems": true,
+          "items": { "type": "string", "minLength": 1, "maxLength": 256 }
+        },
+        "allowedFilesystemWrite": {
+          "type": "array",
+          "maxItems": 128,
+          "uniqueItems": true,
+          "items": { "type": "string", "minLength": 1, "maxLength": 256 }
+        },
+        "allowedNetworkDomains": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "pattern": "^(?:\\*\\.)?[a-z0-9](?:[a-z0-9.-]{0,251}[a-z0-9])?$"
+          }
+        },
+        "allowedExternalActions": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "enum": [
+              "git-push",
+              "github-pull-request",
+              "github-issue",
+              "release",
+              "publish",
+              "deploy",
+              "database-change",
+              "external-provider-write"
+            ]
+          }
+        }
       }
     },
     "memory": {

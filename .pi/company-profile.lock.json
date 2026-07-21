@@ -1,0 +1,202 @@
+{
+  "artifacts": [
+    {
+      "byteSize": 1859,
+      "digest": "sha256:b622344f2eb050876b15c2309790aaf1b2a948aea17df8029c0a2a018a9bbe1b",
+      "id": "generic",
+      "kind": "adapters",
+      "pack": "engineering-base@0.1.0",
+      "path": "adapters/generic/profile.json"
+    },
+    {
+      "byteSize": 1143,
+      "digest": "sha256:f4674f0cf76ecfecf66d8af2377c9fe34fbf21b99bf2b7ae5e524276938a7f08",
+      "id": "capability-resolution",
+      "kind": "evals",
+      "pack": "engineering-base@0.1.0",
+      "path": "evals/scenarios/capability-resolution.json"
+    },
+    {
+      "byteSize": 3439,
+      "digest": "sha256:e40c9ac62b71b6e646a944e371ae55fb1f3ffc58ccd15885eeded509e06e7aba",
+      "id": "base-policy",
+      "kind": "policies",
+      "pack": "engineering-base@0.1.0",
+      "path": "packages/pi-company-core/policies/base-policy.json"
+    },
+    {
+      "byteSize": 1352,
+      "digest": "sha256:203cd3f61d080566f425e57fb665d7704913fca9d33bfb6f03a0d17d49f81194",
+      "id": "plan",
+      "kind": "prompts",
+      "pack": "engineering-base@0.1.0",
+      "path": "packages/pi-company-core/prompts/plan.md"
+    },
+    {
+      "byteSize": 1399,
+      "digest": "sha256:ecf19295c83bdc413b9a75abbba3cd6b0d20983b9c91c21d65b09b80b203e8d9",
+      "id": "review",
+      "kind": "prompts",
+      "pack": "engineering-base@0.1.0",
+      "path": "packages/pi-company-core/prompts/review.md"
+    },
+    {
+      "byteSize": 3635,
+      "digest": "sha256:a569c5c6e4a3dd3c4443bbfded2f9b32172d361ebf96a942ada8589635b09f18",
+      "id": "task",
+      "kind": "prompts",
+      "pack": "engineering-base@0.1.0",
+      "path": "packages/pi-company-core/prompts/task.md"
+    },
+    {
+      "byteSize": 1799,
+      "digest": "sha256:9d06e24da61671508e2e84d4e33c668029de6ca9fd3a0f474a546b6ad7086034",
+      "id": "bounded-change",
+      "kind": "recipes",
+      "pack": "engineering-base@0.1.0",
+      "path": "packs/engineering-base/recipes/bounded-change.json"
+    },
+    {
+      "byteSize": 1358,
+      "digest": "sha256:3b1824fa2ce0d248ccec583db069f4d0c3d71cb6339180368a1a3b676a4a597f",
+      "id": "company-ops",
+      "kind": "skills",
+      "pack": "engineering-base@0.1.0",
+      "path": "packages/pi-company-core/skills/company-ops/SKILL.md"
+    },
+    {
+      "byteSize": 1209,
+      "digest": "sha256:275e6e74a2328796d7574a30635d88f4e7c3808d0ecaf7df2563e5293d76033c",
+      "id": "company-planner",
+      "kind": "subagents",
+      "pack": "engineering-base@0.1.0",
+      "path": "packages/pi-company-core/subagents/company-planner.md"
+    },
+    {
+      "byteSize": 1316,
+      "digest": "sha256:7b11bbf359270aad76dfdf0d0311c194832b7928936e3132e2af6a19f33645e5",
+      "id": "company-reviewer",
+      "kind": "subagents",
+      "pack": "engineering-base@0.1.0",
+      "path": "packages/pi-company-core/subagents/company-reviewer.md"
+    },
+    {
+      "byteSize": 1246,
+      "digest": "sha256:15f5f435bde78b233aaf10c987b323f14d82584889383d746ca90392dc908f36",
+      "id": "company-scout",
+      "kind": "subagents",
+      "pack": "engineering-base@0.1.0",
+      "path": "packages/pi-company-core/subagents/company-scout.md"
+    },
+    {
+      "byteSize": 1393,
+      "digest": "sha256:676e40f70b069421a707d83d0596a264fee2d85ddbfa89ad150dfa51f22f26af",
+      "id": "company-worker",
+      "kind": "subagents",
+      "pack": "engineering-base@0.1.0",
+      "path": "packages/pi-company-core/subagents/company-worker.md"
+    }
+  ],
+  "core": {
+    "apiVersion": 1,
+    "packageDigest": "sha256:882c5c0a3fac5db8907a05866271e2c70d80b9fb90b16539356509de70731c5d",
+    "packageSource": "../",
+    "packageVersion": "0.4.0",
+    "runtimeFiles": [
+      {
+        "byteSize": 2908,
+        "digest": "sha256:229ec72cbf0a1dcd843a7a9d8098452f84e1b217536480914a0ab75fa36e1bbc",
+        "path": "package.json"
+      },
+      {
+        "byteSize": 734,
+        "digest": "sha256:338011daa66ea381099737a8e72f91e8408097a7fed44705a5739b2f50b6257a",
+        "path": "packages/pi-company-core/package.json"
+      },
+      {
+        "byteSize": 52768,
+        "digest": "sha256:e5ca7e490af049f324d93fa6beea40a87f6df5d84258ae4328607ccfb3b24402",
+        "path": "packages/pi-company-core/capabilities/capability-core.js"
+      },
+      {
+        "byteSize": 3885,
+        "digest": "sha256:844f98277bf26fd893e909b636426d48b861f5ab1719deea14db7f4169495b32",
+        "path": "packages/pi-company-core/security/sensitive-data.js"
+      },
+      {
+        "byteSize": 126800,
+        "digest": "sha256:2c405bc5dc729c278547c3859268081a8925d1959bad7e4a40f00871dfbebf1b",
+        "path": "packages/pi-company-core/extensions/company-guard.ts"
+      },
+      {
+        "byteSize": 17827,
+        "digest": "sha256:48e575e8aff1b26cb54840f40db987295cf97fbeb62fa9cb63fca23a3408cda2",
+        "path": "packages/pi-company-core/extensions/policy-core.js"
+      },
+      {
+        "byteSize": 91,
+        "digest": "sha256:54830a43d1bc4e2b1b7d5732ab43c076b7e047420873c05e400e782f16214bc9",
+        "path": "packages/pi-company-core/extensions/redaction-core.js"
+      },
+      {
+        "byteSize": 7586,
+        "digest": "sha256:e7688ee6212e77f0ee0bc45945424fe8454cfbf66454c02a2b6518a9eb812092",
+        "path": "packages/pi-company-core/extensions/runtime-evidence.js"
+      }
+    ]
+  },
+  "packs": [
+    {
+      "digest": "sha256:f0b42e2fe31230590154f25b9c82297f5cf966f946126f52a87e3e4fb11a74d1",
+      "lifecycle": "experimental",
+      "name": "engineering-base",
+      "owner": "platform-maintainers",
+      "version": "0.1.0"
+    }
+  ],
+  "permissions": {
+    "capabilities": [
+      "filesystem-readonly",
+      "filesystem-write",
+      "memory",
+      "shell"
+    ],
+    "externalActions": [],
+    "filesystemRead": [
+      "**/*"
+    ],
+    "filesystemWrite": [
+      "**/*"
+    ],
+    "networkDomains": [],
+    "protectedPaths": [
+      "**/.env",
+      "**/.env.*",
+      "**/auth.json",
+      "**/dist/**",
+      "**/node_modules/**",
+      ".git/**",
+      ".pi/company-profile.json",
+      ".pi/company-profile.lock.json",
+      ".pi/company-state/**",
+      ".pi/settings.json"
+    ],
+    "shellProtectedPaths": [
+      "**/.env",
+      "**/.env.*",
+      "**/auth.json",
+      ".git/**",
+      ".pi/company-profile.json",
+      ".pi/company-profile.lock.json",
+      ".pi/company-state/**",
+      ".pi/settings.json"
+    ]
+  },
+  "profile": {
+    "digest": "sha256:89b6af4992c90ab44538deee64fae211ed9b5a05dec511563e0f563bc4153ff5",
+    "file": "company-profile.json",
+    "mode": "platform-development",
+    "projectId": "pi-company-platform"
+  },
+  "schemaVersion": 1
+}

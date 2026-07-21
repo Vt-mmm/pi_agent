@@ -135,7 +135,7 @@ Pi package chạy code và ảnh hưởng hành vi agent, nên phải review sou
 Candidate phổ biến:
 
 ```bash
-pi install npm:pi-memory
+pi install npm:pi-memory@0.4.0
 ```
 
 Package này lưu markdown ở local memory dir, có tools `memory_write`, `memory_read`, `scratchpad`, `memory_status`; search nâng cao cần qmd.
@@ -146,7 +146,7 @@ Nếu dùng external package, set profile:
 {
   "memory": {
     "mode": "external-package",
-    "externalPackages": ["npm:pi-memory"]
+    "externalPackages": ["npm:pi-memory@0.4.0"]
   }
 }
 ```

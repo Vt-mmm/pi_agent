@@ -11,10 +11,10 @@ pi
 
 Từ đó Pi có thể login provider, chọn model, onboard project, chạy task, kiểm soát tool, theo dõi token, resume session, dùng MCP, và dùng subagent khi task đủ lớn.
 
-Phiên bản runtime ổn định hiện tại: `v0.3.23`.
+Phiên bản runtime ổn định hiện tại: `v0.4.0`.
 
 ```bash
-pi install git:github.com/Vt-mmm/pi_agent@v0.3.23
+pi install git:github.com/Vt-mmm/pi_agent@v0.4.0
 ```
 
 ## Phạm vi đúng của guard
@@ -69,8 +69,8 @@ install package once
 ### Cài Pi và package platform
 
 ```bash
-npm install -g @earendil-works/pi-coding-agent
-pi install git:github.com/Vt-mmm/pi_agent@v0.3.23
+npm install -g @earendil-works/pi-coding-agent@0.80.10
+pi install git:github.com/Vt-mmm/pi_agent@v0.4.0
 ```
 
 Nếu dùng Herdr:
@@ -218,7 +218,7 @@ Không phải daily default. Dùng khi muốn tạo sẵn `.pi` files cho projec
 bash /path/to/pi_agent/scripts/setup.sh /path/to/project \
   --project-only \
   --profile auto \
-  --package-source git:github.com/Vt-mmm/pi_agent@v0.3.23 \
+  --package-source git:github.com/Vt-mmm/pi_agent@v0.4.0 \
   --mcp-preset core \
   --subagents-preset safe
 ```
@@ -227,7 +227,7 @@ Nếu npm bins đã link:
 
 ```bash
 pi-company-init /path/to/project --profile auto
-pi-company-mcp --preset core --scope global
+pi-company-mcp --preset core --scope global --replace
 pi-company-subagents --preset safe
 ```
 
@@ -235,7 +235,7 @@ Khi command không có trên PATH, dùng script trực tiếp:
 
 ```bash
 bash /path/to/pi_agent/scripts/init-project.sh /path/to/project --profile auto
-bash /path/to/pi_agent/scripts/configure-mcp.sh --preset core --scope global
+bash /path/to/pi_agent/scripts/configure-mcp.sh --preset core --scope global --replace
 bash /path/to/pi_agent/scripts/configure-subagents.sh --preset safe
 ```
 
@@ -571,15 +571,15 @@ Trong Pi:
 ### Cấu hình global
 
 ```bash
-pi-company-mcp --preset core --scope global
-pi-company-mcp --preset popular --scope global
+pi-company-mcp --preset core --scope global --replace
+pi-company-mcp --preset popular --scope global --replace
 pi-company-mcp --list
 ```
 
 Fallback:
 
 ```bash
-bash /path/to/pi_agent/scripts/configure-mcp.sh --preset core --scope global
+bash /path/to/pi_agent/scripts/configure-mcp.sh --preset core --scope global --replace
 ```
 
 ### Cấu hình project
@@ -773,7 +773,7 @@ Watchdog là optional adversarial reviewer ở cuối turn, không bật mặc �
 
 | Command | Dùng để |
 |---|---|
-| `pi install git:github.com/Vt-mmm/pi_agent@v0.3.23` | Install platform package. |
+| `pi install git:github.com/Vt-mmm/pi_agent@v0.4.0` | Install platform package. |
 | `pi list --approve` | Kiểm package/resources đã load. |
 | `pi-company-auto` | Mở Pi với project trust `--approve` cho lần chạy hiện tại; guard vẫn bật. |
 | `pi-company-auto --read-only -p "<task>"` | Auto-run read-only scout với tool set `read,grep,find,ls`. |
@@ -784,7 +784,7 @@ Watchdog là optional adversarial reviewer ở cuối turn, không bật mặc �
 | `pi --name "<name>"` | Đặt tên session. |
 | `pi --tools read,grep,find,ls -p "Review src"` | Read-only one-shot. |
 | `pi-company-usage /path/to/project` | Exact token/cost stats. |
-| `pi-company-mcp --preset core --scope global` | Setup MCP baseline. |
+| `pi-company-mcp --preset core --scope global --replace` | Setup or update the governed MCP baseline. |
 | `pi-company-subagents --preset safe` | Setup subagents baseline. |
 | `bash scripts/verify-local.sh` | Verify platform repo. |
 | `bash scripts/team-doctor.sh /path/to/project --strict-share` | Doctor project/team setup. |
@@ -828,7 +828,7 @@ Watchdog là optional adversarial reviewer ở cuối turn, không bật mặc �
 
 ```bash
 pi list --approve
-pi install git:github.com/Vt-mmm/pi_agent@v0.3.23
+pi install git:github.com/Vt-mmm/pi_agent@v0.4.0
 ```
 
 Mở lại Pi session sau khi install.
@@ -839,7 +839,7 @@ Dùng script trực tiếp:
 
 ```bash
 bash /path/to/pi_agent/scripts/pi-session-stats.sh /path/to/project
-bash /path/to/pi_agent/scripts/configure-mcp.sh --preset core --scope global
+bash /path/to/pi_agent/scripts/configure-mcp.sh --preset core --scope global --replace
 bash /path/to/pi_agent/scripts/configure-subagents.sh --preset safe
 ```
 

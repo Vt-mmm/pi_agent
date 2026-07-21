@@ -1,0 +1,190 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Vt-mmm/pi_agent/schemas/capability-pack.schema.json",
+  "title": "Pi Company Capability Pack",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["apiVersion", "kind", "metadata", "spec"],
+  "properties": {
+    "apiVersion": { "const": "pi.company/v1alpha1" },
+    "kind": { "const": "CapabilityPack" },
+    "metadata": { "$ref": "#/$defs/metadata" },
+    "spec": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["coreApiVersion", "requires", "provides", "permissions", "activation", "verification"],
+      "properties": {
+        "coreApiVersion": { "const": 1 },
+        "requires": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["packs"],
+          "properties": {
+            "packs": {
+              "type": "array",
+              "maxItems": 64,
+              "uniqueItems": true,
+              "items": { "$ref": "#/$defs/packDependency" }
+            }
+          }
+        },
+        "provides": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["prompts", "skills", "subagents", "policies", "adapters", "recipes", "evals"],
+          "properties": {
+            "prompts": { "$ref": "#/$defs/artifacts" },
+            "skills": { "$ref": "#/$defs/artifacts" },
+            "subagents": { "$ref": "#/$defs/artifacts" },
+            "policies": { "$ref": "#/$defs/artifacts" },
+            "adapters": { "$ref": "#/$defs/artifacts" },
+            "recipes": { "$ref": "#/$defs/artifacts" },
+            "evals": { "$ref": "#/$defs/artifacts" }
+          }
+        },
+        "permissions": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["capabilities", "filesystemRead", "filesystemWrite", "networkDomains", "externalActions"],
+          "properties": {
+            "capabilities": { "$ref": "#/$defs/names" },
+            "filesystemRead": { "$ref": "#/$defs/pathPatterns" },
+            "filesystemWrite": { "$ref": "#/$defs/pathPatterns" },
+            "networkDomains": {
+              "type": "array",
+              "maxItems": 64,
+              "uniqueItems": true,
+              "items": {
+                "type": "string",
+                "maxLength": 253,
+                "pattern": "^(?:\\*\\.)?[a-z0-9](?:[a-z0-9.-]{0,251}[a-z0-9])?$"
+              }
+            },
+            "externalActions": {
+              "type": "array",
+              "maxItems": 32,
+              "uniqueItems": true,
+              "items": { "$ref": "#/$defs/actionType" }
+            }
+          }
+        },
+        "activation": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["mode", "profiles", "triggers"],
+          "properties": {
+            "mode": { "enum": ["explicit", "profile", "trigger"] },
+            "profiles": { "$ref": "#/$defs/names" },
+            "triggers": {
+              "type": "array",
+              "maxItems": 64,
+              "uniqueItems": true,
+              "items": { "type": "string", "minLength": 1, "maxLength": 256 }
+            }
+          },
+          "allOf": [
+            {
+              "if": { "properties": { "mode": { "const": "trigger" } } },
+              "then": { "properties": { "triggers": { "minItems": 1 } } }
+            }
+          ]
+        },
+        "verification": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["evalScenarios"],
+          "properties": {
+            "evalScenarios": {
+              "type": "array",
+              "maxItems": 64,
+              "uniqueItems": true,
+              "items": { "$ref": "#/$defs/identifier" }
+            }
+          }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "name": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 64,
+      "pattern": "^[a-z0-9][a-z0-9-]{0,63}$"
+    },
+    "identifier": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128,
+      "pattern": "^[a-z0-9][a-z0-9._/-]{0,127}$"
+    },
+    "version": {
+      "type": "string",
+      "maxLength": 64,
+      "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)(?:-[0-9A-Za-z.-]+)?$"
+    },
+    "metadata": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "version", "owner", "lifecycle", "license", "description", "tags"],
+      "properties": {
+        "name": { "$ref": "#/$defs/name" },
+        "version": { "$ref": "#/$defs/version" },
+        "owner": { "$ref": "#/$defs/name" },
+        "lifecycle": { "enum": ["experimental", "stable", "deprecated"] },
+        "license": { "type": "string", "minLength": 1, "maxLength": 64 },
+        "description": { "type": "string", "minLength": 1, "maxLength": 240 },
+        "tags": { "$ref": "#/$defs/names" }
+      }
+    },
+    "packDependency": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "version"],
+      "properties": {
+        "name": { "$ref": "#/$defs/name" },
+        "version": { "$ref": "#/$defs/version" }
+      }
+    },
+    "artifact": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "path"],
+      "properties": {
+        "id": { "$ref": "#/$defs/identifier" },
+        "path": { "$ref": "#/$defs/relativePath" }
+      }
+    },
+    "artifacts": {
+      "type": "array",
+      "maxItems": 128,
+      "items": { "$ref": "#/$defs/artifact" }
+    },
+    "names": {
+      "type": "array",
+      "maxItems": 64,
+      "uniqueItems": true,
+      "items": { "$ref": "#/$defs/name" }
+    },
+    "relativePath": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 512,
+      "pattern": "^(?!/)(?![A-Za-z]:)(?!.*\\\\)(?!.*(?:^|/)\\.\\.(?:/|$))[^*?\\[\\]{}]+$"
+    },
+    "pathPatterns": {
+      "type": "array",
+      "maxItems": 128,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 512,
+        "pattern": "^(?!/)(?![A-Za-z]:)(?!.*\\\\)(?!.*(?:^|/)\\.\\.(?:/|$)).+$"
+      }
+    },
+    "actionType": {
+      "enum": ["git-push", "github-pull-request", "github-issue", "release", "publish", "deploy", "database-change", "external-provider-write"]
+    }
+  }
+}

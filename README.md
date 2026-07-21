@@ -46,12 +46,13 @@ pi-company-auto --read-only -p "Scout payment mapping. Do not edit source."
 - Accident-brake guardrails for protected paths, destructive shell commands, task contracts, context manifests, observed verification evidence, and trace records.
 - Quality benchmark recorder for comparing approved agent surfaces, models, and workflow presets on the same task scenarios.
 - Built-in profiles for frontend, backend, fullstack, BE-readonly/FE-write, data, DevOps, mobile, docs, Python, and Node TypeScript.
+- Versioned capability packs with deterministic catalog, profile resolution, integrity lock, and permission checks.
 
 ## Install once
 
 ```bash
-npm install -g @earendil-works/pi-coding-agent
-pi install git:github.com/Vt-mmm/pi_agent@v0.3.23
+npm install -g @earendil-works/pi-coding-agent@0.80.10
+pi install git:github.com/Vt-mmm/pi_agent@v0.4.0
 ```
 
 Optional Herdr integration:
@@ -83,6 +84,7 @@ First run inside a project:
 `/onboard-project` will inspect the repository with bounded context, recommend a profile, explain tradeoffs, ask before applying, then write:
 
 - `.pi/company-profile.json`
+- `.pi/company-profile.lock.json`
 - `.pi/project-context.md`
 - `.pi/memory/*`
 
@@ -95,6 +97,23 @@ Switch profiles later:
 /profiles apply web-frontend
 /profiles apply backend-api
 ```
+
+## Capability packs
+
+Capability packs group governed prompts, skills, subagents, policies, adapters, recipes, and eval scenarios behind a declarative manifest. Project profiles select exact pack versions and explicitly grant owner, lifecycle, filesystem, network, and external-action boundaries.
+
+```bash
+pi-company-capabilities catalog --check
+pi-company-capabilities doctor \
+  --profile .pi/company-profile.json \
+  --lock .pi/company-profile.lock.json
+pi-company-capabilities resolve \
+  --profile .pi/company-profile.json \
+  --output .pi/company-profile.lock.json \
+  --package-source ../
+```
+
+The generated lock is deterministic and records profile, pack, artifact, and permission digests. See [Capability packs](docs/capability-packs.md).
 
 ## Built-in profiles
 
@@ -205,8 +224,8 @@ pi-company-model-scope --preset full
 Global setup installs `pi-mcp-adapter` and seeds the `core` MCP preset unless disabled.
 
 ```bash
-pi-company-mcp --preset core --scope global
-pi-company-mcp --preset popular --scope global
+pi-company-mcp --preset core --scope global --replace
+pi-company-mcp --preset popular --scope global --replace
 pi-company-mcp --preset design --scope project --project /path/to/project
 pi-company-mcp --list
 ```
@@ -214,7 +233,7 @@ pi-company-mcp --list
 If the repo is cloned from Git and npm bins are not linked yet:
 
 ```bash
-bash /path/to/pi_agent/scripts/configure-mcp.sh --preset core --scope global
+bash /path/to/pi_agent/scripts/configure-mcp.sh --preset core --scope global --replace
 ```
 
 Preset summary:
@@ -264,7 +283,7 @@ Daily task prompts can auto-delegate when useful. The final handoff should state
 Optional web/docs research support:
 
 ```bash
-pi install npm:pi-web-access
+pi install npm:pi-web-access@0.13.0
 ```
 
 ## Optional preseed setup
@@ -274,7 +293,7 @@ Most projects do not need shell init. Use this only when you want to pre-create 
 ```bash
 bash /path/to/pi_agent/scripts/setup.sh /path/to/project \
   --profile be-readonly-fe \
-  --package-source git:github.com/Vt-mmm/pi_agent@v0.3.23 \
+  --package-source git:github.com/Vt-mmm/pi_agent@v0.4.0 \
   --mcp-preset core \
   --subagents-preset safe
 ```
@@ -284,7 +303,10 @@ bash /path/to/pi_agent/scripts/setup.sh /path/to/project \
 ```text
 pi_agent/
 ├─ adapters/                         reusable project profiles
+├─ catalog/                          deterministic capability index
 ├─ docs/                             Vietnamese documentation and operating notes
+├─ evals/                            governed evaluation scenarios
+├─ packs/                            versioned capability manifests and recipes
 ├─ packages/
 │  └─ pi-company-core/               Pi package: extensions, prompts, skills
 ├─ schemas/                          JSON schemas
@@ -372,7 +394,7 @@ This repository intentionally excludes:
 
 ## Maturity
 
-Current release: `v0.3.23`.
+Current release: `v0.4.0`.
 
 Ready for:
 
@@ -389,6 +411,7 @@ Security boundary:
 
 - The guard extension is an accident-prevention layer for agent mistakes and common prompt-injection patterns.
 - Raw path-like tool access to protected paths is blocked before execution. This covers Pi built-ins such as `read`, `write`, `edit`, `grep`, `find`, `ls`, and custom/MCP tools when their input contains path-like strings, including nested objects, arrays, and `file://` URIs.
+- Protected paths are matched case-insensitively, existing aliases are resolved to their canonical repository path, and scope-aware filesystem tools reject repository escape or symbolic-link traversal.
 - Path-like strings are percent-decoded once before matching. Excessively nested tool input fails closed instead of being silently skipped.
 - Known content fields such as `content`, `query`, `pattern`, `text`, and `command` are excluded from generic path extraction to preserve normal search/edit behavior. Tool-specific checks still validate `grep.glob` and `find.pattern` when they explicitly target protected paths.
 - Broad `grep`, `find`, and `ls` sweeps get result-filter backstops: protected file content lines or protected path metadata are redacted before the model sees output.

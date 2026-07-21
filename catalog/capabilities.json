@@ -1,0 +1,188 @@
+{
+  "coreApiVersion": 1,
+  "packs": [
+    {
+      "activation": {
+        "mode": "profile",
+        "profiles": [
+          "generic",
+          "platform-development"
+        ],
+        "triggers": []
+      },
+      "artifacts": [
+        {
+          "byteSize": 1859,
+          "digest": "sha256:b622344f2eb050876b15c2309790aaf1b2a948aea17df8029c0a2a018a9bbe1b",
+          "id": "generic",
+          "kind": "adapters",
+          "path": "adapters/generic/profile.json"
+        },
+        {
+          "byteSize": 1143,
+          "digest": "sha256:f4674f0cf76ecfecf66d8af2377c9fe34fbf21b99bf2b7ae5e524276938a7f08",
+          "id": "capability-resolution",
+          "kind": "evals",
+          "path": "evals/scenarios/capability-resolution.json"
+        },
+        {
+          "byteSize": 3439,
+          "digest": "sha256:e40c9ac62b71b6e646a944e371ae55fb1f3ffc58ccd15885eeded509e06e7aba",
+          "id": "base-policy",
+          "kind": "policies",
+          "path": "packages/pi-company-core/policies/base-policy.json"
+        },
+        {
+          "byteSize": 1352,
+          "digest": "sha256:203cd3f61d080566f425e57fb665d7704913fca9d33bfb6f03a0d17d49f81194",
+          "id": "plan",
+          "kind": "prompts",
+          "path": "packages/pi-company-core/prompts/plan.md"
+        },
+        {
+          "byteSize": 1399,
+          "digest": "sha256:ecf19295c83bdc413b9a75abbba3cd6b0d20983b9c91c21d65b09b80b203e8d9",
+          "id": "review",
+          "kind": "prompts",
+          "path": "packages/pi-company-core/prompts/review.md"
+        },
+        {
+          "byteSize": 3635,
+          "digest": "sha256:a569c5c6e4a3dd3c4443bbfded2f9b32172d361ebf96a942ada8589635b09f18",
+          "id": "task",
+          "kind": "prompts",
+          "path": "packages/pi-company-core/prompts/task.md"
+        },
+        {
+          "byteSize": 1799,
+          "digest": "sha256:9d06e24da61671508e2e84d4e33c668029de6ca9fd3a0f474a546b6ad7086034",
+          "id": "bounded-change",
+          "kind": "recipes",
+          "path": "packs/engineering-base/recipes/bounded-change.json"
+        },
+        {
+          "byteSize": 1358,
+          "digest": "sha256:3b1824fa2ce0d248ccec583db069f4d0c3d71cb6339180368a1a3b676a4a597f",
+          "id": "company-ops",
+          "kind": "skills",
+          "path": "packages/pi-company-core/skills/company-ops/SKILL.md"
+        },
+        {
+          "byteSize": 1209,
+          "digest": "sha256:275e6e74a2328796d7574a30635d88f4e7c3808d0ecaf7df2563e5293d76033c",
+          "id": "company-planner",
+          "kind": "subagents",
+          "path": "packages/pi-company-core/subagents/company-planner.md"
+        },
+        {
+          "byteSize": 1316,
+          "digest": "sha256:7b11bbf359270aad76dfdf0d0311c194832b7928936e3132e2af6a19f33645e5",
+          "id": "company-reviewer",
+          "kind": "subagents",
+          "path": "packages/pi-company-core/subagents/company-reviewer.md"
+        },
+        {
+          "byteSize": 1246,
+          "digest": "sha256:15f5f435bde78b233aaf10c987b323f14d82584889383d746ca90392dc908f36",
+          "id": "company-scout",
+          "kind": "subagents",
+          "path": "packages/pi-company-core/subagents/company-scout.md"
+        },
+        {
+          "byteSize": 1393,
+          "digest": "sha256:676e40f70b069421a707d83d0596a264fee2d85ddbfa89ad150dfa51f22f26af",
+          "id": "company-worker",
+          "kind": "subagents",
+          "path": "packages/pi-company-core/subagents/company-worker.md"
+        }
+      ],
+      "dependencies": [],
+      "description": "Core engineering workflow, policy, verification, and task coordination capabilities.",
+      "digest": "sha256:f0b42e2fe31230590154f25b9c82297f5cf966f946126f52a87e3e4fb11a74d1",
+      "license": "MIT",
+      "lifecycle": "experimental",
+      "name": "engineering-base",
+      "owner": "platform-maintainers",
+      "permissions": {
+        "capabilities": [
+          "filesystem-readonly",
+          "filesystem-write",
+          "memory",
+          "shell"
+        ],
+        "externalActions": [],
+        "filesystemRead": [
+          "**/*"
+        ],
+        "filesystemWrite": [
+          "**/*"
+        ],
+        "networkDomains": []
+      },
+      "tags": [
+        "engineering",
+        "governance"
+      ],
+      "version": "0.1.0"
+    },
+    {
+      "activation": {
+        "mode": "profile",
+        "profiles": [
+          "web-frontend"
+        ],
+        "triggers": []
+      },
+      "artifacts": [
+        {
+          "byteSize": 1908,
+          "digest": "sha256:e888e72e0f61d64595a79c02bded7fcf3c7e8fbacc3133f9fc761f6f8d8fc584",
+          "id": "web-frontend",
+          "kind": "adapters",
+          "path": "adapters/web-frontend/profile.json"
+        },
+        {
+          "byteSize": 1285,
+          "digest": "sha256:e0cd687df2e81856020d2cf75eb553fe23e6aa6c7d6a22e3312c8e787613f7a9",
+          "id": "verified-web-change",
+          "kind": "recipes",
+          "path": "packs/web-delivery/recipes/verified-web-change.json"
+        }
+      ],
+      "dependencies": [
+        {
+          "name": "engineering-base",
+          "version": "0.1.0"
+        }
+      ],
+      "description": "Web application delivery capabilities with browser-assisted verification.",
+      "digest": "sha256:9cbd956c3eae942240f733fc38322efbdd7977cc8a8cb83af8e4988fb7c0e3aa",
+      "license": "MIT",
+      "lifecycle": "experimental",
+      "name": "web-delivery",
+      "owner": "platform-maintainers",
+      "permissions": {
+        "capabilities": [
+          "browser",
+          "filesystem-readonly",
+          "filesystem-write",
+          "shell"
+        ],
+        "externalActions": [],
+        "filesystemRead": [
+          "**/*"
+        ],
+        "filesystemWrite": [
+          "**/*"
+        ],
+        "networkDomains": []
+      },
+      "tags": [
+        "frontend",
+        "web"
+      ],
+      "version": "0.1.0"
+    }
+  ],
+  "schemaVersion": 1
+}

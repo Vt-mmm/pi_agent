@@ -42,12 +42,15 @@ required_files=(
   "$ROOT/types/pi-runtime-shims.d.ts"
   "$ROOT/.pi/settings.json"
   "$ROOT/.pi/company-profile.json"
+  "$ROOT/.pi/company-profile.lock.json"
   "$ROOT/.pi/project-context.md"
   "$ROOT/packages/pi-company-core/package.json"
   "$ROOT/packages/pi-company-core/extensions/company-guard.ts"
   "$ROOT/packages/pi-company-core/extensions/policy-core.js"
   "$ROOT/packages/pi-company-core/extensions/redaction-core.js"
   "$ROOT/packages/pi-company-core/extensions/runtime-evidence.js"
+  "$ROOT/packages/pi-company-core/security/sensitive-data.js"
+  "$ROOT/packages/pi-company-core/capabilities/capability-core.js"
   "$ROOT/packages/pi-company-core/prompts/onboard-project.md"
   "$ROOT/packages/pi-company-core/prompts/company-commands.md"
   "$ROOT/packages/pi-company-core/prompts/profiles.md"
@@ -108,9 +111,21 @@ required_files=(
   "$ROOT/docs/quality-benchmark.md"
   "$ROOT/docs/readiness-assessment.md"
   "$ROOT/docs/package-architecture-notes.md"
+  "$ROOT/docs/capability-packs.md"
+  "$ROOT/docs/decisions/260721-capability-pack-contract.md"
   "$ROOT/docs/runtime-policy-design.md"
   "$ROOT/schemas/project-profile.schema.json"
   "$ROOT/schemas/task-contract.schema.json"
+  "$ROOT/schemas/capability-pack.schema.json"
+  "$ROOT/schemas/capability-recipe.schema.json"
+  "$ROOT/schemas/eval-scenario.schema.json"
+  "$ROOT/schemas/action-proposal.schema.json"
+  "$ROOT/packs/engineering-base/pack.json"
+  "$ROOT/packs/engineering-base/recipes/bounded-change.json"
+  "$ROOT/packs/web-delivery/pack.json"
+  "$ROOT/packs/web-delivery/recipes/verified-web-change.json"
+  "$ROOT/evals/scenarios/capability-resolution.json"
+  "$ROOT/catalog/capabilities.json"
   "$ROOT/templates/project/.pi/task-contract.template.json"
   "$ROOT/scripts/install-global.sh"
   "$ROOT/scripts/init-project.sh"
@@ -126,6 +141,8 @@ required_files=(
   "$ROOT/scripts/configure-model-scope.sh"
   "$ROOT/scripts/configure-mcp.sh"
   "$ROOT/scripts/configure-subagents.sh"
+  "$ROOT/scripts/capability-catalog.mjs"
+  "$ROOT/tests/capability-core.test.mjs"
   "$ROOT/tests/company-guard-integration.test.mjs"
   "$ROOT/tests/policy-core.test.mjs"
   "$ROOT/tests/redaction-core.test.mjs"
@@ -149,6 +166,7 @@ const jsonFiles = [
   ".mcp.json",
   ".pi/settings.json",
   ".pi/company-profile.json",
+  ".pi/company-profile.lock.json",
   "packages/pi-company-core/package.json",
   "packages/pi-company-core/policies/base-policy.json",
   "adapters/generic/profile.json",
@@ -170,7 +188,17 @@ const jsonFiles = [
   "templates/global/settings.json",
   "templates/global/mcp.json",
   "schemas/project-profile.schema.json",
-  "schemas/task-contract.schema.json"
+  "schemas/task-contract.schema.json",
+  "schemas/capability-pack.schema.json",
+  "schemas/capability-recipe.schema.json",
+  "schemas/eval-scenario.schema.json",
+  "schemas/action-proposal.schema.json",
+  "packs/engineering-base/pack.json",
+  "packs/engineering-base/recipes/bounded-change.json",
+  "packs/web-delivery/pack.json",
+  "packs/web-delivery/recipes/verified-web-change.json",
+  "evals/scenarios/capability-resolution.json",
+  "catalog/capabilities.json"
 ];
 
 for (const rel of jsonFiles) {
@@ -184,6 +212,15 @@ if (!rootPkg.pi || !rootPkg.pi.extensions || !rootPkg.pi.prompts || !rootPkg.pi.
 }
 if (!rootPkg.pi.subagents?.agents?.length) {
   throw new Error("root package.json missing pi.subagents.agents");
+}
+const expectedPeers = {
+  "@earendil-works/pi-ai": "0.80.10",
+  "@earendil-works/pi-coding-agent": "0.80.10",
+  typebox: "1.3.6"
+};
+for (const [name, version] of Object.entries(expectedPeers)) {
+  if (rootPkg.peerDependencies?.[name] !== version) throw new Error(`root package peer ${name} must be pinned to ${version}`);
+  if (rootPkg.peerDependenciesMeta?.[name]?.optional !== true) throw new Error(`root package peer ${name} must remain optional`);
 }
 
 const pkg = JSON.parse(fs.readFileSync(path.join(root, "packages/pi-company-core/package.json"), "utf8"));
@@ -208,6 +245,14 @@ grep -R "auto-delegation" "$ROOT/README.md" "$ROOT/docs" "$ROOT/packages/pi-comp
 grep -R "Subagents used/not used" "$ROOT/packages/pi-company-core/prompts" "$ROOT/docs/auto-delegation-policy.md" >/dev/null
 grep -R "Subagent orchestration capabilities" "$ROOT/README.md" "$ROOT/docs/subagent-orchestration-capabilities.md" >/dev/null
 grep -R "pi-web-access" "$ROOT/README.md" "$ROOT/docs" "$ROOT/scripts/install-global.sh" "$ROOT/scripts/setup.sh" >/dev/null
+grep -F 'PI_MCP_ADAPTER_SOURCE="npm:pi-mcp-adapter@2.11.0"' "$ROOT/scripts/install-global.sh" >/dev/null
+grep -F 'PI_SUBAGENTS_SOURCE="npm:pi-subagents@0.35.1"' "$ROOT/scripts/install-global.sh" >/dev/null
+grep -F 'PI_WEB_ACCESS_SOURCE="npm:pi-web-access@0.13.0"' "$ROOT/scripts/install-global.sh" >/dev/null
+grep -F 'npm install -g @earendil-works/pi-coding-agent@0.80.10' "$ROOT/scripts/setup.sh" >/dev/null
+grep -F 'validate-source --package-source "$PACKAGE_SOURCE"' "$ROOT/scripts/install-global.sh" >/dev/null
+grep -F 'verify_npm_integrity "$PI_MCP_ADAPTER_SOURCE" "$PI_MCP_ADAPTER_INTEGRITY"' "$ROOT/scripts/install-global.sh" >/dev/null
+grep -F 'verify_npm_integrity "$PI_SUBAGENTS_SOURCE" "$PI_SUBAGENTS_INTEGRITY"' "$ROOT/scripts/install-global.sh" >/dev/null
+grep -F 'verify_npm_integrity "$PI_WEB_ACCESS_SOURCE" "$PI_WEB_ACCESS_INTEGRITY"' "$ROOT/scripts/install-global.sh" >/dev/null
 grep -R "parallel-review" "$ROOT/docs" "$ROOT/README.md" >/dev/null
 grep -R "intercomBridge" "$ROOT/scripts/configure-subagents.sh" "$ROOT/docs/subagents-and-multiagent.md" >/dev/null
 grep -R "waitTool" "$ROOT/scripts/configure-subagents.sh" "$ROOT/docs/subagents-and-multiagent.md" >/dev/null
@@ -233,9 +278,29 @@ grep -R "subagents-fleet" "$ROOT/docs/command-reference-vietnamese.md" "$ROOT/do
 grep -R "health check" "$ROOT/docs/command-reference-vietnamese.md" "$ROOT/docs/subagents-and-multiagent.md" "$ROOT/README.md" >/dev/null
 grep -R "pi-subagents" "$ROOT/README.md" "$ROOT/docs/subagents-and-multiagent.md" "$ROOT/scripts/install-global.sh" "$ROOT/scripts/setup.sh" >/dev/null
 grep -R "company-scout" "$ROOT/README.md" "$ROOT/docs/subagents-and-multiagent.md" "$ROOT/packages/pi-company-core/subagents" >/dev/null
-grep -R "@upstash/context7-mcp" "$ROOT/scripts/configure-mcp.sh" "$ROOT/docs/mcp-and-tools.md" >/dev/null
+grep -F "@upstash/context7-mcp@3.2.4" "$ROOT/scripts/configure-mcp.sh" >/dev/null
+grep -F "@upstash/context7-mcp@3.2.4" "$ROOT/docs/mcp-and-tools.md" >/dev/null
+grep -F "chrome-devtools-mcp@1.6.0" "$ROOT/scripts/configure-mcp.sh" >/dev/null
+grep -F "chrome-devtools-mcp@1.6.0" "$ROOT/docs/mcp-and-tools.md" >/dev/null
+grep -F "@playwright/mcp@0.0.78" "$ROOT/scripts/configure-mcp.sh" >/dev/null
+grep -F "@playwright/mcp@0.0.78" "$ROOT/docs/mcp-and-tools.md" >/dev/null
 grep -R "https://mcp.figma.com/mcp" "$ROOT/scripts/configure-mcp.sh" "$ROOT/docs/mcp-and-tools.md" >/dev/null
-grep -R "ghcr.io/github/github-mcp-server" "$ROOT/scripts/configure-mcp.sh" "$ROOT/docs/mcp-and-tools.md" >/dev/null
+grep -F "ghcr.io/github/github-mcp-server@sha256:2b0c48b070f61e9d3969269ead600f62d00fb237b60ac849ef3d166ee7de9ad3" "$ROOT/scripts/configure-mcp.sh" >/dev/null
+grep -F "ghcr.io/github/github-mcp-server@sha256:2b0c48b070f61e9d3969269ead600f62d00fb237b60ac849ef3d166ee7de9ad3" "$ROOT/docs/mcp-and-tools.md" >/dev/null
+grep -F '"GITHUB_READ_ONLY=1"' "$ROOT/scripts/configure-mcp.sh" >/dev/null
+grep -F '"GITHUB_READ_ONLY=1"' "$ROOT/docs/mcp-and-tools.md" >/dev/null
+grep -F '"GITHUB_LOCKDOWN_MODE=1"' "$ROOT/scripts/configure-mcp.sh" >/dev/null
+grep -F '"GITHUB_LOCKDOWN_MODE=1"' "$ROOT/docs/mcp-and-tools.md" >/dev/null
+grep -F 'CHROME_DEVTOOLS_MCP_NO_USAGE_STATISTICS: "1"' "$ROOT/scripts/configure-mcp.sh" >/dev/null
+grep -F '"CHROME_DEVTOOLS_MCP_NO_USAGE_STATISTICS": "1"' "$ROOT/docs/mcp-and-tools.md" >/dev/null
+grep -F 'CHROME_DEVTOOLS_MCP_NO_UPDATE_CHECKS: "1"' "$ROOT/scripts/configure-mcp.sh" >/dev/null
+grep -F '"CHROME_DEVTOOLS_MCP_NO_UPDATE_CHECKS": "1"' "$ROOT/docs/mcp-and-tools.md" >/dev/null
+grep -F 'configure-mcp.sh" --scope global --preset "$MCP_PRESET" --replace' "$ROOT/scripts/install-global.sh" >/dev/null
+grep -F 'pi-company-mcp --preset core --scope global --replace' "$ROOT/scripts/configure-mcp.sh" >/dev/null
+if grep -E '@latest|"@upstash/context7-mcp"|"chrome-devtools-mcp"|"@playwright/mcp"|"ghcr\.io/github/github-mcp-server"' "$ROOT/scripts/configure-mcp.sh" >/dev/null; then
+  echo "MCP production presets contain a mutable dependency source"
+  exit 1
+fi
 grep -R "Ctrl+L" "$ROOT/README.md" "$ROOT/docs/model-options.md" "$ROOT/docs/team-onboarding.md" "$ROOT/docs/quickstart-vietnamese.md" >/dev/null
 grep -R "/platform-improve" "$ROOT/packages/pi-company-core/prompts" "$ROOT/docs" >/dev/null
 grep -R "/be-to-fe" "$ROOT/packages/pi-company-core/prompts" "$ROOT/docs" >/dev/null
@@ -248,6 +313,7 @@ grep -R "company-source-cache" "$ROOT/packages/pi-company-core/skills" "$ROOT/te
 grep -R "company_source_checkout" "$ROOT/packages/pi-company-core" >/dev/null
 grep -R "scripts/setup.sh" "$ROOT/README.md" "$ROOT/docs" >/dev/null
 grep -R "quality-benchmark.sh" "$ROOT/README.md" "$ROOT/docs" >/dev/null
+grep -R "pi-company-capabilities" "$ROOT/README.md" "$ROOT/docs/capability-packs.md" >/dev/null
 grep -R ".pi-subagents/" "$ROOT/.gitignore" "$ROOT/docs/subagents-and-multiagent.md" "$ROOT/docs/distribution-standard.md" "$ROOT/scripts/init-project.sh" >/dev/null
 test -s "$ROOT/tests/policy-core.test.mjs"
 
@@ -292,6 +358,9 @@ node --check "$ROOT/packages/pi-company-core/extensions/company-guard.ts" >/dev/
 node --check "$ROOT/packages/pi-company-core/extensions/policy-core.js" >/dev/null
 node --check "$ROOT/packages/pi-company-core/extensions/redaction-core.js" >/dev/null
 node --check "$ROOT/packages/pi-company-core/extensions/runtime-evidence.js" >/dev/null
+node --check "$ROOT/packages/pi-company-core/security/sensitive-data.js" >/dev/null
+node --check "$ROOT/packages/pi-company-core/capabilities/capability-core.js" >/dev/null
+node --check "$ROOT/scripts/capability-catalog.mjs" >/dev/null
 (cd "$ROOT" && npm test) >/dev/null
 if [[ -x "$ROOT/node_modules/.bin/tsc" ]]; then
   (cd "$ROOT" && npm run typecheck) >/dev/null
@@ -304,6 +373,7 @@ bash -n "$ROOT/scripts/pi-model-catalog.sh"
 bash -n "$ROOT/scripts/configure-model-scope.sh"
 bash -n "$ROOT/scripts/configure-mcp.sh"
 bash -n "$ROOT/scripts/configure-subagents.sh"
+bash -n "$ROOT/scripts/init-project.sh"
 if [[ "$OFFLINE" == true || "${PI_COMPANY_VERIFY_OFFLINE:-}" == "1" || "${CI:-}" == "true" ]]; then
   echo "WARN: skipping local Pi model catalog check in offline/CI mode" >&2
 else
@@ -312,9 +382,54 @@ fi
 bash "$ROOT/scripts/configure-model-scope.sh" --dry-run --preset full --default-model openai-codex/gpt-5.5:xhigh >/dev/null
 bash "$ROOT/scripts/configure-mcp.sh" --list >/dev/null
 bash "$ROOT/scripts/configure-mcp.sh" --dry-run --preset popular --scope project --project "$ROOT" >/dev/null
+node --input-type=module - "$ROOT" <<'NODE'
+import assert from "node:assert/strict";
+import { execFileSync } from "node:child_process";
+import fs from "node:fs";
+import os from "node:os";
+import path from "node:path";
+
+const root = process.argv[2];
+const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), "pi-company-mcp-upgrade-"));
+const configPath = path.join(fixtureRoot, "mcp.json");
+try {
+  fs.writeFileSync(configPath, `${JSON.stringify({
+    mcpServers: {
+      context7: { command: "npx", args: ["-y", "@upstash/context7-mcp"] },
+      "chrome-devtools": { command: "npx", args: ["-y", "chrome-devtools-mcp@latest"] },
+      playwright: { command: "npx", args: ["-y", "@playwright/mcp@latest"] },
+      github: { command: "docker", args: ["run", "ghcr.io/github/github-mcp-server"] },
+      internal: { url: "https://mcp.example.invalid/api" }
+    }
+  }, null, 2)}\n`);
+  execFileSync("bash", [
+    path.join(root, "scripts", "configure-mcp.sh"),
+    "--config", configPath,
+    "--preset", "popular",
+    "--replace"
+  ], { stdio: "ignore" });
+  const upgraded = JSON.parse(fs.readFileSync(configPath, "utf8"));
+  assert.equal(upgraded.mcpServers.context7.args[1], "@upstash/context7-mcp@3.2.4");
+  assert.equal(upgraded.mcpServers["chrome-devtools"].args[1], "chrome-devtools-mcp@1.6.0");
+  assert.equal(upgraded.mcpServers["chrome-devtools"].env.CHROME_DEVTOOLS_MCP_NO_USAGE_STATISTICS, "1");
+  assert.equal(upgraded.mcpServers["chrome-devtools"].env.CHROME_DEVTOOLS_MCP_NO_UPDATE_CHECKS, "1");
+  assert.equal(upgraded.mcpServers.playwright.args[1], "@playwright/mcp@0.0.78");
+  assert.ok(upgraded.mcpServers.github.args.includes("GITHUB_READ_ONLY=1"));
+  assert.ok(upgraded.mcpServers.github.args.includes("GITHUB_LOCKDOWN_MODE=1"));
+  assert.ok(upgraded.mcpServers.github.args.includes("ghcr.io/github/github-mcp-server@sha256:2b0c48b070f61e9d3969269ead600f62d00fb237b60ac849ef3d166ee7de9ad3"));
+  assert.deepEqual(upgraded.mcpServers.internal, { url: "https://mcp.example.invalid/api" });
+} finally {
+  fs.rmSync(fixtureRoot, { recursive: true, force: true });
+}
+NODE
 bash "$ROOT/scripts/configure-subagents.sh" --list >/dev/null
 bash "$ROOT/scripts/configure-subagents.sh" --dry-run --preset safe >/dev/null
 bash "$ROOT/scripts/runtime-policy-smoke.sh" >/dev/null
+
+node "$ROOT/scripts/capability-catalog.mjs" catalog --check >/dev/null
+node "$ROOT/scripts/capability-catalog.mjs" doctor --profile "$ROOT/.pi/company-profile.json" --lock "$ROOT/.pi/company-profile.lock.json" >/dev/null
+node "$ROOT/scripts/capability-catalog.mjs" doctor --profile "$ROOT/adapters/generic/profile.json" >/dev/null
+node "$ROOT/scripts/capability-catalog.mjs" doctor --profile "$ROOT/adapters/web-frontend/profile.json" >/dev/null
 
 bash "$ROOT/scripts/profile-doctor.sh" "$ROOT" "$ROOT/.pi/company-profile.json" >/dev/null
 bash "$ROOT/scripts/profile-doctor.sh" "$ROOT" "$ROOT/adapters/generic/profile.json" >/dev/null

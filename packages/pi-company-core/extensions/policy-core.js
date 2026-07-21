@@ -73,6 +73,19 @@ export function matchesAnyPath(candidate, patterns) {
   });
 }
 
+export function matchesProtectedPath(candidate, patterns) {
+  const normalizedCandidate = normalizePathCandidate(candidate).toLocaleLowerCase("en-US");
+  if (!normalizedCandidate) return undefined;
+  return patterns.find((pattern) => {
+    const normalizedPattern = normalizePathCandidate(pattern).toLocaleLowerCase("en-US");
+    if (globMatchesPath(normalizedPattern, normalizedCandidate)) return true;
+    if (normalizedPattern.endsWith("/**")) {
+      return globMatchesPath(normalizedPattern.slice(0, -3), normalizedCandidate);
+    }
+    return false;
+  });
+}
+
 export function splitShellSegments(command) {
   const segments = [];
   let current = "";
@@ -517,7 +530,7 @@ export function extractShellPathCandidates(command) {
 
 export function findProtectedPathInCommand(command, protectedPatterns) {
   for (const candidate of extractShellPathCandidates(command)) {
-    const pattern = matchesAnyPath(candidate, protectedPatterns);
+    const pattern = matchesProtectedPath(candidate, protectedPatterns);
     if (pattern) return { candidate, pattern };
   }
   return undefined;

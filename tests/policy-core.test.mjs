@@ -3,7 +3,8 @@ import { describe, it } from "node:test";
 import {
   evaluateExecPolicyCore,
   findProtectedPathInCommand,
-  matchesAnyPath
+  matchesAnyPath,
+  matchesProtectedPath
 } from "../packages/pi-company-core/extensions/policy-core.js";
 
 const policy = {
@@ -38,6 +39,12 @@ describe("protected path glob matching", () => {
       assert.equal(matchesAnyPath(target, policy.protectedPaths), undefined);
     });
   }
+
+  for (const target of [".ENV", ".Env.Local", "AUTH.JSON", ".PI/COMPANY-PROFILE.JSON"]) {
+    it(`blocks protected case variant ${target}`, () => {
+      assert.ok(matchesProtectedPath(target, policy.protectedPaths), `${target} should match protected paths`);
+    });
+  }
 });
 
 describe("protected path extraction from shell", () => {
@@ -58,7 +65,9 @@ describe("protected path extraction from shell", () => {
     "git config --local --get user.email < .git/config",
     "cat .pi/company-profile.json",
     "cat .pi/company-state/observed-bash.jsonl",
-    "echo forged >> .pi/company-state/observed-bash.jsonl"
+    "echo forged >> .pi/company-state/observed-bash.jsonl",
+    "cat .ENV",
+    "printf x > .Env.Local"
   ];
 
   for (const command of blocked) {

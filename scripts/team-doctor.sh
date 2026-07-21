@@ -50,11 +50,13 @@ node --input-type=module - "$PLATFORM_ROOT" "$PROJECT_PATH" "$STRICT_SHARE" <<'N
 import fs from "node:fs";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
+import { pathToFileURL } from "node:url";
 
 const [platformRoot, projectPath, strictShareRaw] = process.argv.slice(2);
 const strictShare = strictShareRaw === "true";
 const errors = [];
 const warnings = [];
+const { verifyCapabilityLock } = await import(pathToFileURL(path.join(platformRoot, "packages", "pi-company-core", "capabilities", "capability-core.js")).href);
 
 function exists(rel) {
   return fs.existsSync(path.join(platformRoot, rel));
@@ -133,8 +135,8 @@ if (commandExists("pi")) {
   const combined = `${piList.stdout ?? ""}\n${piList.stderr ?? ""}`;
   piHasMcpAdapter = combined.includes("pi-mcp-adapter");
   piHasSubagents = combined.includes("pi-subagents");
-  if (!piHasMcpAdapter) warnings.push("Pi MCP adapter not found in `pi list`; run setup with --with-mcp or `pi install npm:pi-mcp-adapter`");
-  if (!piHasSubagents) warnings.push("Pi subagents package not found in `pi list`; run setup with --with-subagents or `pi install npm:pi-subagents`");
+  if (!piHasMcpAdapter) warnings.push("Pi MCP adapter not found in `pi list`; run setup with --with-mcp or `pi install npm:pi-mcp-adapter@2.11.0`");
+  if (!piHasSubagents) warnings.push("Pi subagents package not found in `pi list`; run setup with --with-subagents or `pi install npm:pi-subagents@0.35.1`");
 }
 
 const mcpFiles = [
@@ -159,10 +161,13 @@ if (subagentConfig && subagentConfig.toolDescriptionMode !== "compact") {
 }
 
 const projectSettingsPath = path.join(projectPath, ".pi", "settings.json");
+let projectPackageSource = "workspace";
 if (fs.existsSync(projectSettingsPath)) {
   const settings = readJson(projectSettingsPath);
   const packages = Array.isArray(settings.packages) ? settings.packages : [];
   if (packages.length === 0) errors.push("project .pi/settings.json has no packages");
+  const declaredSource = packages.find((source) => typeof source === "string" && source.length > 0);
+  if (declaredSource) projectPackageSource = declaredSource;
   for (const source of packages) {
     if (typeof source === "string" && source.includes("__PI_COMPANY_PACKAGE_SOURCE__")) {
       errors.push("project .pi/settings.json still has package source placeholder");
@@ -186,6 +191,22 @@ if (fs.existsSync(projectProfilePath)) {
   }
   if (Array.isArray(profile.requiredContext) && !profile.requiredContext.includes(".pi/project-context.md")) {
     warnings.push("project profile does not require .pi/project-context.md");
+  }
+  if (Array.isArray(profile.capabilityPacks)) {
+    const projectLockPath = path.join(projectPath, ".pi", "company-profile.lock.json");
+    if (!fs.existsSync(projectLockPath)) {
+      errors.push("project capability lock is missing");
+    } else {
+      try {
+        const lock = readJson(projectLockPath);
+        const verification = verifyCapabilityLock(platformRoot, projectProfilePath, lock, { packageSource: projectPackageSource });
+        if (!verification.ok) errors.push("project capability lock is stale or does not match the configured package source");
+      } catch (error) {
+        errors.push(`project capability lock validation failed: ${error instanceof Error ? error.message : String(error)}`);
+      }
+    }
+  } else {
+    warnings.push("project profile uses the legacy capability contract; apply a current profile to create a capability lock");
   }
 } else {
   warnings.push("project has no .pi/company-profile.json");

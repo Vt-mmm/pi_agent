@@ -18,15 +18,15 @@ Global install mặc định sẽ cài adapter và seed preset `core` nếu dùn
 ```bash
 bash /path/to/pi_agent/scripts/setup.sh . \
   --profile auto \
-  --package-source git:github.com/Vt-mmm/pi_agent@v0.3.23 \
+  --package-source git:github.com/Vt-mmm/pi_agent@v0.4.0 \
   --mcp-preset core
 ```
 
 Chỉnh MCP sau này:
 
 ```bash
-pi-company-mcp --preset popular --scope global
-pi-company-mcp --preset design --scope global
+pi-company-mcp --preset popular --scope global --replace
+pi-company-mcp --preset design --scope global --replace
 pi-company-mcp --preset all --scope project --project /path/to/project
 pi-company-mcp --list
 ```
@@ -34,8 +34,10 @@ pi-company-mcp --list
 Nếu clone repo GitHub và chưa link npm bin:
 
 ```bash
-bash /path/to/pi_agent/scripts/configure-mcp.sh --preset popular --scope global
+bash /path/to/pi_agent/scripts/configure-mcp.sh --preset popular --scope global --replace
 ```
+
+`--replace` cập nhật các server ID thuộc preset về baseline đã pin và vẫn giữ nguyên server ID khác. Luồng install/upgrade toàn cục luôn dùng chế độ này để không duy trì dependency động từ cấu hình cũ.
 
 Trong Pi:
 
@@ -92,7 +94,7 @@ MCP config:
   "mcpServers": {
     "context7": {
       "command": "npx",
-      "args": ["-y", "@upstash/context7-mcp"],
+      "args": ["-y", "@upstash/context7-mcp@3.2.4"],
       "env": {
         "CONTEXT7_API_KEY": "${CONTEXT7_API_KEY}"
       },
@@ -106,7 +108,7 @@ MCP config:
 Khuyến nghị cho Pi: có thể cài thêm Pi-native package nếu muốn tool/docs tự nhiên hơn MCP:
 
 ```bash
-pi install npm:@upstash/context7-pi
+pi install npm:@upstash/context7-pi@0.1.1
 ```
 
 API key là optional nhưng nên dùng cho quota tốt hơn:
@@ -150,7 +152,7 @@ Khuyến nghị thực tế:
 
 - dùng remote Figma MCP khi account/org hỗ trợ OAuth;
 - dùng desktop local khi cần selection-based Dev Mode trong app Figma;
-- nếu muốn Pi-native thay vì MCP, cân nhắc `pi install npm:pi-mono-figma` sau khi review source/license.
+- nếu muốn Pi-native thay vì MCP, có thể cài `pi install npm:pi-mono-figma@0.2.2` sau khi hoàn tất security và license review.
 
 ### Browser
 
@@ -161,7 +163,11 @@ Chrome DevTools:
   "mcpServers": {
     "chrome-devtools": {
       "command": "npx",
-      "args": ["-y", "chrome-devtools-mcp@latest"],
+      "args": ["-y", "chrome-devtools-mcp@1.6.0", "--no-performance-crux"],
+      "env": {
+        "CHROME_DEVTOOLS_MCP_NO_USAGE_STATISTICS": "1",
+        "CHROME_DEVTOOLS_MCP_NO_UPDATE_CHECKS": "1"
+      },
       "lifecycle": "lazy",
       "directTools": false
     }
@@ -176,7 +182,7 @@ Playwright:
   "mcpServers": {
     "playwright": {
       "command": "npx",
-      "args": ["-y", "@playwright/mcp@latest"],
+      "args": ["-y", "@playwright/mcp@0.0.78"],
       "lifecycle": "lazy",
       "directTools": false
     }
@@ -197,7 +203,11 @@ Playwright:
         "--rm",
         "-e",
         "GITHUB_PERSONAL_ACCESS_TOKEN",
-        "ghcr.io/github/github-mcp-server"
+        "-e",
+        "GITHUB_READ_ONLY=1",
+        "-e",
+        "GITHUB_LOCKDOWN_MODE=1",
+        "ghcr.io/github/github-mcp-server@sha256:2b0c48b070f61e9d3969269ead600f62d00fb237b60ac849ef3d166ee7de9ad3"
       ],
       "env": {
         "GITHUB_PERSONAL_ACCESS_TOKEN": "${GITHUB_PERSONAL_ACCESS_TOKEN}"
@@ -214,6 +224,8 @@ Token không được commit:
 ```bash
 export GITHUB_PERSONAL_ACCESS_TOKEN=<github-token>
 ```
+
+Preset mặc định chạy GitHub MCP ở read-only và lockdown mode. Bất kỳ cấu hình write nào cũng phải được tách riêng, giới hạn credential và yêu cầu human confirmation.
 
 ## Tool policy
 

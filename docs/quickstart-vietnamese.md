@@ -16,8 +16,8 @@ Phần còn lại — OAuth, package, context, harness, MCP, tool-call guard —
 ## Bước 1 — install global một lần
 
 ```bash
-npm install -g @earendil-works/pi-coding-agent
-pi install git:github.com/Vt-mmm/pi_agent@v0.3.23
+npm install -g @earendil-works/pi-coding-agent@0.80.10
+pi install git:github.com/Vt-mmm/pi_agent@v0.4.0
 ```
 
 Sau bước này, project mới không cần chạy bash init profile. Chỉ cần:
@@ -85,15 +85,15 @@ Nếu muốn xem/re-apply model scope từ terminal: `pi-company-models` và `pi
 Nếu muốn xem/re-apply MCP baseline từ terminal:
 
 ```bash
-pi-company-mcp --preset core --scope global
-pi-company-mcp --preset popular --scope global
+pi-company-mcp --preset core --scope global --replace
+pi-company-mcp --preset popular --scope global --replace
 pi-company-mcp --list
 ```
 
 Nếu clone repo GitHub và chưa link npm bin, dùng fallback:
 
 ```bash
-bash /path/to/pi_agent/scripts/configure-mcp.sh --preset core --scope global
+bash /path/to/pi_agent/scripts/configure-mcp.sh --preset core --scope global --replace
 ```
 
 Nếu muốn xem/re-apply subagents baseline từ terminal:
@@ -107,7 +107,7 @@ bash /path/to/pi_agent/scripts/configure-subagents.sh --preset safe
 Nếu muốn dùng builtin `researcher` cho web/docs research trong Pi:
 
 ```bash
-pi install npm:pi-web-access
+pi install npm:pi-web-access@0.13.0
 # hoặc setup từ đầu:
 bash /path/to/pi_agent/scripts/setup.sh . --with-web-access
 ```
@@ -133,7 +133,7 @@ File này là snapshot context cho task sau. Nếu file còn `Generated: not yet
 bash /path/to/pi_agent/scripts/setup.sh /path/to/project \
   --project-only \
   --profile auto \
-  --package-source git:github.com/Vt-mmm/pi_agent@v0.3.23 \
+  --package-source git:github.com/Vt-mmm/pi_agent@v0.4.0 \
   --mcp-preset core \
   --subagents-preset safe
 ```
@@ -154,7 +154,7 @@ Script bash chỉ dùng khi muốn preseed config vào repo:
 ```bash
 bash /path/to/pi_agent/scripts/setup.sh /path/to/project \
   --profile be-readonly-fe \
-  --package-source git:github.com/Vt-mmm/pi_agent@v0.3.23 \
+  --package-source git:github.com/Vt-mmm/pi_agent@v0.4.0 \
   --mcp-preset core \
   --subagents-preset safe
 ```

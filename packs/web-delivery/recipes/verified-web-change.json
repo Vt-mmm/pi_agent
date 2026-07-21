@@ -1,0 +1,57 @@
+{
+  "apiVersion": "pi.company/v1alpha1",
+  "kind": "CapabilityRecipe",
+  "metadata": {
+    "name": "verified-web-change",
+    "version": "0.1.0",
+    "owner": "platform-maintainers",
+    "lifecycle": "experimental",
+    "license": "MIT",
+    "description": "A web change workflow with source verification and bounded browser inspection.",
+    "tags": [
+      "frontend",
+      "verification"
+    ]
+  },
+  "spec": {
+    "inputs": [
+      {
+        "name": "task",
+        "description": "Expected interface behavior and acceptance criteria.",
+        "required": true
+      }
+    ],
+    "steps": [
+      {
+        "id": "context",
+        "uses": "recipe:bounded-change",
+        "mode": "workspace-write",
+        "needs": [],
+        "timeoutSeconds": 2400,
+        "retries": 0,
+        "outputs": [
+          "workspace-diff",
+          "verification-evidence"
+        ]
+      },
+      {
+        "id": "browser-check",
+        "uses": "capability:browser-inspection",
+        "mode": "read-only",
+        "needs": [
+          "context"
+        ],
+        "timeoutSeconds": 900,
+        "retries": 1,
+        "outputs": [
+          "runtime-evidence"
+        ]
+      }
+    ],
+    "gates": {
+      "context": true,
+      "verification": true,
+      "humanApproval": false
+    }
+  }
+}

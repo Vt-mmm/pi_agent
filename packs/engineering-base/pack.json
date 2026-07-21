@@ -1,0 +1,115 @@
+{
+  "apiVersion": "pi.company/v1alpha1",
+  "kind": "CapabilityPack",
+  "metadata": {
+    "name": "engineering-base",
+    "version": "0.1.0",
+    "owner": "platform-maintainers",
+    "lifecycle": "experimental",
+    "license": "MIT",
+    "description": "Core engineering workflow, policy, verification, and task coordination capabilities.",
+    "tags": [
+      "engineering",
+      "governance"
+    ]
+  },
+  "spec": {
+    "coreApiVersion": 1,
+    "requires": {
+      "packs": []
+    },
+    "provides": {
+      "prompts": [
+        {
+          "id": "task",
+          "path": "packages/pi-company-core/prompts/task.md"
+        },
+        {
+          "id": "plan",
+          "path": "packages/pi-company-core/prompts/plan.md"
+        },
+        {
+          "id": "review",
+          "path": "packages/pi-company-core/prompts/review.md"
+        }
+      ],
+      "skills": [
+        {
+          "id": "company-ops",
+          "path": "packages/pi-company-core/skills/company-ops/SKILL.md"
+        }
+      ],
+      "subagents": [
+        {
+          "id": "company-scout",
+          "path": "packages/pi-company-core/subagents/company-scout.md"
+        },
+        {
+          "id": "company-planner",
+          "path": "packages/pi-company-core/subagents/company-planner.md"
+        },
+        {
+          "id": "company-worker",
+          "path": "packages/pi-company-core/subagents/company-worker.md"
+        },
+        {
+          "id": "company-reviewer",
+          "path": "packages/pi-company-core/subagents/company-reviewer.md"
+        }
+      ],
+      "policies": [
+        {
+          "id": "base-policy",
+          "path": "packages/pi-company-core/policies/base-policy.json"
+        }
+      ],
+      "adapters": [
+        {
+          "id": "generic",
+          "path": "adapters/generic/profile.json"
+        }
+      ],
+      "recipes": [
+        {
+          "id": "bounded-change",
+          "path": "packs/engineering-base/recipes/bounded-change.json"
+        }
+      ],
+      "evals": [
+        {
+          "id": "capability-resolution",
+          "path": "evals/scenarios/capability-resolution.json"
+        }
+      ]
+    },
+    "permissions": {
+      "capabilities": [
+        "filesystem-readonly",
+        "filesystem-write",
+        "memory",
+        "shell"
+      ],
+      "filesystemRead": [
+        "**/*"
+      ],
+      "filesystemWrite": [
+        "**/*"
+      ],
+      "networkDomains": [],
+      "externalActions": []
+    },
+    "activation": {
+      "mode": "profile",
+      "profiles": [
+        "generic",
+        "platform-development"
+      ],
+      "triggers": []
+    },
+    "verification": {
+      "evalScenarios": [
+        "capability-resolution"
+      ]
+    }
+  }
+}

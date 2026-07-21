@@ -16,15 +16,14 @@ Options:
   -h, --help
 
 Package source examples:
-  git:github.com/Vt-mmm/pi_agent@v0.3.23
-  https://github.com/Vt-mmm/pi_agent
-  npm:@company/pi_agent@0.3.23
+  git:github.com/Vt-mmm/pi_agent@v0.4.0
+  https://github.com/Vt-mmm/pi_agent/archive/refs/tags/v0.4.0.tar.gz
+  npm:@company/pi-agent-platform@0.4.0
 
 Default package source:
   1. --package-source
   2. PI_COMPANY_PACKAGE_SOURCE
-  3. platform git remote origin
-  4. local platform path (warn; do not commit for team)
+  3. local platform path (warn; do not commit for team)
 USAGE
 }
 
@@ -215,16 +214,25 @@ resolve_package_source() {
     return
   fi
 
-  if git -C "$PLATFORM_ROOT" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
-    local remote_url
-    remote_url="$(git -C "$PLATFORM_ROOT" config --get remote.origin.url || true)"
-    if [[ -n "$remote_url" ]]; then
-      printf '%s\n' "$remote_url"
+  local existing_settings="$PROJECT_PATH/.pi/settings.json"
+  if [[ -f "$existing_settings" ]]; then
+    local existing_source
+    existing_source="$(node --input-type=module - "$existing_settings" <<'NODE'
+import fs from "node:fs";
+const settings = JSON.parse(fs.readFileSync(process.argv[2], "utf8"));
+const source = Array.isArray(settings.packages)
+  ? settings.packages.find((item) => typeof item === "string" && item.length > 0)
+  : undefined;
+if (source) process.stdout.write(source);
+NODE
+)"
+    if [[ -n "$existing_source" ]]; then
+      printf '%s\n' "$existing_source"
       return
     fi
   fi
 
-  echo "WARN: No package source provided and no git remote detected." >&2
+  echo "WARN: No exact package source provided." >&2
   echo "WARN: .pi/settings.json will use local platform path; do not commit it for team use." >&2
   printf '%s\n' "$PLATFORM_ROOT"
 }
@@ -236,6 +244,7 @@ fi
 
 PROFILE_PATH="$(resolve_profile_path "$PROFILE_INPUT")"
 PACKAGE_SOURCE="$(resolve_package_source)"
+node "$PLATFORM_ROOT/scripts/capability-catalog.mjs" validate-source --package-source "$PACKAGE_SOURCE" >/dev/null
 
 mkdir -p "$PROJECT_PATH/.pi"
 
@@ -258,10 +267,25 @@ else
 fi
 
 PROFILE_TARGET="$PROJECT_PATH/.pi/company-profile.json"
+CAPABILITY_LOCK_TARGET="$PROJECT_PATH/.pi/company-profile.lock.json"
 if [[ "$FORCE_PROFILE" == true || ! -f "$PROFILE_TARGET" ]]; then
-  cp "$PROFILE_PATH" "$PROFILE_TARGET"
+  apply_profile_args=(
+    "$PLATFORM_ROOT/scripts/capability-catalog.mjs"
+    apply-profile
+    --profile "$PROFILE_PATH"
+    --target "$PROFILE_TARGET"
+    --package-source "$PACKAGE_SOURCE"
+  )
+  if [[ "$FORCE_PROFILE" == true ]]; then
+    apply_profile_args+=(--force)
+  fi
+  node "${apply_profile_args[@]}" >/dev/null
 else
   echo "SKIP: .pi/company-profile.json exists. Use --force-profile to replace."
+  node "$PLATFORM_ROOT/scripts/capability-catalog.mjs" resolve \
+    --profile "$PROFILE_TARGET" \
+    --output "$CAPABILITY_LOCK_TARGET" \
+    --package-source "$PACKAGE_SOURCE" >/dev/null
 fi
 
 if [[ ! -f "$PROJECT_PATH/.pi/mcp.json" ]]; then
@@ -310,6 +334,7 @@ echo "  project: $PROJECT_PATH"
 echo "  requestedProfile: $REQUESTED_PROFILE"
 echo "  resolvedProfile: $PROFILE_INPUT"
 echo "  profile: $PROFILE_TARGET"
+echo "  capabilityLock: $CAPABILITY_LOCK_TARGET"
 echo "  profileSource: $PROFILE_PATH"
 echo "  packageSource: $PACKAGE_SOURCE"
 echo

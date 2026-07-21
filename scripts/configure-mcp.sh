@@ -28,7 +28,7 @@ Recommended presets:
   all        popular + Figma desktop/local MCP
 
 Examples:
-  pi-company-mcp --preset core --scope global
+  pi-company-mcp --preset core --scope global --replace
   pi-company-mcp --preset popular --scope project --project /path/to/repo
   pi-company-mcp --preset design-local --scope project
 
@@ -139,7 +139,7 @@ const servers = {
     description: "Official Context7 MCP server for up-to-date library/framework docs.",
     config: {
       command: "npx",
-      args: ["-y", "@upstash/context7-mcp"],
+      args: ["-y", "@upstash/context7-mcp@3.2.4"],
       env: {
         CONTEXT7_API_KEY: "${CONTEXT7_API_KEY}"
       },
@@ -151,7 +151,11 @@ const servers = {
     description: "Chrome DevTools MCP for runtime browser inspection, console logs, screenshots, and performance checks.",
     config: {
       command: "npx",
-      args: ["-y", "chrome-devtools-mcp@latest"],
+      args: ["-y", "chrome-devtools-mcp@1.6.0", "--no-performance-crux"],
+      env: {
+        CHROME_DEVTOOLS_MCP_NO_USAGE_STATISTICS: "1",
+        CHROME_DEVTOOLS_MCP_NO_UPDATE_CHECKS: "1"
+      },
       lifecycle: "lazy",
       directTools: false
     }
@@ -160,7 +164,7 @@ const servers = {
     description: "Playwright MCP for browser automation and UI verification workflows.",
     config: {
       command: "npx",
-      args: ["-y", "@playwright/mcp@latest"],
+      args: ["-y", "@playwright/mcp@0.0.78"],
       lifecycle: "lazy",
       directTools: false
     }
@@ -175,7 +179,11 @@ const servers = {
         "--rm",
         "-e",
         "GITHUB_PERSONAL_ACCESS_TOKEN",
-        "ghcr.io/github/github-mcp-server"
+        "-e",
+        "GITHUB_READ_ONLY=1",
+        "-e",
+        "GITHUB_LOCKDOWN_MODE=1",
+        "ghcr.io/github/github-mcp-server@sha256:2b0c48b070f61e9d3969269ead600f62d00fb237b60ac849ef3d166ee7de9ad3"
       ],
       env: {
         GITHUB_PERSONAL_ACCESS_TOKEN: "${GITHUB_PERSONAL_ACCESS_TOKEN}"
@@ -291,4 +299,3 @@ if (dryRun) {
   console.log(JSON.stringify(report, null, 2));
 }
 NODE
-

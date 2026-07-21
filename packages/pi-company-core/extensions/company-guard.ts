@@ -8,8 +8,10 @@ import { StringEnum } from "@earendil-works/pi-ai";
 import { Type } from "typebox";
 import {
   evaluateExecPolicyCore,
+  extractShellPathCandidates,
   findProtectedPathInCommand,
   globMatchesPath,
+  matchesProtectedPath,
   normalizePathCandidate,
   matchesAnyPath
 } from "./policy-core.js";
@@ -25,6 +27,11 @@ import {
   redactForStorage,
   redactSensitiveText
 } from "./redaction-core.js";
+import {
+  resolveCapabilityProfileDocument,
+  verifyCapabilityLock,
+  writeProfileLockAtomic
+} from "../capabilities/capability-core.js";
 
 type ProjectProfile = {
   schemaVersion?: number;
@@ -36,6 +43,15 @@ type ProjectProfile = {
   requiredContext?: string[];
   verifyCommands?: Record<string, string[]>;
   mcpCapabilities?: string[];
+  capabilityPacks?: Array<{ name: string; version: string }>;
+  capabilityPolicy?: {
+    allowedOwners?: string[];
+    allowedLifecycles?: Array<"experimental" | "stable" | "deprecated">;
+    allowedFilesystemRead?: string[];
+    allowedFilesystemWrite?: string[];
+    allowedNetworkDomains?: string[];
+    allowedExternalActions?: string[];
+  };
   memory?: MemorySettings;
   runtimePolicy?: RuntimePolicySettings;
 };
@@ -252,8 +268,8 @@ const DEFAULT_RUNTIME_POLICY: Required<RuntimePolicySettings> = {
 };
 
 const DEFAULT_POLICY: BasePolicy = {
-  protectedPaths: [".git/**", "**/auth.json", "**/.env", "**/.env.*"],
-  shellProtectedPaths: [".git/**", "**/auth.json", "**/.env", "**/.env.*"],
+  protectedPaths: [".git/**", "**/auth.json", "**/.env", "**/.env.*", ".pi/settings.json", ".pi/company-profile.json", ".pi/company-profile.lock.json"],
+  shellProtectedPaths: [".git/**", "**/auth.json", "**/.env", "**/.env.*", ".pi/settings.json", ".pi/company-profile.json", ".pi/company-profile.lock.json"],
   blockedCommandPatterns: ["rm -rf /", "rm -rf ~", "rm -rf $HOME", "git reset --hard", "git clean -fd"],
   requireConfirmationPatterns: ["deploy", "release", "publish", "migration", "gh pr merge", "git push"],
   defaultRequiredContext: ["AGENTS.md", "README.md"],
@@ -429,6 +445,45 @@ function projectProfilePath(cwd: string): string {
   return path.join(cwd, ".pi", "company-profile.json");
 }
 
+function projectPackageSource(cwd: string): string {
+  const settings = readJsonFile<{ packages?: unknown[] }>(path.join(cwd, ".pi", "settings.json"));
+  const source = settings?.packages?.find((item): item is string => typeof item === "string" && item.length > 0);
+  return source ?? "workspace";
+}
+
+type ProjectCapabilityState = {
+  ok: boolean;
+  reason?: string;
+  filesystemRead?: string[];
+  filesystemWrite?: string[];
+};
+
+function verifyProjectCapabilityState(extensionDir: string, cwd: string): ProjectCapabilityState {
+  if (process.env.PI_COMPANY_PROFILE?.trim()) return { ok: true };
+  const profilePath = projectProfilePath(cwd);
+  if (!fs.existsSync(profilePath)) return { ok: true };
+  const profile = readJsonFile<ProjectProfile>(profilePath);
+  if (!profile || !Array.isArray(profile.capabilityPacks)) return { ok: true };
+  const lockPath = path.join(cwd, ".pi", "company-profile.lock.json");
+  if (!fs.existsSync(lockPath)) return { ok: false, reason: "Capability lock is missing. Reapply the project profile." };
+  const lock = readJsonFile<Record<string, unknown>>(lockPath);
+  if (!lock) return { ok: false, reason: "Capability lock is unreadable. Reapply the project profile." };
+  try {
+    const verification = verifyCapabilityLock(findPlatformRoot(extensionDir), profilePath, lock, {
+      packageSource: projectPackageSource(cwd)
+    });
+    return verification.ok
+      ? {
+          ok: true,
+          filesystemRead: verification.expected.permissions.filesystemRead,
+          filesystemWrite: verification.expected.permissions.filesystemWrite
+        }
+      : { ok: false, reason: "Capability lock does not match the active profile, package source, or installed platform." };
+  } catch (error) {
+    return { ok: false, reason: `Capability validation failed: ${error instanceof Error ? error.message : String(error)}` };
+  }
+}
+
 function evaluateExecPolicy(command: string, profile: ProjectProfile, policy: BasePolicy): {
   mode: RuntimePolicySettings["execPolicy"];
   decision: "allow" | "prompt" | "forbid";
@@ -500,8 +555,109 @@ const CONTENT_INPUT_FIELDS = new Set([
   "text"
 ]);
 
+const FILESYSTEM_SCOPE_FIELDS = new Set([
+  "absolutepath",
+  "dest",
+  "destination",
+  "dir",
+  "directory",
+  "file",
+  "filepath",
+  "files",
+  "location",
+  "notebookpath",
+  "output",
+  "outputpath",
+  "path",
+  "paths",
+  "source",
+  "src",
+  "target",
+  "targetpath",
+  "uri"
+]);
+
 function isContentInputField(field: string | undefined): boolean {
   return field !== undefined && CONTENT_INPUT_FIELDS.has(field.toLowerCase().replace(/[-_]/g, ""));
+}
+
+function isFilesystemScopeField(fieldPath: string): boolean {
+  const field = fieldPath.split(".").at(-1)?.replace(/\[\d+\]$/, "");
+  return field !== undefined && FILESYSTEM_SCOPE_FIELDS.has(field.toLowerCase().replace(/[-_]/g, ""));
+}
+
+function inspectRepositoryPathBoundary(cwd: string, candidate: string): { reason?: string } {
+  const normalized = normalizePathCandidate(candidate);
+  if (normalized === ".." || normalized.startsWith("../") || path.posix.isAbsolute(normalized)) {
+    return { reason: `path resolves outside the project: ${candidate}` };
+  }
+  let current = cwd;
+  for (const segment of normalized.split("/").filter((item) => item && item !== ".")) {
+    current = path.join(current, segment);
+    try {
+      const stat = fs.lstatSync(current);
+      if (stat.isSymbolicLink()) return { reason: `path traverses symbolic link: ${path.relative(cwd, current)}` };
+    } catch (error) {
+      const code = error && typeof error === "object" && "code" in error ? String((error as { code?: unknown }).code) : "";
+      if (code === "ENOENT") break;
+      return { reason: `path component cannot be inspected: ${path.relative(cwd, current)}` };
+    }
+  }
+  return {};
+}
+
+function resolveRepositoryPathCandidate(cwd: string, candidate: string): string | undefined {
+  const normalized = normalizePathCandidate(candidate);
+  if (normalized === ".." || normalized.startsWith("../")) return undefined;
+
+  const relative = path.posix.isAbsolute(normalized)
+    ? path.relative(cwd, normalized).split(path.sep).join("/")
+    : normalized;
+  if (relative === ".." || relative.startsWith("../")) return undefined;
+
+  const pending = relative.split("/").filter((item) => item && item !== ".");
+  let current = cwd;
+  let resolvedDepth = 0;
+  for (let index = 0; index < pending.length; index += 1) {
+    const next = path.join(current, pending[index]);
+    try {
+      fs.lstatSync(next);
+      current = next;
+      resolvedDepth = index + 1;
+    } catch (error) {
+      const code = error && typeof error === "object" && "code" in error ? String((error as { code?: unknown }).code) : "";
+      if (code !== "ENOENT") return undefined;
+      break;
+    }
+  }
+
+  let canonicalBase: string;
+  try {
+    canonicalBase = fs.realpathSync.native(current);
+  } catch {
+    return undefined;
+  }
+  const canonical = path.resolve(canonicalBase, ...pending.slice(resolvedDepth));
+  const canonicalRoot = fs.realpathSync.native(cwd);
+  const canonicalRelative = path.relative(canonicalRoot, canonical).split(path.sep).join("/");
+  if (canonicalRelative === ".." || canonicalRelative.startsWith("../") || path.isAbsolute(canonicalRelative)) return undefined;
+  return canonicalRelative || ".";
+}
+
+function findResolvedProtectedPathInCommand(
+  cwd: string,
+  command: string,
+  protectedPatterns: string[]
+): { candidate: string; resolved: string; pattern: string } | undefined {
+  for (const candidate of extractShellPathCandidates(command)) {
+    const relative = normalizeRelative(cwd, candidate);
+    if (!relative) continue;
+    const resolved = resolveRepositoryPathCandidate(cwd, relative);
+    if (!resolved || resolved === relative) continue;
+    const pattern = matchesProtectedPath(resolved, protectedPatterns);
+    if (pattern) return { candidate, resolved, pattern };
+  }
+  return undefined;
 }
 
 const MAX_TOOL_INPUT_INSPECTION_DEPTH = 32;
@@ -701,7 +857,9 @@ function evaluatePathLikeToolAccess(
   toolName: string,
   input: Record<string, unknown>,
   protectedPaths: string[],
-  shellProtectedPaths: string[]
+  shellProtectedPaths: string[],
+  filesystemRead?: string[],
+  filesystemWrite?: string[]
 ): { block: boolean; reason?: string } {
   const inspection = inspectPathInputsFromInput(cwd, input);
   if (inspection.maxDepthExceeded) {
@@ -711,8 +869,40 @@ function evaluatePathLikeToolAccess(
     };
   }
 
-  for (const item of inspection.paths) {
-    const shellMatched = matchesAnyPath(item.path, shellProtectedPaths);
+  const scopeAwareTool = ["read", "write", "edit", "grep", "find", "ls"].includes(toolName)
+    || /(?:^|[_-])(?:fs|filesystem)(?:[_-]|$)/i.test(toolName);
+  const writesFilesystem = ["write", "edit"].includes(toolName)
+    || (scopeAwareTool && /(?:write|edit|create|delete|move|rename|upload)/i.test(toolName));
+  const scopeGlobs = toolName === "grep"
+    ? (Array.isArray(input.glob) ? input.glob : [input.glob])
+    : toolName === "find"
+      ? (Array.isArray(input.pattern) ? input.pattern : [input.pattern])
+      : [];
+  for (const value of scopeGlobs) {
+    if (typeof value !== "string") continue;
+    const candidate = value.startsWith("!") ? value.slice(1) : value;
+    const unsafe = candidate.length === 0
+      || candidate.length > 512
+      || candidate.includes("\\")
+      || candidate.includes("\0")
+      || path.posix.isAbsolute(candidate)
+      || /^[A-Za-z]:/.test(candidate)
+      || candidate.split("/").some((segment) => segment === "..");
+    if (unsafe) return { block: true, reason: `Blocked ${toolName} unsafe scope pattern: ${value}` };
+  }
+  const inspectedPaths = [...inspection.paths];
+  if (["grep", "find", "ls"].includes(toolName) && !inspectedPaths.some((item) => isFilesystemScopeField(item.field))) {
+    inspectedPaths.push({ field: "path", path: "." });
+  }
+
+  for (const item of inspectedPaths) {
+    if (scopeAwareTool && isFilesystemScopeField(item.field)) {
+      const boundary = inspectRepositoryPathBoundary(cwd, item.path);
+      if (boundary.reason) return { block: true, reason: `Blocked ${toolName}: ${boundary.reason}` };
+    }
+    const resolvedPath = resolveRepositoryPathCandidate(cwd, item.path);
+    const shellMatched = matchesProtectedPath(item.path, shellProtectedPaths)
+      ?? (resolvedPath ? matchesProtectedPath(resolvedPath, shellProtectedPaths) : undefined);
     if (shellMatched) {
       return {
         block: true,
@@ -720,14 +910,26 @@ function evaluatePathLikeToolAccess(
       };
     }
 
-    if (["write", "edit"].includes(toolName)) {
-      const writeMatched = matchesAnyPath(item.path, protectedPaths);
+    if (writesFilesystem) {
+      const writeMatched = matchesProtectedPath(item.path, protectedPaths)
+        ?? (resolvedPath ? matchesProtectedPath(resolvedPath, protectedPaths) : undefined);
       if (writeMatched) {
         return {
           block: true,
           reason: `Blocked ${toolName} write to protected path from ${item.field}: ${item.path} matches ${writeMatched}`
         };
       }
+      if (scopeAwareTool && filesystemWrite && isFilesystemScopeField(item.field) && !matchesAnyPath(item.path, filesystemWrite)) {
+        return {
+          block: true,
+          reason: `Blocked ${toolName} write outside resolved filesystem scope from ${item.field}: ${item.path}`
+        };
+      }
+    } else if (scopeAwareTool && filesystemRead && isFilesystemScopeField(item.field) && !matchesAnyPath(item.path, filesystemRead)) {
+      return {
+        block: true,
+        reason: `Blocked ${toolName} read outside resolved filesystem scope from ${item.field}: ${item.path}`
+      };
     }
   }
 
@@ -777,7 +979,7 @@ function filterGrepProtectedContent(content: unknown, protectedPatterns: string[
     let blockRedactedLines = 0;
     for (const line of text.split(/\r?\n/)) {
       const linePath = grepOutputLinePath(line);
-      if (linePath && matchesAnyPath(linePath, protectedPatterns)) {
+      if (linePath && matchesProtectedPath(linePath, protectedPatterns)) {
         changed = true;
         redactedLines += 1;
         blockRedactedLines += 1;
@@ -835,7 +1037,7 @@ function filterProtectedPathListContent(
     let blockRedactedLines = 0;
     for (const line of text.split(/\r?\n/)) {
       const candidates = resultLineProtectedPathCandidates(cwd, basePath, line);
-      if (candidates.some((candidate) => matchesAnyPath(candidate, protectedPatterns))) {
+      if (candidates.some((candidate) => matchesProtectedPath(candidate, protectedPatterns))) {
         changed = true;
         redactedLines += 1;
         blockRedactedLines += 1;
@@ -1288,8 +1490,12 @@ function writeProfileFromAdapter(extensionDir: string, cwd: string, profileName:
     projectId: projectId ? slugify(projectId) : slugify(projectName),
     displayName: displayName?.trim() || titleize(projectName)
   };
+  const capabilityLock = resolveCapabilityProfileDocument(findPlatformRoot(extensionDir), personalized, {
+    profileFile: "company-profile.json",
+    packageSource: projectPackageSource(cwd)
+  });
   fs.mkdirSync(path.dirname(target), { recursive: true });
-  fs.writeFileSync(target, `${JSON.stringify(personalized, null, 2)}\n`);
+  writeProfileLockAtomic(target, personalized, path.join(cwd, ".pi", "company-profile.lock.json"), capabilityLock);
   ensureProjectContextPlaceholder(cwd);
   return personalized;
 }
@@ -1886,12 +2092,14 @@ export default function companyGuard(pi: ExtensionAPI) {
     const profileHint = fs.existsSync(projectProfilePath(ctx.cwd)) ? "" : " (run /onboard-project to select a profile)";
     const snapshot = buildUsageSnapshot(ctx, String(pi.getThinkingLevel()));
     const preflight = buildContextPreflight(snapshot, "task", 0);
+    const capabilityState = verifyProjectCapabilityState(extensionDir, ctx.cwd);
     const contextHint = preflight.recommendation === "fresh-session"
       ? " Context is high; use /fresh-task or /fresh-scout for new work."
       : preflight.recommendation === "compact"
         ? " Context is warm; run /task-preflight before large work."
         : "";
     ctx.ui.notify(`Company Pi guard loaded: ${name}${profileHint}${contextHint}`, preflight.recommendation === "fresh-session" ? "warning" : "info");
+    if (!capabilityState.ok) ctx.ui.notify(capabilityState.reason ?? "Capability validation failed.", "warning");
   });
 
   pi.on("input", async (event, ctx) => {
@@ -1988,6 +2196,11 @@ export default function companyGuard(pi: ExtensionAPI) {
   });
 
   pi.on("tool_call", async (event, ctx) => {
+    const capabilityState = verifyProjectCapabilityState(extensionDir, ctx.cwd);
+    const recoveryTools = new Set(["company_profile_options", "company_profile_apply", "company_context", "read", "grep", "find", "ls"]);
+    if (!capabilityState.ok && !recoveryTools.has(event.toolName)) {
+      return { block: true, reason: capabilityState.reason ?? "Capability lock validation failed." };
+    }
     const profile = loadProfileFromContext(ctx);
     const runtime = resolveRuntimePolicy(profile);
     const protectedPaths = [
@@ -2017,6 +2230,13 @@ export default function companyGuard(pi: ExtensionAPI) {
       if (protectedHit) {
         return { block: true, reason: `Command touches protected path: ${protectedHit.candidate} matches ${protectedHit.pattern}` };
       }
+      const resolvedProtectedHit = findResolvedProtectedPathInCommand(ctx.cwd, command, shellProtectedPaths);
+      if (resolvedProtectedHit) {
+        return {
+          block: true,
+          reason: `Command resolves to protected path: ${resolvedProtectedHit.candidate} resolves to ${resolvedProtectedHit.resolved} matching ${resolvedProtectedHit.pattern}`
+        };
+      }
 
       if (execDecision.mode !== "off" && execDecision.decision === "prompt") {
         const ok = await ctx.ui.confirm(
@@ -2032,7 +2252,9 @@ export default function companyGuard(pi: ExtensionAPI) {
       event.toolName,
       toolInput,
       protectedPaths,
-      shellProtectedPaths
+      shellProtectedPaths,
+      capabilityState.filesystemRead,
+      capabilityState.filesystemWrite
     );
     if (pathDecision.block) {
       return { block: true, reason: pathDecision.reason };
@@ -2402,7 +2624,7 @@ export default function companyGuard(pi: ExtensionAPI) {
         appendTrace(ctx.cwd, { event: "profile_apply", profile: params.profile, projectId: profile.projectId, mode: profile.mode });
         appendSessionTrace(pi, { event: "profile_apply", profile: params.profile, projectId: profile.projectId, mode: profile.mode });
         return {
-          content: [{ type: "text", text: `Profile applied: .pi/company-profile.json (${params.profile})` }],
+          content: [{ type: "text", text: `Profile applied: .pi/company-profile.json and .pi/company-profile.lock.json (${params.profile})` }],
           details: profile
         };
       } catch (error) {

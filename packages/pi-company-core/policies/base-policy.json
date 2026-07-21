@@ -9,7 +9,9 @@
     "**/node_modules/**",
     "**/dist/**",
     ".pi/company-state/**",
-    ".pi/company-profile.json"
+    ".pi/settings.json",
+    ".pi/company-profile.json",
+    ".pi/company-profile.lock.json"
   ],
   "shellProtectedPaths": [
     ".git/**",
@@ -17,7 +19,9 @@
     "**/.env",
     "**/.env.*",
     ".pi/company-state/**",
-    ".pi/company-profile.json"
+    ".pi/settings.json",
+    ".pi/company-profile.json",
+    ".pi/company-profile.lock.json"
   ],
   "blockedCommandPatterns": [
     "rm -rf /",

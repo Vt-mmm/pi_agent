@@ -8,6 +8,8 @@ Pi Agent Platform được đóng gói như một reusable Pi package để dùn
 
 ```text
 packages/pi-company-core/
+├─ capabilities/
+│  └─ capability-core.js
 ├─ extensions/
 │  └─ company-guard.ts
 ├─ prompts/
@@ -23,6 +25,8 @@ Root `package.json` expose:
 - `pi.skills`
 - `pi.prompts`
 - `pi.subagents.agents`
+
+Root CLI additionally exposes `pi-company-capabilities` for catalog validation, profile resolution, lock verification, and dry-run action proposal validation.
 
 ## Design decisions
 
@@ -54,6 +58,12 @@ Prompt instructions are not enough for safety. The extension layer provides exec
 
 Token/cost/quality improvements must be measured on repeatable project scenarios, not assumed from setup shape.
 
+### 8. Capability selection is deterministic
+
+Capability packs declare exact dependencies, owners, lifecycle, artifacts, permissions, activation, and eval identifiers. Project profiles grant the allowed boundary. Resolver output is stored in `company-profile.lock.json` with profile, pack, and artifact digests.
+
+Manifest data never executes code. Invalid paths, symbolic links, dependency cycles, stale locks, and permission expansion fail validation.
+
 ## Adopted capabilities
 
 | Capability | Implementation |
@@ -67,6 +77,8 @@ Token/cost/quality improvements must be measured on repeatable project scenarios
 | Source cache | `company-source-cache` + `company_source_checkout` |
 | Subagent roles | `company-scout`, `company-planner`, `company-worker`, `company-reviewer`, `company-oracle` |
 | Quality benchmark | `scripts/quality-benchmark.sh` |
+| Capability catalog | `packs/*/pack.json` + `catalog/capabilities.json` |
+| Capability resolver | `capability-core.js` + `pi-company-capabilities` |
 
 ## Deferred capabilities
 

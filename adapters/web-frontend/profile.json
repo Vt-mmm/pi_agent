@@ -57,6 +57,28 @@
     "browser",
     "memory"
   ],
+  "capabilityPacks": [
+    {
+      "name": "web-delivery",
+      "version": "0.1.0"
+    }
+  ],
+  "capabilityPolicy": {
+    "allowedOwners": [
+      "platform-maintainers"
+    ],
+    "allowedLifecycles": [
+      "experimental"
+    ],
+    "allowedFilesystemRead": [
+      "**/*"
+    ],
+    "allowedFilesystemWrite": [
+      "**/*"
+    ],
+    "allowedNetworkDomains": [],
+    "allowedExternalActions": []
+  },
   "memory": {
     "enabled": true,
     "mode": "manual",

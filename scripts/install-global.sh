@@ -10,9 +10,9 @@ Purpose:
   Install the company Pi package into the current user's global Pi settings.
 
 Package source examples:
-  git:github.com/Vt-mmm/pi_agent@v0.3.23
-  https://github.com/Vt-mmm/pi_agent
-  npm:@company/pi_agent@0.3.23
+  git:github.com/Vt-mmm/pi_agent@v0.4.0
+  https://github.com/Vt-mmm/pi_agent/archive/refs/tags/v0.4.0.tar.gz
+  npm:@company/pi-agent-platform@0.4.0
   /absolute/path/to/pi_agent
 
 Notes:
@@ -37,6 +37,28 @@ WITH_HERDR=false
 CONFIGURE_MODEL_SCOPE=true
 MODEL_SCOPE_PRESET="full"
 DEFAULT_MODEL="openai-codex/gpt-5.5:xhigh"
+PI_MCP_ADAPTER_SOURCE="npm:pi-mcp-adapter@2.11.0"
+PI_SUBAGENTS_SOURCE="npm:pi-subagents@0.35.1"
+PI_WEB_ACCESS_SOURCE="npm:pi-web-access@0.13.0"
+PI_MCP_ADAPTER_INTEGRITY="sha512-4Y/eLbhbxnRih519dJUxMyQ5QASvPcdWyBlS8+dDXteAzaMuLnd4nMTWgoZw3JRIW+0r93KAQcz1Rbli4xCwEQ=="
+PI_SUBAGENTS_INTEGRITY="sha512-nIH6liO541FZ1RoeEu58Ligd59tiNw0/ODPgHh7uvx9Dk4UpWH08F84/l1+hXCzUgC85OCmyVtngWkZjcK94Cg=="
+PI_WEB_ACCESS_INTEGRITY="sha512-ny0bHisMWdobmu1hcMp/jqjaRh6pYrH7dctBK2CVyRF4ia7bP47RnOPYdG1yiks9ohtcanWir5Hl9EFap8h0zQ=="
+
+verify_npm_integrity() {
+  local source="$1"
+  local expected="$2"
+  local package_spec="${source#npm:}"
+  if ! command -v npm >/dev/null 2>&1; then
+    echo "FAIL: npm is required to verify package integrity for $package_spec." >&2
+    exit 1
+  fi
+  local actual
+  actual="$(npm view "$package_spec" dist.integrity 2>/dev/null | tr -d '\r\n')"
+  if [[ -z "$actual" || "$actual" != "$expected" ]]; then
+    echo "FAIL: registry integrity does not match the approved digest for $package_spec." >&2
+    exit 1
+  fi
+}
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -101,19 +123,12 @@ while [[ $# -gt 0 ]]; do
 done
 
 if [[ -z "$PACKAGE_SOURCE" ]]; then
-  if git -C "$PLATFORM_ROOT" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
-    REMOTE_URL="$(git -C "$PLATFORM_ROOT" config --get remote.origin.url || true)"
-    if [[ -n "$REMOTE_URL" ]]; then
-      PACKAGE_SOURCE="$REMOTE_URL"
-    fi
-  fi
-fi
-
-if [[ -z "$PACKAGE_SOURCE" ]]; then
   PACKAGE_SOURCE="$PLATFORM_ROOT"
-  echo "WARN: No git remote detected. Installing from local path." >&2
+  echo "WARN: No exact package source provided. Installing from local path." >&2
   echo "WARN: For team rollout, pass --package-source git:github.com/Vt-mmm/pi_agent@TAG" >&2
 fi
+
+node "$PLATFORM_ROOT/scripts/capability-catalog.mjs" validate-source --package-source "$PACKAGE_SOURCE" >/dev/null
 
 if ! command -v pi >/dev/null 2>&1; then
   echo "FAIL: pi is not on PATH." >&2
@@ -128,24 +143,27 @@ pi install "$PACKAGE_SOURCE"
 
 if [[ "$WITH_MCP" == true ]]; then
   echo "Installing Pi MCP adapter:"
-  pi install npm:pi-mcp-adapter
+  verify_npm_integrity "$PI_MCP_ADAPTER_SOURCE" "$PI_MCP_ADAPTER_INTEGRITY"
+  pi install "$PI_MCP_ADAPTER_SOURCE"
   if command -v pi-mcp-adapter >/dev/null 2>&1; then
     pi-mcp-adapter init || true
   fi
   echo "Configuring shared global MCP baseline:"
-  bash "$PLATFORM_ROOT/scripts/configure-mcp.sh" --scope global --preset "$MCP_PRESET"
+  bash "$PLATFORM_ROOT/scripts/configure-mcp.sh" --scope global --preset "$MCP_PRESET" --replace
 fi
 
 if [[ "$WITH_SUBAGENTS" == true ]]; then
   echo "Installing Pi subagents:"
-  pi install npm:pi-subagents
+  verify_npm_integrity "$PI_SUBAGENTS_SOURCE" "$PI_SUBAGENTS_INTEGRITY"
+  pi install "$PI_SUBAGENTS_SOURCE"
   echo "Configuring Pi subagents baseline:"
   bash "$PLATFORM_ROOT/scripts/configure-subagents.sh" --preset "$SUBAGENTS_PRESET" --model-scope "$SUBAGENTS_MODEL_SCOPE"
 fi
 
 if [[ "$WITH_WEB_ACCESS" == true ]]; then
   echo "Installing Pi web access for researcher subagent:"
-  pi install npm:pi-web-access
+  verify_npm_integrity "$PI_WEB_ACCESS_SOURCE" "$PI_WEB_ACCESS_INTEGRITY"
+  pi install "$PI_WEB_ACCESS_SOURCE"
 fi
 
 if [[ "$CONFIGURE_MODEL_SCOPE" == true ]]; then
