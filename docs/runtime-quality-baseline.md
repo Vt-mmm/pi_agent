@@ -2,7 +2,7 @@
 
 ## Mục tiêu
 
-`v0.4.0` định nghĩa bộ kiểm soát runtime để Pi Agent Platform có thể chạy task một cách có kỷ luật cho solo, internal team, và public package.
+`v0.4.1` định nghĩa bộ kiểm soát runtime để Pi Agent Platform có thể chạy task một cách có kỷ luật cho solo, internal team, và public package.
 
 Các module chính:
 
@@ -29,6 +29,8 @@ Runtime behavior:
 - block destructive patterns;
 - đệ quy vào shell wrapper phổ biến như `sudo`, `env`, `bash -c`, subshell, command substitution, và backtick;
 - check `shellProtectedPaths` cho bash, mặc định bảo vệ `.git`, `auth.json`, `.env`, `.env.*`;
+- kiểm tra cả bare filename, partial glob (`*`, `?`, character class, brace), symbolic-link alias đã canonicalize, và redirect shell có hoặc không có khoảng trắng;
+- redact sensitive text trong text result và JSON-like result details trước khi output được trả về model; non-text media block được giữ nguyên;
 - cảnh báo broad command prefix như `bash`, `python`, `node`, `git`, `sudo`;
 - áp dụng policy rule `allow | prompt | forbid`;
 - ghi lý do để agent/human đánh giá trước khi tiếp tục.
@@ -137,6 +139,8 @@ Guard state tự bảo vệ:
 - generic extractor chỉ skip leaf field nội dung đã biết như `content`, `query`, `pattern`, `text`, và `command`;
 - `grep.glob` và `find.pattern` bị block khi pattern nhắm protected path rõ ràng như `.env*`, `auth.json`, `.pi/company-state/**`, hoặc `company-profile.json`; broad glob như `*.json` được phép và để result backstop xử lý;
 - broad `grep`, `find`, và `ls` sweep có thêm `tool_result` backstop để redact content line hoặc path metadata từ protected files;
+- mọi text block trong `tool_result` và string leaf trong JSON-like `details` có thêm shared sensitive-data redaction; key như `password`, `token`, `credential` được dùng làm context phát hiện;
+- bash evidence chỉ giữ command text đã redact ở memory/disk; raw command hash vẫn dùng để exact-match verify evidence;
 - `company_task_start`, `company_verify_record`, và `tool_result` hook vẫn ghi state được qua internal extension path.
 
 ## 5. Local verification

@@ -1,6 +1,7 @@
 import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
+import { redactSensitiveText } from "../security/sensitive-data.js";
 
 export function normalizeEvidenceCommand(command) {
   return String(command ?? "")
@@ -56,13 +57,14 @@ export function observedBashResultFromToolResultEvent(event, cwd, nowMs = Date.n
   const command = extractBashCommandFromToolResultEvent(event);
   const normalizedCommand = normalizeEvidenceCommand(command);
   if (!normalizedCommand) return undefined;
+  const commandHash = hashEvidenceCommand(normalizedCommand);
   const exitCode = numericExitCode(event?.details?.exitCode ?? event?.details?.status ?? event?.exitCode);
   const recordedAtMs = parseTimeMs(event?.timestamp, nowMs);
   return {
     cwd: normalizeCwd(cwd),
-    command,
-    normalizedCommand,
-    commandHash: hashEvidenceCommand(normalizedCommand),
+    command: redactSensitiveText(command).text,
+    normalizedCommand: redactSensitiveText(normalizedCommand).text,
+    commandHash,
     isError: event?.isError === true,
     exitCode,
     recordedAt: new Date(recordedAtMs).toISOString(),
@@ -72,13 +74,15 @@ export function observedBashResultFromToolResultEvent(event, cwd, nowMs = Date.n
 }
 
 function canonicalObservedEntry(entry) {
-  const normalizedCommand = normalizeEvidenceCommand(entry?.normalizedCommand ?? entry?.command);
-  const commandHash = entry?.commandHash || (normalizedCommand ? hashEvidenceCommand(normalizedCommand) : "");
+  const rawNormalizedCommand = normalizeEvidenceCommand(entry?.normalizedCommand ?? entry?.command);
+  const commandHash = entry?.commandHash || (rawNormalizedCommand ? hashEvidenceCommand(rawNormalizedCommand) : "");
   if (!commandHash) return undefined;
+  const command = typeof entry?.command === "string" ? redactSensitiveText(entry.command).text : "";
+  const normalizedCommand = redactSensitiveText(rawNormalizedCommand).text;
   const recordedAtMs = parseTimeMs(entry?.recordedAtMs ?? entry?.recordedAt);
   return {
     cwd: normalizeCwd(entry?.cwd),
-    command: typeof entry?.command === "string" ? entry.command : "",
+    command,
     normalizedCommand,
     commandHash,
     isError: entry?.isError === true,
@@ -128,11 +132,14 @@ export function findMatchingObservedBashResult(entries, { cwd, command, notBefor
 function persistedObservedEntry(entry) {
   const observed = canonicalObservedEntry(entry);
   if (!observed) return undefined;
+  const command = typeof entry?.redactedCommand === "string"
+    ? redactSensitiveText(entry.redactedCommand).text
+    : observed.command;
   return {
     schemaVersion: 1,
     cwd: observed.cwd,
     commandHash: observed.commandHash,
-    command: typeof entry?.redactedCommand === "string" ? entry.redactedCommand : observed.command,
+    command,
     isError: observed.isError,
     exitCode: observed.exitCode,
     recordedAt: observed.recordedAt,

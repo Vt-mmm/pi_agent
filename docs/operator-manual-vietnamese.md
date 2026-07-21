@@ -11,10 +11,10 @@ pi
 
 Từ đó Pi có thể login provider, chọn model, onboard project, chạy task, kiểm soát tool, theo dõi token, resume session, dùng MCP, và dùng subagent khi task đủ lớn.
 
-Phiên bản runtime ổn định hiện tại: `v0.4.0`.
+Phiên bản runtime ổn định hiện tại: `v0.4.1`.
 
 ```bash
-pi install git:github.com/Vt-mmm/pi_agent@v0.4.0
+pi install git:github.com/Vt-mmm/pi_agent@v0.4.1
 ```
 
 ## Phạm vi đúng của guard
@@ -70,7 +70,7 @@ install package once
 
 ```bash
 npm install -g @earendil-works/pi-coding-agent@0.80.10
-pi install git:github.com/Vt-mmm/pi_agent@v0.4.0
+pi install git:github.com/Vt-mmm/pi_agent@v0.4.1
 ```
 
 Nếu dùng Herdr:
@@ -218,7 +218,7 @@ Không phải daily default. Dùng khi muốn tạo sẵn `.pi` files cho projec
 bash /path/to/pi_agent/scripts/setup.sh /path/to/project \
   --project-only \
   --profile auto \
-  --package-source git:github.com/Vt-mmm/pi_agent@v0.4.0 \
+  --package-source git:github.com/Vt-mmm/pi_agent@v0.4.1 \
   --mcp-preset core \
   --subagents-preset safe
 ```
@@ -773,7 +773,7 @@ Watchdog là optional adversarial reviewer ở cuối turn, không bật mặc �
 
 | Command | Dùng để |
 |---|---|
-| `pi install git:github.com/Vt-mmm/pi_agent@v0.4.0` | Install platform package. |
+| `pi install git:github.com/Vt-mmm/pi_agent@v0.4.1` | Install platform package. |
 | `pi list --approve` | Kiểm package/resources đã load. |
 | `pi-company-auto` | Mở Pi với project trust `--approve` cho lần chạy hiện tại; guard vẫn bật. |
 | `pi-company-auto --read-only -p "<task>"` | Auto-run read-only scout với tool set `read,grep,find,ls`. |
@@ -828,7 +828,7 @@ Watchdog là optional adversarial reviewer ở cuối turn, không bật mặc �
 
 ```bash
 pi list --approve
-pi install git:github.com/Vt-mmm/pi_agent@v0.4.0
+pi install git:github.com/Vt-mmm/pi_agent@v0.4.1
 ```
 
 Mở lại Pi session sau khi install.

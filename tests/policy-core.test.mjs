@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
   evaluateExecPolicyCore,
+  extractShellGlobCandidates,
   findProtectedPathInCommand,
   matchesAnyPath,
   matchesProtectedPath
@@ -91,10 +92,69 @@ describe("protected path extraction from shell", () => {
   }
 
   it("applies project custom protected paths to shell when included explicitly", () => {
-    const shellProtectedPaths = [...policy.shellProtectedPaths, "secrets/**", "config/prod.key"];
+    const shellProtectedPaths = [...policy.shellProtectedPaths, "secrets", "secrets/**", "config/prod.key"];
+    assert.ok(findProtectedPathInCommand("cat secrets", shellProtectedPaths));
     assert.ok(findProtectedPathInCommand("cat secrets/api.key", shellProtectedPaths));
     assert.ok(findProtectedPathInCommand("bash -c 'cat config/prod.key'", shellProtectedPaths));
+    assert.ok(findProtectedPathInCommand("F=secrets; cat \"$F\"", shellProtectedPaths));
+    assert.ok(findProtectedPathInCommand("F=secrets; cat \"$F\"; F=README.md", shellProtectedPaths));
+    assert.ok(findProtectedPathInCommand("F=secrets; cat \"$F\" F=README.md", shellProtectedPaths));
+    assert.ok(findProtectedPathInCommand("F=secrets; F=README.md true; cat \"$F\"", shellProtectedPaths));
+    assert.ok(findProtectedPathInCommand("F=secrets; F=README.md cat README.md; cat \"$F\"", shellProtectedPaths));
+    assert.ok(findProtectedPathInCommand("F=secrets; G=$F; cat \"$G\"", shellProtectedPaths));
+    assert.ok(findProtectedPathInCommand("F=secrets G=$F; cat \"$G\"", shellProtectedPaths));
+    assert.ok(findProtectedPathInCommand("F=secrets; F=$F; cat \"$F\"", shellProtectedPaths));
+    assert.ok(findProtectedPathInCommand("F=secrets; export G=$F; cat \"$G\"", shellProtectedPaths));
+    assert.ok(findProtectedPathInCommand("xargs cat <<< secrets", shellProtectedPaths));
+    assert.ok(findProtectedPathInCommand("printf secrets | xargs cat", shellProtectedPaths));
+    assert.ok(findProtectedPathInCommand("printf secrets | xargs -I{} cat {}", shellProtectedPaths));
+    assert.ok(findProtectedPathInCommand("printf \"secrets\\n\" | xargs cat", shellProtectedPaths));
+    assert.ok(findProtectedPathInCommand("printf '%b' 'secrets\\n' | xargs cat", shellProtectedPaths));
+    assert.ok(findProtectedPathInCommand("F=secrets; echo \"$F\" | xargs cat", shellProtectedPaths));
+    assert.ok(findProtectedPathInCommand("echo -e 'secrets\\n' | xargs cat", shellProtectedPaths));
+    assert.ok(findProtectedPathInCommand("echo -ne 'secrets\\n' | xargs cat", shellProtectedPaths));
+    assert.ok(findProtectedPathInCommand("echo -e 'secrets\\c' | xargs cat", shellProtectedPaths));
+    assert.ok(findProtectedPathInCommand("printf '\\x73\\x65\\x63\\x72\\x65\\x74\\x73' | xargs cat", shellProtectedPaths));
+    assert.ok(findProtectedPathInCommand("printf '%s%s\\n' secr ets | xargs cat", shellProtectedPaths));
+    assert.ok(findProtectedPathInCommand("echo -e 'secr''ets\\n' | xargs cat", shellProtectedPaths));
+    assert.ok(findProtectedPathInCommand("grep -f secrets README.md", shellProtectedPaths));
+    assert.ok(findProtectedPathInCommand("grep -fsecrets README.md", shellProtectedPaths));
+    assert.ok(findProtectedPathInCommand("rg --ignore-file secrets pattern README.md", shellProtectedPaths));
+    assert.ok(findProtectedPathInCommand("rg -ePROBE secrets", shellProtectedPaths));
+    assert.ok(findProtectedPathInCommand("rg -fsecrets README.md", shellProtectedPaths));
+    assert.equal(findProtectedPathInCommand("rg secrets README.md", shellProtectedPaths), undefined);
+    assert.equal(findProtectedPathInCommand("F=secrets; cat '$F'", shellProtectedPaths), undefined);
+    assert.equal(findProtectedPathInCommand("F=$G; G=$F; cat \"$G\"", shellProtectedPaths), undefined);
+    assert.equal(findProtectedPathInCommand("grep --regexp=secrets README.md", shellProtectedPaths), undefined);
+    assert.ok(extractShellGlobCandidates("rg -gsecr* PROBE .").includes("secr*"));
+    assert.ok(extractShellGlobCandidates("rg -igsecr* PROBE .").includes("secr*"));
+    assert.ok(extractShellGlobCandidates("rg -ugsecr* PROBE .").includes("secr*"));
+    assert.ok(extractShellGlobCandidates("G='secr*'; rg -ug$G PROBE .").includes("secr*"));
   });
+
+  it("keeps quote-aware shell glob candidates and nested substitutions distinct", () => {
+    assert.deepEqual(extractShellGlobCandidates("cat .en*"), [".en*"]);
+    assert.deepEqual(extractShellGlobCandidates("rg '.en*' README.md"), []);
+    assert.ok(extractShellGlobCandidates("cat $(echo .en*)").includes(".en*"));
+    assert.ok(extractShellGlobCandidates("cat \"$(echo .en*)\"").includes(".en*"));
+    assert.ok(extractShellGlobCandidates("eval 'cat .en*'").includes(".en*"));
+    assert.ok(extractShellGlobCandidates("printf x | xargs sh -c 'cat .en*'").includes(".en*"));
+    assert.ok(extractShellGlobCandidates("find . -exec sh -c 'cat .en*' \\;").includes(".en*"));
+    assert.ok(extractShellGlobCandidates("env -S \"bash -c 'cat .en*'\"").includes(".en*"));
+    assert.deepEqual(extractShellGlobCandidates("echo \"sh -c 'cat .env'\""), []);
+  });
+
+  for (const command of ["cat <.env", "cat 0<.env", "cat<.env", "echo x >.env", "printf x 2>.env"]) {
+    it(`blocks attached redirection touching a protected path: ${command}`, () => {
+      assert.ok(findProtectedPathInCommand(command, policy.shellProtectedPaths), command);
+    });
+  }
+
+  for (const command of ["echo '<.env'", "echo '$(cat .env)'", "cat <<< '.env'", "echo x 2>&1", "cat 0<&3", "echo x > notes.txt"]) {
+    it(`keeps non-path shell data and descriptor operations allowed: ${command}`, () => {
+      assert.equal(findProtectedPathInCommand(command, policy.shellProtectedPaths), undefined, command);
+    });
+  }
 
   it("does not treat base policy build artifacts as shell-protected secrets", () => {
     assert.equal(findProtectedPathInCommand("rm -rf ~/proj/node_modules", policy.shellProtectedPaths), undefined);

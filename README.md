@@ -52,7 +52,7 @@ pi-company-auto --read-only -p "Scout payment mapping. Do not edit source."
 
 ```bash
 npm install -g @earendil-works/pi-coding-agent@0.80.10
-pi install git:github.com/Vt-mmm/pi_agent@v0.4.0
+pi install git:github.com/Vt-mmm/pi_agent@v0.4.1
 ```
 
 Optional Herdr integration:
@@ -293,7 +293,7 @@ Most projects do not need shell init. Use this only when you want to pre-create 
 ```bash
 bash /path/to/pi_agent/scripts/setup.sh /path/to/project \
   --profile be-readonly-fe \
-  --package-source git:github.com/Vt-mmm/pi_agent@v0.4.0 \
+  --package-source git:github.com/Vt-mmm/pi_agent@v0.4.1 \
   --mcp-preset core \
   --subagents-preset safe
 ```
@@ -394,7 +394,7 @@ This repository intentionally excludes:
 
 ## Maturity
 
-Current release: `v0.4.0`.
+Current release: `v0.4.1`.
 
 Ready for:
 
@@ -414,9 +414,10 @@ Security boundary:
 - Protected paths are matched case-insensitively, existing aliases are resolved to their canonical repository path, and scope-aware filesystem tools reject repository escape or symbolic-link traversal.
 - Path-like strings are percent-decoded once before matching. Excessively nested tool input fails closed instead of being silently skipped.
 - Known content fields such as `content`, `query`, `pattern`, `text`, and `command` are excluded from generic path extraction to preserve normal search/edit behavior. Tool-specific checks still validate `grep.glob` and `find.pattern` when they explicitly target protected paths.
-- Broad `grep`, `find`, and `ls` sweeps get result-filter backstops: protected file content lines or protected path metadata are redacted before the model sees output.
-- Raw `bash` access to protected paths is blocked through shell path extraction. `.pi/company-state/**` and `.pi/company-profile.json` are self-protected; use `company_context` and company task tools instead.
+- Broad `grep`, `find`, and `ls` sweeps get result-filter backstops: protected file content lines or protected path metadata are redacted before the model sees output. Text tool results and JSON-like result details also pass through shared sensitive-data redaction; image, audio, and resource payloads are left intact.
+- Raw `bash` access to protected paths is blocked through shell operand extraction. The guard covers partial shell globs, bare filenames, canonical symbolic-link aliases, and attached input/output redirections. `.pi/company-state/**` and `.pi/company-profile.json` are self-protected; use `company_context` and company task tools instead.
 - Verify evidence is accepted only when it matches an observed Pi bash tool result after task start. The observed ledger is persisted under `.pi/company-state/observed-bash.jsonl`, so parent agents can validate bash results produced by guarded subagent processes.
+- Observed command identity is retained as a SHA-256 hash while sensitive command text is redacted at both the in-memory and persisted evidence boundaries.
 - Passing final gates require an observed exit `0` command that exactly matches one of the task/profile `verifyCommands`; ad-hoc commands such as `true`, `echo ok`, or `npm test || true` are advisory only.
 - Project memory files are private-by-default in generated projects; opt in to shared memory only after review/redaction.
 - It is not an OS sandbox. For untrusted code, untrusted prompts, or adversarial workloads, run Pi inside an isolated container/VM with filesystem, process, network, and credential boundaries.

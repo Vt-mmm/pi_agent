@@ -83,11 +83,19 @@ export function containsSensitiveText(input) {
   return typeof input === "string" && redactSensitiveText(input).redacted;
 }
 
-export function redactForStorage(value) {
-  if (typeof value === "string") return redactSensitiveText(value).text;
-  if (Array.isArray(value)) return value.map((item) => redactForStorage(item));
+function redactStorageValue(value, key) {
+  if (typeof value === "string") {
+    const redacted = redactSensitiveText(value);
+    if (redacted.redacted) return redacted.text;
+    return key && valueLooksSensitive(key, value) ? REDACTION : value;
+  }
+  if (Array.isArray(value)) return value.map((item) => redactStorageValue(item, key));
   if (!value || typeof value !== "object") return value;
   return Object.fromEntries(
-    Object.entries(value).map(([key, item]) => [key, redactForStorage(item)])
+    Object.entries(value).map(([childKey, item]) => [childKey, redactStorageValue(item, childKey)])
   );
+}
+
+export function redactForStorage(value) {
+  return redactStorageValue(value, undefined);
 }

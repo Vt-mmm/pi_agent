@@ -484,6 +484,109 @@ describe("company guard integration", () => {
     }
   });
 
+  it("blocks shell glob expansion and bare-word aliases with a valid capability lock", async () => {
+    const { root, companyGuard } = await loadGuardFixture();
+    const adapterPath = path.join(root, "adapters", "generic", "profile.json");
+    const adapter = JSON.parse(fs.readFileSync(adapterPath, "utf8"));
+    adapter.shellProtectedPaths = [...adapter.protectedPaths, "secrets", "Makefile"];
+    fs.writeFileSync(adapterPath, `${JSON.stringify(adapter, null, 2)}\n`);
+
+    const cwd = createProject(root);
+    fs.writeFileSync(path.join(cwd, "auth.json"), "{}\n");
+    fs.writeFileSync(path.join(cwd, "secrets"), "fixture\n");
+    fs.writeFileSync(path.join(cwd, "Makefile"), "fixture:\n\t@true\n");
+    fs.symlinkSync(".env", path.join(cwd, "cfg"));
+    const ctx = createContext(cwd);
+    const harness = createPiHarness();
+    companyGuard(harness.pi);
+
+    const applied = await harness.tools.get("company_profile_apply").execute(
+      "shell-protection-profile",
+      { profile: "generic", overwrite: true },
+      undefined,
+      () => {},
+      ctx
+    );
+    assert.equal(applied.isError, undefined);
+
+    const toolCall = harness.handlers.get("tool_call");
+    for (const command of [
+      "cat .en*",
+      "cat .e??",
+      "cat .??v",
+      "cat .E??",
+      "cat .e[n]v",
+      "cat .env{,.local}",
+      "cat auth.js*",
+      "cat auth.js[o]n",
+      "cat secrets",
+      "cat Makefile",
+      "cat cfg",
+      "sh -c 'cat .en*'",
+      "cat $(echo .en*)",
+      "cat \"$(echo .en*)\"",
+      "xargs cat <<< .env",
+      "F=.env; cat \"$F\"",
+      "F=.env; cat \"$F\"; F=README.md",
+      "F=.env; cat \"$F\" F=README.md",
+      "F=.env; F=README.md true; cat \"$F\"",
+      "F=.env; F=README.md cat README.md; cat \"$F\"",
+      "F=.env; G=$F; cat \"$G\"",
+      "F=.env G=$F; cat \"$G\"",
+      "F=.env; F=$F; cat \"$F\"",
+      "F=.env; export G=$F; cat \"$G\"",
+      "F=.en*; cat $F",
+      "printf .env | xargs cat",
+      "printf .env | xargs -I{} cat {}",
+      "printf \".env\\n\" | xargs cat",
+      "printf '%b' '.env\\n' | xargs cat",
+      "F=.env; echo \"$F\" | xargs cat",
+      "echo -e '.env\\n' | xargs cat",
+      "echo -ne '.env\\n' | xargs cat",
+      "echo -e '.env\\c' | xargs cat",
+      "printf '\\x2e\\x65\\x6e\\x76' | xargs cat",
+      "printf '.%s\\n' env | xargs cat",
+      "printf '%s%s\\n' . env | xargs cat",
+      "echo -e '.e''nv\\n' | xargs cat",
+      "grep -f .env README.md",
+      "grep -f.env README.md",
+      "rg --ignore-file .env pattern README.md",
+      "rg -g.env PROBE_TOKEN .",
+      "rg -ig.env PROBE_TOKEN .",
+      "rg -ug.env PROBE_TOKEN .",
+      "G='.e*'; rg -ug$G PROBE_TOKEN .",
+      "rg -ePROBE_TOKEN .env",
+      "rg -f.env README.md",
+      "eval 'cat .en*'",
+      "printf x | xargs sh -c 'cat .en*'",
+      "find . -exec sh -c 'cat .en*' \\;",
+      "env -S \"bash -c 'cat .en*'\"",
+      "bash <<< 'cat .env'"
+    ]) {
+      const result = await callToolCall(toolCall, ctx, "bash", { command });
+      assert.equal(result.block, true, `${command} should be blocked`);
+    }
+
+    for (const command of [
+      "cat README.md",
+      "cat README.*",
+      "cat *.md",
+      "echo .env",
+      "echo auth.json",
+      "echo '$(cat .env)'",
+      "echo \"sh -c 'cat .env'\"",
+      "printf '%s' \"eval cat .env\"",
+      "rg '.en*' README.md",
+      "grep '.e??' README.md",
+      "rg Makefile README.md",
+      "F=.env; cat '$F'",
+      "grep --regexp=.env README.md"
+    ]) {
+      const result = await callToolCall(toolCall, ctx, "bash", { command });
+      assert.notEqual(result.block, true, `${command} should remain allowed`);
+    }
+  });
+
   it("redacts protected grep result lines from broad searches", async () => {
     const { root, companyGuard } = await loadGuardFixture();
     const cwd = createProject(root);
@@ -518,6 +621,59 @@ describe("company guard integration", () => {
     assert.equal(protectedOnly.details.protectedMatchesRedacted, 1);
     assert.match(protectedOnly.content[0].text, /No matches found in non-protected paths/);
     assert.doesNotMatch(protectedOnly.content[0].text, /fake-token/);
+  });
+
+  it("redacts sensitive bash output and details before returning them", async () => {
+    const { root, companyGuard } = await loadGuardFixture();
+    const cwd = createProject(root);
+    const ctx = createContext(cwd);
+    const harness = createPiHarness();
+    companyGuard(harness.pi);
+    const toolResult = harness.handlers.get("tool_result");
+    const secret = ["Correct", "Horse", "42"].join("");
+    const imageBlock = { type: "image", data: "fixture-image-data", mimeType: "image/png" };
+
+    const result = await toolResult({
+      toolName: "bash",
+      input: { command: "env" },
+      content: [
+        { type: "text", text: `DATABASE_PASSWORD=${secret}\nstatus=ok` },
+        imageBlock
+      ],
+      details: {
+        exitCode: 0,
+        stdout: `TOKEN=${secret}123`,
+        nested: { password: secret }
+      },
+      isError: false
+    }, ctx);
+
+    assert.match(result.content[0].text, /\[REDACTED_SECRET\]/);
+    assert.doesNotMatch(result.content[0].text, new RegExp(secret));
+    assert.deepEqual(result.content[1], imageBlock);
+    assert.equal(result.details.exitCode, 0);
+    assert.match(result.details.stdout, /\[REDACTED_SECRET\]/);
+    assert.equal(result.details.nested.password, "[REDACTED_SECRET]");
+    assert.ok(result.details.sensitiveValuesRedacted >= 3);
+
+    const contentOnly = await toolResult({
+      toolName: "bash",
+      input: { command: "printenv" },
+      content: [{ type: "text", text: `TOKEN=${secret}123` }],
+      isError: false
+    }, ctx);
+    assert.match(contentOnly.content[0].text, /\[REDACTED_SECRET\]/);
+    assert.equal(Object.hasOwn(contentOnly, "details"), false);
+
+    const arrayDetails = await toolResult({
+      toolName: "bash",
+      input: { command: "printenv" },
+      content: [{ type: "text", text: "status=ok" }],
+      details: [`TOKEN=${secret}123`],
+      isError: false
+    }, ctx);
+    assert.equal(Array.isArray(arrayDetails.details), true);
+    assert.match(arrayDetails.details[0], /\[REDACTED_SECRET\]/);
   });
 
   it("redacts protected find and ls metadata from broad result output", async () => {

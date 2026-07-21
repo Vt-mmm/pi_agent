@@ -8,6 +8,7 @@ import { StringEnum } from "@earendil-works/pi-ai";
 import { Type } from "typebox";
 import {
   evaluateExecPolicyCore,
+  extractShellGlobCandidates,
   extractShellPathCandidates,
   findProtectedPathInCommand,
   globMatchesPath,
@@ -725,9 +726,10 @@ function extractLikelyPathFromInput(cwd: string, input: Record<string, unknown>)
   return extractPathInputsFromInput(cwd, input)[0]?.path;
 }
 
-function expandSimpleGlobAlternatives(pattern: string, max = 24): string[] {
+function expandSimpleGlobAlternatives(pattern: string, max = 24): { values: string[]; complete: boolean } {
   let results = [pattern];
   let changed = true;
+  let complete = true;
 
   while (changed) {
     changed = false;
@@ -739,17 +741,70 @@ function expandSimpleGlobAlternatives(pattern: string, max = 24): string[] {
         continue;
       }
       changed = true;
-      const options = match[1].split(",").map((option) => option.trim()).filter(Boolean);
+      const options = match[1].split(",").map((option) => option.trim());
       for (const option of options) {
         expanded.push(`${item.slice(0, match.index)}${option}${item.slice((match.index ?? 0) + match[0].length)}`);
-        if (expanded.length >= max) break;
+        if (expanded.length >= max) {
+          complete = false;
+          break;
+        }
       }
       if (expanded.length >= max) break;
     }
     results = expanded.slice(0, max);
   }
 
-  return results;
+  return { values: results, complete };
+}
+
+function shellGlobSegmentMatches(patternSegment: string, candidateSegment: string): boolean {
+  if (candidateSegment.startsWith(".") && !patternSegment.startsWith(".")) return false;
+  let source = "";
+  for (let index = 0; index < patternSegment.length; index += 1) {
+    const char = patternSegment[index];
+    if (char === "*") {
+      source += "[^/]*";
+      continue;
+    }
+    if (char === "?") {
+      source += "[^/]";
+      continue;
+    }
+    if (char === "[") {
+      const end = patternSegment.indexOf("]", index + 1);
+      const body = end > index + 1 ? patternSegment.slice(index + 1, end) : "";
+      if (body && /^[!^A-Za-z0-9_-]+$/.test(body)) {
+        const negated = body.startsWith("!") ? `^${body.slice(1)}` : body;
+        source += `[${negated}]`;
+        index = end;
+        continue;
+      }
+    }
+    source += char.replace(/[\\^$.*+?()[\]{}|]/g, "\\$&");
+  }
+  return new RegExp(`^${source}$`, "i").test(candidateSegment);
+}
+
+function shellGlobMatchesPath(pattern: string, candidate: string): boolean {
+  const patternSegments = normalizePathCandidate(pattern).split("/").filter(Boolean);
+  const candidateSegments = normalizePathCandidate(candidate).split("/").filter(Boolean);
+
+  function match(patternIndex: number, candidateIndex: number): boolean {
+    if (patternIndex === patternSegments.length) return candidateIndex === candidateSegments.length;
+    const patternSegment = patternSegments[patternIndex];
+    if (patternSegment === "**") {
+      if (match(patternIndex + 1, candidateIndex)) return true;
+      for (let next = candidateIndex; next < candidateSegments.length; next += 1) {
+        if (match(patternIndex + 1, next + 1)) return true;
+      }
+      return false;
+    }
+    if (candidateIndex >= candidateSegments.length) return false;
+    return shellGlobSegmentMatches(patternSegment, candidateSegments[candidateIndex])
+      && match(patternIndex + 1, candidateIndex + 1);
+  }
+
+  return patternSegments.length > 0 && candidateSegments.length > 0 && match(0, 0);
 }
 
 function protectedPatternExamples(pattern: string): string[] {
@@ -834,7 +889,9 @@ function globTargetsProtectedPath(glob: unknown, protectedPatterns: string[]): {
     const trimmed = value.trim();
     if (!trimmed || trimmed.startsWith("!")) continue;
 
-    for (const candidateGlob of expandSimpleGlobAlternatives(trimmed)) {
+    const expanded = expandSimpleGlobAlternatives(trimmed);
+    if (!expanded.complete) return { glob: trimmed, pattern: "bounded glob expansion", example: "a protected path" };
+    for (const candidateGlob of expanded.values) {
       for (const pattern of protectedPatterns) {
         if (!globMentionsProtectedHint(candidateGlob, pattern)) continue;
         for (const example of protectedPatternExamples(pattern)) {
@@ -850,6 +907,65 @@ function globTargetsProtectedPath(glob: unknown, protectedPatterns: string[]): {
     }
   }
   return undefined;
+}
+
+function shellGlobTargetsProtectedPath(
+  command: string,
+  protectedPatterns: string[]
+): { glob: string; pattern: string; example: string } | undefined {
+  for (const candidate of extractShellGlobCandidates(command)) {
+    if (!/[*?{\[]/.test(candidate)) continue;
+    const expanded = expandSimpleGlobAlternatives(candidate);
+    if (!expanded.complete) return { glob: candidate, pattern: "bounded glob expansion", example: "a protected path" };
+    for (const candidateGlob of expanded.values) {
+      for (const pattern of protectedPatterns) {
+        for (const example of protectedPatternExamples(pattern)) {
+          if (/[*?{\[\]]/.test(example)) continue;
+          if (
+            shellGlobMatchesPath(candidateGlob, example)
+            || shellGlobMatchesPath(`**/${candidateGlob}`, example)
+            || shellGlobMatchesPath(candidateGlob, path.posix.basename(example))
+          ) {
+            return { glob: candidate, pattern, example };
+          }
+        }
+      }
+    }
+  }
+  return undefined;
+}
+
+function countChangedStringLeaves(before: unknown, after: unknown): number {
+  if (typeof before === "string" && typeof after === "string") return before === after ? 0 : 1;
+  if (Array.isArray(before) && Array.isArray(after)) {
+    return before.reduce((total, item, index) => total + countChangedStringLeaves(item, after[index]), 0);
+  }
+  if (!before || !after || typeof before !== "object" || typeof after !== "object") return 0;
+  return Object.entries(before as Record<string, unknown>).reduce(
+    (total, [key, value]) => total + countChangedStringLeaves(value, (after as Record<string, unknown>)[key]),
+    0
+  );
+}
+
+function isPlainRecord(value: unknown): value is Record<string, unknown> {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+  const prototype = Object.getPrototypeOf(value);
+  return prototype === Object.prototype || prototype === null;
+}
+
+function redactToolResultTextContent(content: unknown): { content: unknown; redacted: number } {
+  if (!Array.isArray(content)) return { content, redacted: 0 };
+  let redacted = 0;
+  const safeContent = content.map((block) => {
+    if (!block || typeof block !== "object") return block;
+    const typed = block as { type?: unknown; text?: unknown };
+    if (typed.type !== "text" || typeof typed.text !== "string") return block;
+    const safeText = redactSensitiveText(typed.text);
+    if (!safeText.redacted) return block;
+    redacted += 1;
+    return { ...block, text: safeText.text };
+  });
+  return { content: safeContent, redacted };
 }
 
 function evaluatePathLikeToolAccess(
@@ -2170,13 +2286,18 @@ export default function companyGuard(pi: ExtensionAPI) {
       }
     }
 
+    let resultContent: unknown = event.content;
+    let resultDetails: unknown = event.details;
+    let resultChanged = false;
+
     if (event.toolName === "grep") {
-      const filtered = filterGrepProtectedContent(event.content, shellProtectedPaths);
+      const filtered = filterGrepProtectedContent(resultContent, shellProtectedPaths);
       if (filtered.changed) {
-        const details = event.details && typeof event.details === "object"
-          ? { ...event.details, protectedMatchesRedacted: filtered.redactedLines }
+        resultContent = filtered.content;
+        resultDetails = resultDetails && typeof resultDetails === "object"
+          ? { ...resultDetails, protectedMatchesRedacted: filtered.redactedLines }
           : { protectedMatchesRedacted: filtered.redactedLines };
-        return { content: filtered.content, details };
+        resultChanged = true;
       }
     }
 
@@ -2185,13 +2306,32 @@ export default function companyGuard(pi: ExtensionAPI) {
         ? event.input as Record<string, unknown>
         : {};
       const basePath = extractLikelyPathFromInput(ctx.cwd, input) || ".";
-      const filtered = filterProtectedPathListContent(ctx.cwd, event.content, shellProtectedPaths, basePath, event.toolName);
+      const filtered = filterProtectedPathListContent(ctx.cwd, resultContent, shellProtectedPaths, basePath, event.toolName);
       if (filtered.changed) {
-        const details = event.details && typeof event.details === "object"
-          ? { ...event.details, protectedPathsRedacted: filtered.redactedLines }
+        resultContent = filtered.content;
+        resultDetails = resultDetails && typeof resultDetails === "object"
+          ? { ...resultDetails, protectedPathsRedacted: filtered.redactedLines }
           : { protectedPathsRedacted: filtered.redactedLines };
-        return { content: filtered.content, details };
+        resultChanged = true;
       }
+    }
+
+    const safeContent = redactToolResultTextContent(resultContent);
+    const safeDetails = redactForStorage(resultDetails);
+    const detailRedactions = countChangedStringLeaves(resultDetails, safeDetails);
+    const sensitiveValuesRedacted = safeContent.redacted + detailRedactions;
+    if (sensitiveValuesRedacted > 0) {
+      resultContent = safeContent.content;
+      resultDetails = isPlainRecord(safeDetails)
+        ? { ...safeDetails, sensitiveValuesRedacted }
+        : safeDetails;
+      resultChanged = true;
+    }
+
+    if (resultChanged) {
+      return resultDetails === undefined
+        ? { content: resultContent }
+        : { content: resultContent, details: resultDetails };
     }
   });
 
@@ -2229,6 +2369,13 @@ export default function companyGuard(pi: ExtensionAPI) {
       const protectedHit = findProtectedPathInCommand(command, shellProtectedPaths);
       if (protectedHit) {
         return { block: true, reason: `Command touches protected path: ${protectedHit.candidate} matches ${protectedHit.pattern}` };
+      }
+      const protectedGlobHit = shellGlobTargetsProtectedPath(command, shellProtectedPaths);
+      if (protectedGlobHit) {
+        return {
+          block: true,
+          reason: `Command glob can target protected path: ${protectedGlobHit.glob} can match ${protectedGlobHit.example} via ${protectedGlobHit.pattern}`
+        };
       }
       const resolvedProtectedHit = findResolvedProtectedPathInCommand(ctx.cwd, command, shellProtectedPaths);
       if (resolvedProtectedHit) {

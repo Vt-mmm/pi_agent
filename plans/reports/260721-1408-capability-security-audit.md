@@ -3,13 +3,16 @@
 ---
 type: security-audit
 date: 2026-07-21
-status: complete
+status: superseded
 scope: capability-platform-phase-0
+supersededBy: 260721-1521-v0.4.1-shell-security-remediation.md
 ---
 
 ## Executive summary
 
-Phase 0 is approved for its declared scope. The final independent review found no actionable P1/P2 issue and no open Critical/High security finding. The implementation establishes a fail-closed capability boundary through exact dependency resolution, explicit project grants, deterministic locks, protected-path controls, shared secret detection, and non-executing external-action proposals.
+The capability resolver, deterministic lock, permission boundary, and tamper-detection conclusions remain valid. The original approval for shell-layer information-disclosure protection is withdrawn: post-release execution testing identified protected-path bypasses through partial shell globs and bare symbolic-link aliases, followed by unredacted bash output. The statement that no High finding remained, and the broad symbolic-link coverage statement, no longer represent the verified v0.4.0 posture.
+
+Remediation status and final verification evidence are tracked in `260721-1521-v0.4.1-shell-security-remediation.md`.
 
 This approval does not classify Pi as an operating-system sandbox. A trusted Pi project remains code-execution trust. Workloads containing untrusted code, prompts, or credentials still require process, filesystem, network, and credential isolation outside the extension runtime.
 
@@ -28,7 +31,7 @@ This approval does not classify Pi as an operating-system sandbox. A trusted Pi 
 | Spoofing | Exact package identifiers, exact version/tag/commit requirements, installed-content digest, owner allowlist | Controlled within Phase 0; signed provenance remains future work |
 | Tampering | Canonical JSON, SHA-256 artifact and package digests, deterministic lock, per-tool-call lock verification, validation-before-write, rollback | Fail closed on stale, malformed, or inconsistent state |
 | Repudiation | Resolved lock, observed verification evidence, task trace, explicit proposal document | Decisions and validation state are inspectable; executor receipts are future work |
-| Information disclosure | Shared secret detector, protected-path deny rules, result redaction, case-insensitive matching, canonical-path inspection | Case variants, repository escape, encoded paths, and symbolic-link aliases are covered by regression tests |
+| Information disclosure | Shared secret detector, protected-path deny rules, result redaction, case-insensitive matching, canonical-path inspection | Superseded: v0.4.0 shell glob and bare-alias coverage was incomplete, and bash output lacked a redaction backstop |
 | Denial of service | Limits for files, sizes, tags, dependencies, recipe inputs, graph depth, and tool-input inspection depth | Malformed or oversized inputs are rejected before activation |
 | Elevation of privilege | Exact dependency graph, globally unique artifact IDs, profile grant subsets, no implicit network/action grants | A pack cannot expand its authority beyond the active profile |
 
@@ -41,7 +44,9 @@ This approval does not classify Pi as an operating-system sandbox. A trusted Pi 
 - Runtime path controls apply protected-path denial before filesystem scope allowance and canonicalize existing repository paths.
 - Human confirmation remains mandatory for destructive or external-provider actions.
 
-## Verification evidence
+## Historical verification evidence
+
+These results describe the original audit run. They did not include the shell glob, bare-word alias, or bash-result cases that later reproduced the disclosure.
 
 | Gate | Result |
 |---|---|

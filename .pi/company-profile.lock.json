@@ -99,18 +99,18 @@
   ],
   "core": {
     "apiVersion": 1,
-    "packageDigest": "sha256:882c5c0a3fac5db8907a05866271e2c70d80b9fb90b16539356509de70731c5d",
+    "packageDigest": "sha256:b86c3cda148979e249d76582a10a161f874c819377ecc467264de3becfcc02ca",
     "packageSource": "../",
-    "packageVersion": "0.4.0",
+    "packageVersion": "0.4.1",
     "runtimeFiles": [
       {
         "byteSize": 2908,
-        "digest": "sha256:229ec72cbf0a1dcd843a7a9d8098452f84e1b217536480914a0ab75fa36e1bbc",
+        "digest": "sha256:2e9c7ae3e5e24626be6e3b6ab12499f0a5d1483db0f3179038a9a97985db3632",
         "path": "package.json"
       },
       {
         "byteSize": 734,
-        "digest": "sha256:338011daa66ea381099737a8e72f91e8408097a7fed44705a5739b2f50b6257a",
+        "digest": "sha256:aee846a6d88727ce7bf3f40040b7e82059d3cde0abc7997232e6e5a43a5dd7ce",
         "path": "packages/pi-company-core/package.json"
       },
       {
@@ -119,18 +119,18 @@
         "path": "packages/pi-company-core/capabilities/capability-core.js"
       },
       {
-        "byteSize": 3885,
-        "digest": "sha256:844f98277bf26fd893e909b636426d48b861f5ab1719deea14db7f4169495b32",
+        "byteSize": 4141,
+        "digest": "sha256:0921f94f8e3ebb113006641ea55f0e84b19154644d7ca3dc903103d37735ff7f",
         "path": "packages/pi-company-core/security/sensitive-data.js"
       },
       {
-        "byteSize": 126800,
-        "digest": "sha256:2c405bc5dc729c278547c3859268081a8925d1959bad7e4a40f00871dfbebf1b",
+        "byteSize": 132878,
+        "digest": "sha256:9d54b2afb1fc9019919c8e349a9e9be91ced7351c87bba2e7c2790463b800cc7",
         "path": "packages/pi-company-core/extensions/company-guard.ts"
       },
       {
-        "byteSize": 17827,
-        "digest": "sha256:48e575e8aff1b26cb54840f40db987295cf97fbeb62fa9cb63fca23a3408cda2",
+        "byteSize": 38753,
+        "digest": "sha256:b373532e718070ffdef066f209a69471b617aa0e5858f4177357aad3359d20a2",
         "path": "packages/pi-company-core/extensions/policy-core.js"
       },
       {
@@ -139,8 +139,8 @@
         "path": "packages/pi-company-core/extensions/redaction-core.js"
       },
       {
-        "byteSize": 7586,
-        "digest": "sha256:e7688ee6212e77f0ee0bc45945424fe8454cfbf66454c02a2b6518a9eb812092",
+        "byteSize": 7938,
+        "digest": "sha256:793083d3e89e3aa39162bfffe4ac38d55cda87d9707a22fb1b36fda6ff06f5a3",
         "path": "packages/pi-company-core/extensions/runtime-evidence.js"
       }
     ]

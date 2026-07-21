@@ -11,7 +11,7 @@ Team khác có thể cài cùng một Pi platform mà không lấy secret của 
 Dùng cho team:
 
 ```bash
-pi install git:github.com/Vt-mmm/pi_agent@v0.4.0
+pi install git:github.com/Vt-mmm/pi_agent@v0.4.1
 ```
 
 Nên pin tag hoặc commit.
@@ -21,7 +21,7 @@ Nên pin tag hoặc commit.
 Dùng khi muốn version/publish chuẩn:
 
 ```bash
-pi install npm:@company/pi-agent-platform@0.4.0
+pi install npm:@company/pi-agent-platform@0.4.1
 ```
 
 ### Local path

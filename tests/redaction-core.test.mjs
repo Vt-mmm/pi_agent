@@ -67,11 +67,19 @@ describe("sensitive text redaction", () => {
   it("recursively redacts storage payloads", () => {
     const result = redactForStorage({
       summary: joined("DATABASE", "_PASSWORD", "=", "CorrectHorse42"),
-      nested: ["token: null", joined("github_pat_", "11AAAAAAA0", "abcdefghijklmnopqrstuvwxyz")]
+      nested: ["token: null", joined("github_pat_", "11AAAAAAA0", "abcdefghijklmnopqrstuvwxyz")],
+      credentials: {
+        password: "CorrectHorse42",
+        token: "placeholder"
+      }
     });
     assert.deepEqual(result, {
       summary: joined("DATABASE", "_PASSWORD", "= [REDACTED_SECRET]"),
-      nested: ["token: null", "[REDACTED_SECRET]"]
+      nested: ["token: null", "[REDACTED_SECRET]"],
+      credentials: {
+        password: "[REDACTED_SECRET]",
+        token: "placeholder"
+      }
     });
   });
 });

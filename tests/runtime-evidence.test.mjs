@@ -206,6 +206,41 @@ describe("runtime verify evidence ledger", () => {
     assert.equal(result.ok, true);
   });
 
+  it("redacts command text at the in-memory and persistence boundaries", () => {
+    const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "pi-ledger-"));
+    const file = path.join(tmp, "observed-bash.jsonl");
+    const rawCommand = joined("DATABASE", "_PASSWORD", "=", "CorrectHorse42", " npm test");
+    const ledger = createBashResultLedger();
+
+    ledger.record({
+      cwd: "/repo",
+      command: rawCommand,
+      isError: false,
+      recordedAtMs: Date.parse("2026-07-19T01:00:01.000Z")
+    });
+    appendObservedBashResult(file, {
+      cwd: "/repo",
+      command: rawCommand,
+      isError: false,
+      recordedAtMs: Date.parse("2026-07-19T01:00:01.000Z")
+    });
+
+    assert.equal(JSON.stringify(ledger.list()).includes("CorrectHorse42"), false);
+    assert.equal(fs.readFileSync(file, "utf8").includes("CorrectHorse42"), false);
+    assert.equal(ledger.findMatching({
+      cwd: "/repo",
+      command: rawCommand,
+      notBefore: "2026-07-19T01:00:00.000Z",
+      exitCode: 0
+    }).ok, true);
+    assert.equal(findMatchingObservedBashResult(readObservedBashResults(file), {
+      cwd: "/repo",
+      command: rawCommand,
+      notBefore: "2026-07-19T01:00:00.000Z",
+      exitCode: 0
+    }).ok, true);
+  });
+
   it("requires exact verify-plan command match for final-gate evidence", () => {
     const verifyCommands = ["npm test", "npm run lint"];
 

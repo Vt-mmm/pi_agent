@@ -1,5 +1,10 @@
 const PATH_REDIRECT_OPERATORS = new Set(["<", ">", ">>", "1>", "1>>", "2>", "2>>", "&>", "&>>"]);
 const DATA_ONLY_COMMANDS = new Set(["echo", "printf"]);
+const SEARCH_COMMANDS = new Set(["grep", "egrep", "fgrep", "rg", "ripgrep"]);
+const SEARCH_FILE_OPTIONS = new Set(["-f", "--file", "--exclude-from", "--ignore-file"]);
+const SEARCH_GLOB_OPTIONS = new Set(["-g", "--glob", "--iglob", "--include", "--exclude"]);
+const SEARCH_PATTERN_OPTIONS = new Set(["-e", "--regexp", "--pattern"]);
+const ASSIGNMENT_BUILTINS = new Set(["export", "readonly", "declare", "typeset", "local"]);
 const SHELL_COMMANDS = new Set(["bash", "sh", "zsh"]);
 const SIMPLE_WRAPPERS = new Set(["sudo", "nohup", "time", "nice", "ionice", "command"]);
 
@@ -130,11 +135,22 @@ export function splitShellSegments(command) {
   return segments.length ? segments : [command.trim()].filter(Boolean);
 }
 
-export function shellWords(segment) {
-  const words = [];
+function shellWordTokens(segment) {
+  const tokens = [];
   let current = "";
   let quote;
   let escaped = false;
+  let activeGlob = false;
+  let unquotedVariable = false;
+  let variableActive = false;
+  const flush = () => {
+    if (!current) return;
+    tokens.push({ value: current, activeGlob, unquotedVariable, variableActive });
+    current = "";
+    activeGlob = false;
+    unquotedVariable = false;
+    variableActive = false;
+  };
   for (const char of segment.trim()) {
     if (escaped) {
       current += char;
@@ -154,16 +170,22 @@ export function shellWords(segment) {
       continue;
     }
     if (!quote && /\s/.test(char)) {
-      if (current) {
-        words.push(current);
-        current = "";
-      }
+      flush();
       continue;
+    }
+    if (!quote && /[*?{\[]/.test(char)) activeGlob = true;
+    if (char === "$" && quote !== "'") {
+      variableActive = true;
+      if (!quote) unquotedVariable = true;
     }
     current += char;
   }
-  if (current) words.push(current);
-  return words;
+  flush();
+  return tokens;
+}
+
+export function shellWords(segment) {
+  return shellWordTokens(segment).map((token) => token.value);
 }
 
 export function arrayStartsWith(items, prefix) {
@@ -415,27 +437,63 @@ function findBalanced(text, startIndex, openChar, closeChar) {
   return undefined;
 }
 
-function shellCPayload(words) {
+function shellCPayloads(words) {
   const normalizedWords = stripWrapper(words);
-  const command = commandBasename(normalizedWords[0] ?? "");
-  if (!SHELL_COMMANDS.has(command)) return undefined;
-  for (let index = 1; index < normalizedWords.length - 1; index += 1) {
-    const word = normalizedWords[index];
-    if (word === "-c" || (/^-[A-Za-z]+$/.test(word) && word.includes("c"))) {
-      return normalizedWords[index + 1];
+  const rootCommand = commandBasename(normalizedWords[0] ?? "");
+  const carrier = SHELL_COMMANDS.has(rootCommand) || rootCommand === "xargs" || rootCommand === "find";
+  if (!carrier) return [];
+
+  const payloads = [];
+  for (let commandIndex = 0; commandIndex < normalizedWords.length; commandIndex += 1) {
+    if (!SHELL_COMMANDS.has(commandBasename(normalizedWords[commandIndex] ?? ""))) continue;
+    for (let index = commandIndex + 1; index < normalizedWords.length - 1; index += 1) {
+      const word = normalizedWords[index];
+      if (word === "-c" || (/^-[A-Za-z]+$/.test(word) && word.includes("c"))) {
+        payloads.push(normalizedWords[index + 1]);
+        break;
+      }
     }
   }
-  return undefined;
+  return payloads;
 }
 
 function extractNestedCommands(segment, words = shellWords(segment)) {
   const nested = [];
-  const payload = shellCPayload(words);
-  if (payload) nested.push(payload);
+  nested.push(...shellCPayloads(words));
+  const normalizedWords = stripWrapper(words);
+  const rootCommand = commandBasename(normalizedWords[0] ?? "");
+  if (rootCommand === "eval" && normalizedWords.length > 1) nested.push(normalizedWords.slice(1).join(" "));
+  if (commandBasename(words[0] ?? "") === "env") {
+    const splitIndex = words.indexOf("-S");
+    if (splitIndex >= 0 && words[splitIndex + 1]) nested.push(words[splitIndex + 1]);
+  }
+  if (SHELL_COMMANDS.has(rootCommand)) {
+    const hereStringIndex = normalizedWords.indexOf("<<<");
+    if (hereStringIndex >= 0 && normalizedWords[hereStringIndex + 1]) nested.push(normalizedWords[hereStringIndex + 1]);
+  }
 
+  let quote;
+  let escaped = false;
   for (let index = 0; index < segment.length; index += 1) {
     const char = segment[index];
     const next = segment[index + 1];
+    if (escaped) {
+      escaped = false;
+      continue;
+    }
+    if (char === "\\") {
+      escaped = true;
+      continue;
+    }
+    if ((char === "'" || char === '"') && !quote) {
+      quote = char;
+      continue;
+    }
+    if (quote === char) {
+      quote = undefined;
+      continue;
+    }
+    if (quote === "'") continue;
     if (char === "$" && next === "(") {
       const match = findBalanced(segment, index + 1, "(", ")");
       if (match) {
@@ -453,6 +511,7 @@ function extractNestedCommands(segment, words = shellWords(segment)) {
       continue;
     }
     if (char === "(") {
+      if (quote) continue;
       const previous = segment[index - 1];
       if (previous && /[A-Za-z0-9_]/.test(previous)) continue;
       const match = findBalanced(segment, index, "(", ")");
@@ -484,37 +543,422 @@ function isPathLike(word) {
     || word === "auth.json";
 }
 
-export function extractShellPathCandidates(command) {
+function isFilesystemArgument(word) {
+  if (!word || word === "-") return false;
+  if (word.startsWith("http://") || word.startsWith("https://")) return false;
+  if (PATH_REDIRECT_OPERATORS.has(word)) return false;
+  if (isAssignment(word)) return false;
+  return isPathLike(word) || !word.startsWith("-");
+}
+
+function rememberLeadingShellAssignments(words, assignments) {
+  const remember = (word) => {
+    const match = word.match(/^([A-Za-z_][A-Za-z0-9_]*)=(.*)$/);
+    if (match) assignments.set(match[1], expandKnownShellVariables(match[2], assignments));
+  };
+  let start = 0;
+  while (start < words.length && isAssignment(words[start])) start += 1;
+  if (start === words.length) {
+    for (const word of words) remember(word);
+    return;
+  }
+  if (!ASSIGNMENT_BUILTINS.has(commandBasename(words[start] ?? ""))) return;
+  for (const word of words.slice(start + 1)) remember(word);
+}
+
+function expandKnownShellVariables(value, assignments, resolving = new Set(), depth = 0) {
+  if (depth >= 8) return String(value ?? "");
+  return String(value ?? "").replace(/\$(?:\{([A-Za-z_][A-Za-z0-9_]*)\}|([A-Za-z_][A-Za-z0-9_]*))/g, (match, braced, plain) => {
+    const name = braced ?? plain;
+    const resolved = assignments.get(name);
+    if (resolved === undefined || resolving.has(name)) return match;
+    const nextResolving = new Set(resolving);
+    nextResolving.add(name);
+    return expandKnownShellVariables(resolved, assignments, nextResolving, depth + 1);
+  });
+}
+
+function executableArgumentTokens(tokens, words, commandName) {
+  const commandIndex = words.findIndex((word) => commandBasename(word) === commandName);
+  return commandIndex >= 0 ? tokens.slice(commandIndex + 1) : tokens.slice(1);
+}
+
+function quotedShellLiterals(segment) {
+  const literals = [];
+  for (let index = 0; index < segment.length; index += 1) {
+    const quote = segment[index];
+    if (quote !== "'" && quote !== '"') continue;
+    let value = "";
+    let escaped = false;
+    for (index += 1; index < segment.length; index += 1) {
+      const char = segment[index];
+      if (escaped) {
+        value += `\\${char}`;
+        escaped = false;
+        continue;
+      }
+      if (char === "\\" && quote === '"') {
+        escaped = true;
+        continue;
+      }
+      if (char === quote) break;
+      value += char;
+    }
+    literals.push(value);
+  }
+  return literals;
+}
+
+function decodeShellDataEscapes(value) {
+  const controlIndex = value.indexOf("\\c");
+  const bounded = controlIndex >= 0 ? value.slice(0, controlIndex) : value;
+  return bounded.replace(/\\(?:x([0-9A-Fa-f]{1,2})|0([0-7]{1,3})|([0-7]{1,3})|u([0-9A-Fa-f]{4})|U([0-9A-Fa-f]{8})|([abefnrtv\\'\"]))/g,
+    (match, hex, zeroOctal, octal, shortUnicode, longUnicode, simple) => {
+      if (hex) return String.fromCodePoint(Number.parseInt(hex, 16));
+      if (zeroOctal || octal) return String.fromCodePoint(Number.parseInt(zeroOctal ?? octal, 8));
+      if (shortUnicode || longUnicode) {
+        const codePoint = Number.parseInt(shortUnicode ?? longUnicode, 16);
+        return codePoint <= 0x10FFFF ? String.fromCodePoint(codePoint) : match;
+      }
+      return {
+        a: "\u0007",
+        b: "\b",
+        e: "\u001B",
+        f: "\f",
+        n: "\n",
+        r: "\r",
+        t: "\t",
+        v: "\v",
+        "\\": "\\",
+        "'": "'",
+        '"': '"'
+      }[simple] ?? match;
+    });
+}
+
+function escapedLiteralCandidates(segment) {
   const candidates = [];
+  for (const literal of quotedShellLiterals(segment)) {
+    const decoded = decodeShellDataEscapes(literal);
+    candidates.push(...decoded.split(/\s+/).filter(Boolean));
+  }
+  return candidates;
+}
+
+function shellDataTokens(segment) {
+  const tokens = [];
+  let current = "";
+  let quote;
+  let tokenStarted = false;
+  let variableActive = false;
+  const flush = () => {
+    if (!tokenStarted) return;
+    tokens.push({ value: current, variableActive });
+    current = "";
+    tokenStarted = false;
+    variableActive = false;
+  };
+
+  for (let index = 0; index < segment.length; index += 1) {
+    const char = segment[index];
+    const next = segment[index + 1];
+    if (quote === "'") {
+      tokenStarted = true;
+      if (char === "'") quote = undefined;
+      else current += char;
+      continue;
+    }
+    if (quote === '"') {
+      tokenStarted = true;
+      if (char === '"') {
+        quote = undefined;
+      } else if (char === "\\" && next !== undefined && /[$`"\\\n]/.test(next)) {
+        current += next;
+        index += 1;
+      } else {
+        if (char === "$" && next !== undefined) variableActive = true;
+        current += char;
+      }
+      continue;
+    }
+    if (/\s/.test(char)) {
+      flush();
+      continue;
+    }
+    tokenStarted = true;
+    if (char === "'" || char === '"') {
+      quote = char;
+      continue;
+    }
+    if (char === "\\" && next !== undefined) {
+      current += next;
+      index += 1;
+      continue;
+    }
+    if (char === "$" && next !== undefined) variableActive = true;
+    current += char;
+  }
+  flush();
+  return tokens;
+}
+
+function renderStaticPrintf(format, values) {
+  let valueIndex = 0;
+  let rendered = "";
+  const decodedFormat = decodeShellDataEscapes(format);
+  const conversion = /%(?:\d+\$)?[-+#0 ']*(?:\d+|\*)?(?:\.(?:\d+|\*))?[hlL]?[bcdeEfgGiosuxXaA]/g;
+  let cursor = 0;
+  for (const match of decodedFormat.matchAll(conversion)) {
+    if (rendered.length > 8192 || valueIndex >= 32) break;
+    const start = match.index ?? 0;
+    rendered += decodedFormat.slice(cursor, start).replace(/%%/g, "%");
+    const specifier = match[0].slice(-1);
+    const argument = values[valueIndex] ?? "";
+    rendered += specifier === "b" ? decodeShellDataEscapes(argument) : argument;
+    valueIndex += 1;
+    cursor = start + match[0].length;
+  }
+  rendered += decodedFormat.slice(cursor).replace(/%%/g, "%");
+  return rendered.slice(0, 8192);
+}
+
+function staticDataOutputCandidates(segment, assignments, producerCommand) {
+  const tokens = shellDataTokens(segment);
+  const commandIndex = tokens.findIndex((token) => commandBasename(token.value) === producerCommand);
+  if (commandIndex < 0) return [];
+  const args = tokens.slice(commandIndex + 1).map((token) => token.variableActive
+    ? expandKnownShellVariables(token.value, assignments)
+    : token.value);
+  let output = "";
+  if (producerCommand === "echo") {
+    let argumentIndex = 0;
+    let escapes = false;
+    while (argumentIndex < args.length && /^-[eEn]+$/.test(args[argumentIndex])) {
+      if (args[argumentIndex].slice(1).includes("e")) escapes = true;
+      if (args[argumentIndex].slice(1).includes("E")) escapes = false;
+      argumentIndex += 1;
+    }
+    output = args.slice(argumentIndex).join(" ");
+    if (escapes) output = decodeShellDataEscapes(output);
+  } else if (producerCommand === "printf" && args.length > 0) {
+    output = renderStaticPrintf(args[0], args.slice(1));
+  }
+  return output.split(/\s+/).filter(Boolean);
+}
+
+function echoEscapeMode(words, commandIndex) {
+  for (const word of words.slice(commandIndex + 1)) {
+    if (!/^-[eEn]+$/.test(word)) break;
+    if (word.slice(1).includes("e")) return true;
+  }
+  return false;
+}
+
+const RG_VALUE_SHORT_OPTIONS = new Set(["A", "B", "C", "E", "e", "f", "g", "j", "M", "m", "r", "t", "T"]);
+
+function attachedRgShortOption(word) {
+  if (!/^-[^-]/.test(word)) return undefined;
+  const cluster = word.slice(1);
+  for (let index = 0; index < cluster.length; index += 1) {
+    const option = cluster[index];
+    if (!RG_VALUE_SHORT_OPTIONS.has(option)) continue;
+    const value = cluster.slice(index + 1);
+    return value ? { option: `-${option}`, value } : undefined;
+  }
+  return undefined;
+}
+
+function xargsPipelineInputCandidates(command) {
+  const segments = splitShellSegments(command);
+  const candidates = [];
+  const assignments = new Map();
+  for (let index = 0; index < segments.length; index += 1) {
+    const producerTokens = shellWordTokens(segments[index]);
+    const producerWords = producerTokens.map((token) => token.value);
+    rememberLeadingShellAssignments(producerWords, assignments);
+    if (index + 1 >= segments.length) continue;
+    const consumerWords = shellWords(segments[index + 1]);
+    const consumerCommand = commandBasename(stripWrapper(consumerWords)[0] ?? "");
+    if (consumerCommand !== "xargs") continue;
+    const producerCommand = commandBasename(stripWrapper(producerWords)[0] ?? "");
+    if (!DATA_ONLY_COMMANDS.has(producerCommand)) continue;
+    const commandIndex = producerWords.findIndex((word) => commandBasename(word) === producerCommand);
+    for (const token of producerTokens.slice(commandIndex + 1)) {
+      const word = token.variableActive ? expandKnownShellVariables(token.value, assignments) : token.value;
+      if (word.startsWith("-") || word === "%s" || word === "%s\\n") continue;
+      candidates.push(word);
+    }
+    if (producerCommand === "printf" || (producerCommand === "echo" && echoEscapeMode(producerWords, commandIndex))) {
+      candidates.push(...escapedLiteralCandidates(segments[index]));
+    }
+    candidates.push(...staticDataOutputCandidates(segments[index], assignments, producerCommand));
+  }
+  return candidates;
+}
+
+function extractAttachedRedirectionPaths(segment) {
+  const paths = [];
+  let quote;
+  let escaped = false;
+
+  for (let index = 0; index < segment.length; index += 1) {
+    const char = segment[index];
+    if (escaped) {
+      escaped = false;
+      continue;
+    }
+    if (char === "\\") {
+      escaped = true;
+      continue;
+    }
+    if ((char === "'" || char === '"') && !quote) {
+      quote = char;
+      continue;
+    }
+    if (quote === char) {
+      quote = undefined;
+      continue;
+    }
+    if (quote || (char !== "<" && char !== ">")) continue;
+
+    const next = segment[index + 1];
+    if (char === "<" && next === "<") {
+      while (segment[index + 1] === "<") index += 1;
+      continue;
+    }
+    if (next === "&") {
+      index += 1;
+      continue;
+    }
+
+    if ((char === ">" && (next === ">" || next === "|")) || (char === "<" && next === ">")) index += 1;
+    let cursor = index + 1;
+    while (/\s/.test(segment[cursor] ?? "")) cursor += 1;
+    if (!segment[cursor] || segment[cursor] === "&" || segment[cursor] === "-") continue;
+
+    let target = "";
+    let targetQuote;
+    let targetEscaped = false;
+    for (; cursor < segment.length; cursor += 1) {
+      const targetChar = segment[cursor];
+      if (targetEscaped) {
+        target += targetChar;
+        targetEscaped = false;
+        continue;
+      }
+      if (targetChar === "\\") {
+        targetEscaped = true;
+        continue;
+      }
+      if ((targetChar === "'" || targetChar === '"') && !targetQuote) {
+        targetQuote = targetChar;
+        continue;
+      }
+      if (targetQuote === targetChar) {
+        targetQuote = undefined;
+        continue;
+      }
+      if (!targetQuote && (/\s/.test(targetChar) || /[;&|<>]/.test(targetChar))) break;
+      target += targetChar;
+    }
+    if (target) paths.push(target);
+    index = Math.max(index, cursor - 1);
+  }
+
+  return paths;
+}
+
+export function extractShellPathCandidates(command) {
+  const candidates = [...xargsPipelineInputCandidates(command)];
+  const assignments = new Map();
+  const addCandidate = (candidate, variableActive = true) => {
+    if (typeof candidate !== "string" || !candidate) return;
+    candidates.push(variableActive ? expandKnownShellVariables(candidate, assignments) : candidate);
+  };
   const pending = splitShellSegments(command).map((segment) => ({ segment, depth: 0 }));
   while (pending.length > 0) {
     const { segment, depth } = pending.shift();
-    const words = shellWords(segment);
+    const tokens = shellWordTokens(segment);
+    const words = tokens.map((token) => token.value);
+    rememberLeadingShellAssignments(words, assignments);
     const commandName = commandBasename(stripWrapper(words)[0] ?? "");
-    if (DATA_ONLY_COMMANDS.has(commandName)) {
-      for (let index = 1; index < words.length; index += 1) {
-        if (PATH_REDIRECT_OPERATORS.has(words[index]) && words[index + 1]) candidates.push(words[index + 1]);
-      }
-    } else {
-      for (let index = 1; index < words.length; index += 1) {
-        const word = words[index];
-        if (PATH_REDIRECT_OPERATORS.has(word) && words[index + 1]) {
-          candidates.push(words[index + 1]);
+    for (const redirectPath of extractAttachedRedirectionPaths(segment)) addCandidate(redirectPath);
+    if (!DATA_ONLY_COMMANDS.has(commandName) || depth > 0) {
+      const argumentTokens = executableArgumentTokens(tokens, words, commandName);
+      let searchPatternPending = SEARCH_COMMANDS.has(commandName);
+      for (let index = 0; index < argumentTokens.length; index += 1) {
+        const word = argumentTokens[index].value;
+        if (word === "<<" || word === "<<<") {
+          if (commandName === "xargs" && word === "<<<" && argumentTokens[index + 1]) {
+            const input = argumentTokens[index + 1];
+            addCandidate(input.value, input.variableActive);
+          }
+          index += 1;
+          continue;
+        }
+        if (PATH_REDIRECT_OPERATORS.has(word) && argumentTokens[index + 1]) {
+          const target = argumentTokens[index + 1];
+          addCandidate(target.value, target.variableActive);
           index += 1;
           continue;
         }
         if (/^(?:\d*)>>?/.test(word) || /^&>>?/.test(word)) {
           const pathPart = word.replace(/^(?:\d*|&)>>?/, "");
-          if (pathPart) candidates.push(pathPart);
+          if (pathPart) addCandidate(pathPart, argumentTokens[index].variableActive);
+          continue;
+        }
+        const optionEquals = word.indexOf("=");
+        const optionName = optionEquals > 0 ? word.slice(0, optionEquals) : word;
+        const inlineOptionValue = optionEquals > 0 ? word.slice(optionEquals + 1) : undefined;
+        if (SEARCH_COMMANDS.has(commandName) && SEARCH_PATTERN_OPTIONS.has(optionName)) {
+          searchPatternPending = false;
+          if (inlineOptionValue === undefined) index += 1;
+          continue;
+        }
+        const attachedGrepFile = ["grep", "egrep", "fgrep"].includes(commandName) && /^-f.+/.test(word)
+          ? word.slice(2)
+          : undefined;
+        if (attachedGrepFile) {
+          addCandidate(attachedGrepFile, argumentTokens[index].variableActive);
+          searchPatternPending = false;
+          continue;
+        }
+        const attachedRgOption = ["rg", "ripgrep"].includes(commandName) ? attachedRgShortOption(word) : undefined;
+        if (attachedRgOption?.option === "-e") {
+          searchPatternPending = false;
+          continue;
+        }
+        if (attachedRgOption?.option === "-f") {
+          addCandidate(attachedRgOption.value, argumentTokens[index].variableActive);
+          searchPatternPending = false;
+          continue;
+        }
+        if (attachedRgOption?.option === "-g") {
+          addCandidate(attachedRgOption.value, argumentTokens[index].variableActive);
+          continue;
+        }
+        if (SEARCH_COMMANDS.has(commandName) && (SEARCH_FILE_OPTIONS.has(optionName) || SEARCH_GLOB_OPTIONS.has(optionName))) {
+          if (inlineOptionValue !== undefined) {
+            addCandidate(inlineOptionValue, argumentTokens[index].variableActive);
+          } else {
+            const target = argumentTokens[index + 1];
+            if (target) addCandidate(target.value, target.variableActive);
+            index += 1;
+          }
+          if (SEARCH_FILE_OPTIONS.has(optionName) && (optionName === "-f" || optionName === "--file")) searchPatternPending = false;
           continue;
         }
         const optionPath = pathCandidateFromOption(word);
         if (optionPath) {
-          candidates.push(optionPath);
+          addCandidate(optionPath, argumentTokens[index].variableActive);
           continue;
         }
         if (word.startsWith("-")) continue;
-        if (isPathLike(word)) candidates.push(word);
+        if (searchPatternPending) {
+          searchPatternPending = false;
+          continue;
+        }
+        if (isFilesystemArgument(word)) addCandidate(word, argumentTokens[index].variableActive);
       }
     }
     if (depth < 4) {
@@ -525,7 +969,96 @@ export function extractShellPathCandidates(command) {
       }
     }
   }
-  return candidates.map(normalizePathCandidate).filter(Boolean);
+  return [...new Set(candidates.map(normalizePathCandidate).filter(Boolean))];
+}
+
+export function extractShellGlobCandidates(command) {
+  const candidates = [];
+  const assignments = new Map();
+  const pending = splitShellSegments(command).map((segment) => ({ segment, depth: 0 }));
+  while (pending.length > 0) {
+    const { segment, depth } = pending.shift();
+    const tokens = shellWordTokens(segment);
+    const words = tokens.map((token) => token.value);
+    rememberLeadingShellAssignments(words, assignments);
+    const commandName = commandBasename(stripWrapper(words)[0] ?? "");
+    if (!DATA_ONLY_COMMANDS.has(commandName) || depth > 0) {
+      const argumentTokens = executableArgumentTokens(tokens, words, commandName);
+      let searchPatternPending = SEARCH_COMMANDS.has(commandName);
+      for (let index = 0; index < argumentTokens.length; index += 1) {
+        const token = argumentTokens[index];
+        if (token.value === "<<" || token.value === "<<<") {
+          if (commandName === "xargs" && token.value === "<<<" && argumentTokens[index + 1]) {
+            const input = argumentTokens[index + 1];
+            const expanded = expandKnownShellVariables(input.value, assignments);
+            if (input.activeGlob || (input.unquotedVariable && /[*?{\[]/.test(expanded))) candidates.push(expanded);
+          }
+          index += 1;
+          continue;
+        }
+        if (PATH_REDIRECT_OPERATORS.has(token.value)) {
+          const target = argumentTokens[index + 1];
+          if (target) {
+            const expanded = expandKnownShellVariables(target.value, assignments);
+            if (target.activeGlob || (target.unquotedVariable && /[*?{\[]/.test(expanded))) candidates.push(expanded);
+          }
+          index += 1;
+          continue;
+        }
+        const optionEquals = token.value.indexOf("=");
+        const optionName = optionEquals > 0 ? token.value.slice(0, optionEquals) : token.value;
+        const inlineOptionValue = optionEquals > 0 ? token.value.slice(optionEquals + 1) : undefined;
+        if (SEARCH_COMMANDS.has(commandName) && SEARCH_PATTERN_OPTIONS.has(optionName)) {
+          searchPatternPending = false;
+          if (inlineOptionValue === undefined) index += 1;
+          continue;
+        }
+        const attachedRgOption = ["rg", "ripgrep"].includes(commandName) ? attachedRgShortOption(token.value) : undefined;
+        if (attachedRgOption?.option === "-e") {
+          searchPatternPending = false;
+          continue;
+        }
+        if (attachedRgOption?.option === "-f") {
+          searchPatternPending = false;
+          continue;
+        }
+        if (attachedRgOption?.option === "-g") {
+          const expanded = token.variableActive
+            ? expandKnownShellVariables(attachedRgOption.value, assignments)
+            : attachedRgOption.value;
+          candidates.push(expanded);
+          continue;
+        }
+        if (SEARCH_COMMANDS.has(commandName) && (SEARCH_FILE_OPTIONS.has(optionName) || SEARCH_GLOB_OPTIONS.has(optionName))) {
+          const target = inlineOptionValue === undefined ? argumentTokens[index + 1] : undefined;
+          const targetValue = inlineOptionValue ?? target?.value;
+          if (targetValue !== undefined) {
+            const targetVariableActive = inlineOptionValue === undefined ? target?.variableActive : token.variableActive;
+            const expanded = targetVariableActive ? expandKnownShellVariables(targetValue, assignments) : targetValue;
+            if (SEARCH_GLOB_OPTIONS.has(optionName) || target?.activeGlob || (target?.unquotedVariable && /[*?{\[]/.test(expanded))) {
+              candidates.push(expanded);
+            }
+          }
+          if (SEARCH_FILE_OPTIONS.has(optionName) && (optionName === "-f" || optionName === "--file")) searchPatternPending = false;
+          if (inlineOptionValue === undefined) index += 1;
+          continue;
+        }
+        if (token.value.startsWith("-")) continue;
+        if (searchPatternPending) {
+          searchPatternPending = false;
+          continue;
+        }
+        const expanded = expandKnownShellVariables(token.value, assignments);
+        if (token.activeGlob || (token.unquotedVariable && /[*?{\[]/.test(expanded))) candidates.push(expanded);
+      }
+    }
+    if (depth < 4) {
+      for (const nestedCommand of extractNestedCommands(segment, words)) {
+        for (const nestedSegment of splitShellSegments(nestedCommand)) pending.push({ segment: nestedSegment, depth: depth + 1 });
+      }
+    }
+  }
+  return [...new Set(candidates.map(normalizePathCandidate).filter(Boolean))];
 }
 
 export function findProtectedPathInCommand(command, protectedPatterns) {
