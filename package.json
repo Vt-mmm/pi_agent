@@ -5,6 +5,11 @@
   "license": "MIT",
   "type": "module",
   "description": "Reusable Pi agent platform, project adapters, MCP/tool policy, and coding workflow harness.",
+  "homepage": "https://piagent.io.vn",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Vt-mmm/pi_agent.git"
+  },
   "keywords": [
     "pi-package",
     "pi-extension",

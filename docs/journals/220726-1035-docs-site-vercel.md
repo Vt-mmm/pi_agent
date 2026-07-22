@@ -10,7 +10,8 @@ Added a static HTML documentation site for Pi Company Platform and a Vercel depl
 - Added `docs-site/vercel.json` with static URL behavior and safe response headers.
 - Added `docs/vercel-docs-site.md` with dashboard and CLI deployment steps.
 - Documented Pi positioning, architecture, security boundaries, profile commands, permission modes, workflow commands, runtime scripts, and team usage.
-- Deployed production docs at https://docs-site-three-pearl.vercel.app.
+- Deployed initial production docs through a Vercel-generated project URL.
+- Canonical public docs domain is now https://piagent.io.vn.
 
 ## Operator decision
 

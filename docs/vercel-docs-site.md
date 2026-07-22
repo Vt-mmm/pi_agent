@@ -4,7 +4,11 @@
 
 Giữ tài liệu HTML trong cùng repository, dưới `docs-site/`.
 
-Production URL hiện tại: https://docs-site-three-pearl.vercel.app
+Production URL hiện tại: https://piagent.io.vn
+
+Vercel project: `pi-agent`
+
+Root Directory: `docs-site`
 
 Lý do:
 
@@ -39,6 +43,24 @@ vercel login
 ```
 
 Sau khi site đã nối Git, các lần sau chỉ cần sửa `docs-site/index.html`, commit và push vào production branch.
+
+## Custom domain
+
+Canonical domain: `piagent.io.vn`
+
+Trong Vercel project `pi-agent` → Settings → Domains, add:
+
+- `piagent.io.vn`
+- `www.piagent.io.vn`
+
+Trong iNET DNS, dùng cấu hình do Vercel Domains panel báo. Với cấu hình Vercel phổ biến:
+
+| Type | Name/Host | Value |
+|---|---|---|
+| `A` | `@` | `76.76.21.21` |
+| `CNAME` | `www` | Vercel CNAME target, thường là `cname.vercel-dns-0.com` hoặc giá trị Vercel hiển thị |
+
+Không xoá `MX`, `TXT`, `NS`, hoặc email records nếu domain đang dùng mail. Sau khi DNS valid, Vercel sẽ cấp SSL tự động.
 
 ## Local preview
 

@@ -139,7 +139,7 @@ Files không commit:
 
 ## Release checklist
 
-1. Update docs/changelog.
+1. Update `CHANGELOG.md`, public docs links, and GitHub release notes.
 2. Run:
 
    ```bash
@@ -153,11 +153,12 @@ Files không commit:
    pi list
    ```
 
-3. Tag:
+3. Tag and publish release notes:
 
    ```bash
    git tag vX.Y.Z
    git push origin vX.Y.Z
+   gh release create vX.Y.Z --title "vX.Y.Z" --notes-file /tmp/pi-agent-vX.Y.Z-release-notes.md
    ```
 
 4. Team updates:

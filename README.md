@@ -2,6 +2,8 @@
 
 Reusable Pi package for project onboarding, profile-based coding workflows, guarded tool usage, multi-agent orchestration, MCP setup, memory policy, and task verification.
 
+Public docs: [piagent.io.vn](https://piagent.io.vn)
+
 The goal is a simple daily flow:
 
 ```bash
@@ -430,7 +432,9 @@ This repository intentionally excludes:
 
 ## Documentation
 
+- [Public docs site](https://piagent.io.vn)
 - [Static team docs site](docs-site/index.html)
+- [Changelog](CHANGELOG.md)
 - [Vercel docs site deploy](docs/vercel-docs-site.md)
 - [Operator manual tiếng Việt](docs/operator-manual-vietnamese.md)
 - [Quickstart tiếng Việt](docs/quickstart-vietnamese.md)

@@ -115,18 +115,18 @@
   ],
   "core": {
     "apiVersion": 1,
-    "packageDigest": "sha256:73a990880b0f7988f349e65a86c81430d156f29eaa4d5de6f0baf27f65b5e32f",
+    "packageDigest": "sha256:e1b18b0017671866570a39ab5afdbe400af1607dd08f7d419f611042cab06c06",
     "packageSource": "../",
     "packageVersion": "0.4.7",
     "runtimeFiles": [
       {
-        "byteSize": 2975,
-        "digest": "sha256:65d05939a0848f6fa45539fdaf098d695fbf69bbe5184cecc036a9433d4e79de",
+        "byteSize": 3108,
+        "digest": "sha256:b9cc063bf5b840af176b38bd1173b9c4790006af82c1726e1201aadd82b1a756",
         "path": "package.json"
       },
       {
-        "byteSize": 734,
-        "digest": "sha256:c2526dfa548b87ff19ad98907e5f2203dd44429c6c4d6213fc3b2406099edd45",
+        "byteSize": 912,
+        "digest": "sha256:0d16781c0952774989d8de67a7041a65718c0f46fb58d8260889dfef01425305",
         "path": "packages/pi-company-core/package.json"
       },
       {

@@ -5,6 +5,12 @@
   "private": true,
   "license": "MIT",
   "description": "Pi agent package: guard extension, prompts, skills, and policy defaults.",
+  "homepage": "https://piagent.io.vn",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Vt-mmm/pi_agent.git",
+    "directory": "packages/pi-company-core"
+  },
   "keywords": [
     "pi-package",
     "coding-agent",
