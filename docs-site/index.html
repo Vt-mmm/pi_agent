@@ -35,7 +35,7 @@
         --shadow: 0 24px 90px rgba(0, 0, 0, 0.45);
         --radius: 22px;
         --sidebar: 294px;
-        --content: 980px;
+        --content: 1260px;
       }
 
       * {
@@ -233,11 +233,13 @@
 
       main {
         min-width: 0;
+        display: flex;
+        justify-content: center;
       }
 
       .content-shell {
-        width: min(100%, calc(var(--content) + 96px));
-        padding: 58px 48px 96px;
+        width: min(100%, var(--content));
+        padding: 58px 56px 96px;
       }
 
       .hero {
@@ -674,6 +676,7 @@
         }
 
         .content-shell {
+          width: min(100%, 980px);
           padding: 38px 22px 76px;
         }
 
@@ -770,12 +773,6 @@
             <a class="nav-link" href="#runtime">Runtime tools</a>
             <a class="nav-link" href="#team">Team usage</a>
           </div>
-          <div class="nav-group">
-            <p class="nav-title">Ship</p>
-            <a class="nav-link" href="#vercel">Vercel deploy</a>
-            <a class="nav-link" href="#repo-strategy">Repo strategy</a>
-            <a class="nav-link" href="#sources">Public sources</a>
-          </div>
         </nav>
       </aside>
 
@@ -785,7 +782,7 @@
             <p class="eyebrow">Team operating docs</p>
             <h1>Pi runtime được đóng gói như một nền tảng dùng lại cho nhiều dự án.</h1>
             <p>
-              Tài liệu này gom phần cài đặt, profile, quyền chạy, bảo mật, workflow và cách đưa docs HTML lên Vercel vào một nơi duy nhất. Mục tiêu là thành viên mới chỉ cần mở trang này, chọn đúng command, chạy đúng chế độ và biết ranh giới an toàn.
+              Tài liệu này gom phần cài đặt, profile, quyền chạy, bảo mật và workflow vào một nơi duy nhất. Mục tiêu là thành viên mới chỉ cần mở trang này, chọn đúng command, chạy đúng chế độ và biết ranh giới an toàn.
             </p>
             <div class="hero-actions">
               <a class="button primary" href="#quickstart">Bắt đầu</a>
@@ -1303,75 +1300,6 @@ npm run typecheck</code></pre>
             <div class="callout ok-callout">
               <strong>Chuẩn handoff</strong>
               <p>Final response nên nói ngắn: đã đổi gì, verify nào đã chạy, có dùng subagent không, và còn rủi ro hoặc next step nào cần người review.</p>
-            </div>
-          </section>
-
-          <section class="section" id="vercel">
-            <p class="section-kicker">Deploy</p>
-            <h2>Đưa file HTML docs lên Vercel</h2>
-            <p class="section-lead">
-              Cách gọn nhất là giữ thư mục <span class="inline-code">docs-site/</span> trong repo này và cấu hình Vercel trỏ Root Directory vào thư mục đó. Vì chỉ có static HTML/CSS/JS, không cần build step.
-            </p>
-
-            <div class="steps">
-              <article class="step">
-                <div>
-                  <h3>Qua Vercel Dashboard</h3>
-                  <p>Import Git repo, chọn Root Directory là <span class="inline-code">docs-site</span>, Framework Preset là <span class="inline-code">Other</span>, Build Command để trống, Output Directory là <span class="inline-code">.</span> hoặc để default.</p>
-                </div>
-              </article>
-              <article class="step">
-                <div>
-                  <h3>Qua Vercel CLI</h3>
-                  <p>Chạy từ thư mục docs site nếu máy đã đăng nhập Vercel.</p>
-                  <div class="command-card">
-                    <header><span>CLI deploy</span><button class="clip-btn" data-clip="cd docs-site && vercel --prod">Lấy lệnh</button></header>
-                    <pre><code>cd docs-site
-vercel --prod</code></pre>
-                  </div>
-                </div>
-              </article>
-              <article class="step">
-                <div>
-                  <h3>Update nội dung</h3>
-                  <p>Sửa <span class="inline-code">docs-site/index.html</span>, commit, push. Nếu repo đã nối Vercel, production branch sẽ tự tạo deployment mới.</p>
-                </div>
-              </article>
-            </div>
-          </section>
-
-          <section class="section" id="repo-strategy">
-            <p class="section-kicker">Repo strategy</p>
-            <h2>Nên để chung repo hay tách repo?</h2>
-            <p class="section-lead">
-              Với project này, để chung repo là lựa chọn tốt hơn: docs đi cùng version package, review cùng PR, và thành viên thấy ngay command tương ứng source hiện tại.
-            </p>
-
-            <div class="grid cols-2">
-              <article class="card">
-                <h3>Để chung repo</h3>
-                <p><strong>Nên dùng hiện tại.</strong> Gọn, version đồng bộ, ít hạ tầng, Vercel chỉ cần Root Directory <span class="inline-code">docs-site</span>.</p>
-              </article>
-              <article class="card">
-                <h3>Tách repo</h3>
-                <p>Dùng khi docs cần domain, quyền truy cập, release cadence hoặc content team độc lập với source Pi agent.</p>
-              </article>
-            </div>
-          </section>
-
-          <section class="section" id="sources">
-            <p class="section-kicker">Public sources</p>
-            <h2>Nguồn công khai dùng để đối chiếu thuật ngữ</h2>
-            <p class="section-lead">
-              Nội dung Pi trong trang này đến từ repository hiện tại. Các link dưới đây giúp team hiểu bối cảnh chung của Codex CLI, Claude Code và Vercel static config.
-            </p>
-
-            <div class="source-links">
-              <a href="https://learn.chatgpt.com/docs/codex/cli" target="_blank" rel="noopener noreferrer">OpenAI Codex CLI docs</a>
-              <a href="https://learn.chatgpt.com/docs/build-skills" target="_blank" rel="noopener noreferrer">OpenAI skill docs</a>
-              <a href="https://code.claude.com/docs/en/overview" target="_blank" rel="noopener noreferrer">Claude Code overview</a>
-              <a href="https://code.claude.com/docs/en/security" target="_blank" rel="noopener noreferrer">Claude Code security</a>
-              <a href="https://vercel.com/docs/project-configuration" target="_blank" rel="noopener noreferrer">Vercel project configuration</a>
             </div>
           </section>
 
