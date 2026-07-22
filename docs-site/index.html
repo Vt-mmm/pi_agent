@@ -9,6 +9,9 @@
       content="Tài liệu vận hành Pi Company Platform: cài đặt, profile, permission, workflow, bảo mật và triển khai tài liệu tĩnh."
     />
     <meta name="theme-color" content="#050505" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <meta property="og:title" content="Pi Company Platform Docs" />
+    <meta property="og:description" content="Team docs for Pi profiles, permissions, security workflow, and command usage." />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -108,7 +111,14 @@
         color: var(--accent);
         font-family: "JetBrains Mono", monospace;
         font-size: 13px;
+        overflow: hidden;
         box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.04);
+      }
+
+      .brand-mark img {
+        display: block;
+        width: 100%;
+        height: 100%;
       }
 
       .brand span:last-child {
@@ -368,6 +378,54 @@
       .button.primary:focus-visible {
         background: #e5ff98;
         color: #111300;
+      }
+
+      .button.social {
+        min-height: 34px;
+        padding: 7px 12px;
+        color: #d6d7dc;
+      }
+
+      .button.social svg {
+        width: 14px;
+        height: 14px;
+      }
+
+      .owner-strip {
+        position: relative;
+        z-index: 1;
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 10px;
+        margin-top: 18px;
+      }
+
+      .owner-label {
+        color: var(--muted-2);
+        font-size: 12px;
+        font-weight: 800;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+      }
+
+      .owner-strip a {
+        display: inline-flex;
+        align-items: center;
+        gap: 7px;
+        padding: 7px 11px;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.04);
+        color: #d6d7dc;
+        font-size: 12px;
+        font-weight: 700;
+      }
+
+      .owner-strip a:hover,
+      .owner-strip a:focus-visible {
+        border-color: rgba(216, 255, 122, 0.42);
+        color: var(--accent);
       }
 
       .section {
@@ -648,6 +706,23 @@
         font-size: 13px;
       }
 
+      .footer-links {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        margin-top: 14px;
+      }
+
+      .footer-links a {
+        color: var(--muted);
+        font-weight: 700;
+      }
+
+      .footer-links a:hover,
+      .footer-links a:focus-visible {
+        color: var(--accent);
+      }
+
       .mobile-menu {
         display: none;
       }
@@ -694,6 +769,10 @@
           display: none;
         }
 
+        .button.social {
+          display: none;
+        }
+
         .grid.cols-2,
         .grid.cols-3,
         .command-grid,
@@ -733,11 +812,23 @@
   <body>
     <header class="topbar">
       <a class="brand" href="#overview" aria-label="Pi Company Platform">
-        <span class="brand-mark">Pi</span>
+        <span class="brand-mark"><img src="/assets/pi-company-logo.svg" alt="" /></span>
         <span>Pi Company Platform</span>
       </a>
       <div class="top-actions">
         <span class="pill"><span class="pill-dot"></span>v0.4.6 docs</span>
+        <a class="button social" href="https://github.com/Vt-mmm/pi_agent" target="_blank" rel="noopener noreferrer" aria-label="Mở GitHub repository">
+          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M7 17 17 7M9 7h8v8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+          </svg>
+          GitHub
+        </a>
+        <a class="button social" href="https://www.facebook.com/vinhtam0544/" target="_blank" rel="noopener noreferrer" aria-label="Mở Facebook">
+          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M7 17 17 7M9 7h8v8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+          </svg>
+          Facebook
+        </a>
         <button class="button mobile-menu" type="button" data-menu>Lộ trình</button>
         <a class="button" href="#commands">Commands</a>
       </div>
@@ -784,6 +875,11 @@
             <p>
               Tài liệu này gom phần cài đặt, profile, quyền chạy, bảo mật và workflow vào một nơi duy nhất. Mục tiêu là thành viên mới chỉ cần mở trang này, chọn đúng command, chạy đúng chế độ và biết ranh giới an toàn.
             </p>
+            <div class="owner-strip" aria-label="Thông tin dự án">
+              <span class="owner-label">Project links</span>
+              <a href="https://github.com/Vt-mmm/pi_agent" target="_blank" rel="noopener noreferrer">GitHub · Vt-mmm/pi_agent</a>
+              <a href="https://www.facebook.com/vinhtam0544/" target="_blank" rel="noopener noreferrer">Facebook · Vĩnh Tâm</a>
+            </div>
             <div class="hero-actions">
               <a class="button primary" href="#quickstart">Bắt đầu</a>
               <a class="button" href="#commands">Xem command</a>
@@ -1305,6 +1401,10 @@ npm run typecheck</code></pre>
 
           <footer class="footer">
             <p>Pi Company Platform docs · static HTML · security-first agent workflow · v0.4.6</p>
+            <div class="footer-links" aria-label="External links">
+              <a href="https://github.com/Vt-mmm/pi_agent" target="_blank" rel="noopener noreferrer">GitHub repository</a>
+              <a href="https://www.facebook.com/vinhtam0544/" target="_blank" rel="noopener noreferrer">Facebook profile</a>
+            </div>
           </footer>
         </div>
       </main>
