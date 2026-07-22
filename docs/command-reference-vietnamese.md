@@ -100,9 +100,20 @@ Các command này đến từ package `pi-company-core`.
 | `/fresh-task` | Task trong session mới | Khi implementation mới không nên kéo context cũ. | Tự mở session mới và chạy `/task`. |
 | `/fresh-be-to-fe` | BE→FE trong session mới | Khi mapping BE/FE lớn hoặc session hiện tại đã phình. | Tự mở session mới và chạy `/be-to-fe`. |
 | `/task` | Implement task chuẩn | Khi requirement đã rõ. | Có task contract, context manifest, verify, trace, gate. |
+| `/commit [message/scope]` | Commit local có guard | Khi diff đã review và muốn tạo commit gọn. | Stage file rõ ràng, chạy verify phù hợp, commit local; không push. |
+| `/pr [title/request]` | Chuẩn bị pull request | Khi branch đã commit xong và muốn mở PR. | Check status/branch/remote, verify, hỏi xác nhận trước push hoặc tạo/cập nhật PR. |
 | `/plan` | Lập kế hoạch | Khi cần bóc task trước khi sửa. | Plan có scope, file target, verify, risk. |
 | `/discuss` | Trao đổi/làm rõ | Khi chưa nên sửa code. | Giải thích option/tradeoff, không tự implement. |
 | `/review` | Review current diff/source | Khi cần audit read-only trước final/merge. | Findings theo severity, file/area, required fix. |
+
+Git flow của Pi cố ý không dùng namespace `/git-*`. Daily flow là nói tự nhiên hoặc dùng lệnh ngắn:
+
+```text
+/commit docs: update onboarding notes
+/pr Add guarded git workflow
+```
+
+`/commit` chỉ tạo local commit. `/pr` có thể cần `git push` và GitHub write action, nên guard vẫn bắt agent xác nhận rõ branch/title/scope trước khi đẩy hoặc tạo PR. Các lệnh stage rộng như `git add .`, `git add -A`, `git add --all`, `git add -- .`, `git add :/` cũng bị đưa qua confirmation để tránh gom nhầm file riêng tư hoặc unrelated diff.
 
 ## Image/screenshot input
 
@@ -333,7 +344,9 @@ Các lệnh này chạy ngoài Pi.
 | Command | Dùng khi nào |
 |---|---|
 | `npm install -g @earendil-works/pi-coding-agent` | Cài Pi CLI lần đầu. |
-| `pi install git:github.com/Vt-mmm/pi_agent@v0.4.5` | Cài package platform từ GitHub. |
+| `pi install git:github.com/Vt-mmm/pi_agent` | Cài global latest package platform từ GitHub. |
+| `pi install git:github.com/Vt-mmm/pi_agent@vX.Y.Z` | Cài pinned release khi cần reproducible setup. |
+| `pi update --extensions` | Update packages đã cài, gồm package platform. |
 | `pi list --approve` | Xem package Pi đã install. |
 | `pi-company-auto` | Mở Pi với project trust `--approve` cho lần chạy hiện tại; guard vẫn bật. |
 | `pi-company-auto --read-only -p "<task>"` | Auto-run scout/read-only; guard chặn shell/write/unknown tool. |

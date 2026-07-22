@@ -64,7 +64,7 @@ Tạo lock bên cạnh profile project:
 pi-company-capabilities resolve \
   --profile /path/to/project/.pi/company-profile.json \
   --output /path/to/project/.pi/company-profile.lock.json \
-  --package-source npm:@company/pi-agent-platform@0.4.5
+  --package-source npm:@company/pi-agent-platform@x.y.z
 ```
 
 Cập nhật profile và lock theo đường fail-closed:
@@ -73,7 +73,7 @@ Cập nhật profile và lock theo đường fail-closed:
 pi-company-capabilities apply-profile \
   --profile adapters/generic/profile.json \
   --target /path/to/project/.pi/company-profile.json \
-  --package-source git:github.com/Vt-mmm/pi_agent@v0.4.5 \
+  --package-source git:github.com/Vt-mmm/pi_agent@vX.Y.Z \
   --force
 ```
 
@@ -83,7 +83,7 @@ Kiểm tra profile và lock:
 pi-company-capabilities doctor \
   --profile /path/to/project/.pi/company-profile.json \
   --lock /path/to/project/.pi/company-profile.lock.json \
-  --package-source npm:@company/pi-agent-platform@0.4.5
+  --package-source npm:@company/pi-agent-platform@x.y.z
 ```
 
 Kiểm tra external action proposal dạng dry-run:
@@ -101,7 +101,7 @@ pi-company-capabilities validate-action --file proposal.json
   "capabilityPacks": [
     {
       "name": "engineering-base",
-      "version": "0.1.0"
+      "version": "0.1.1"
     }
   ],
   "capabilityPolicy": {

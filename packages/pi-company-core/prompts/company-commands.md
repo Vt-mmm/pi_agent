@@ -37,8 +37,13 @@ Mandatory flow:
    - `/workspace-write` switches back to governed implementation mode.
    - `/full-access` switches the current session to trusted full-access.
    - `/full-access <task>` switches the current session and forwards `<task>` as the next user request.
-9. If the user asks about screenshots/images, explain that local image paths pasted into chat are auto-attached as `[image1]` when supported and below size limits.
-10. Do not claim token/cost savings unless benchmark evidence exists. Point to `/company-usage`, `/task-preflight`, `/subagent-cost`, and `pi-company-usage <project>`.
+9. Explain Git workflow commands when relevant:
+   - Pi Company intentionally does not expose a `/git-*` namespace.
+   - `/commit [message/scope]` starts a guarded local commit workflow.
+   - `/pr [title/request]` starts a guarded pull request workflow.
+   - Broad staging (`git add .`, `git add -A`, `git add --all`, `git add -- .`, `git add :/`), `git push`, and GitHub write actions still require explicit confirmation.
+10. If the user asks about screenshots/images, explain that local image paths pasted into chat are auto-attached as `[image1]` when supported and below size limits.
+11. Do not claim token/cost savings unless benchmark evidence exists. Point to `/company-usage`, `/task-preflight`, `/subagent-cost`, and `pi-company-usage <project>`.
 
 Output format:
 

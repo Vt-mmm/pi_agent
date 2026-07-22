@@ -83,7 +83,14 @@ Inside an active Pi session, use slash commands for a session-local switch:
 
 ```bash
 npm install -g @earendil-works/pi-coding-agent@0.80.10
-pi install git:github.com/Vt-mmm/pi_agent@v0.4.5
+pi install git:github.com/Vt-mmm/pi_agent
+```
+
+For reproducible team/project settings, pin a release tag:
+
+```bash
+pi install git:github.com/Vt-mmm/pi_agent@vX.Y.Z
+pi update --extensions
 ```
 
 Optional Herdr integration:
@@ -175,6 +182,21 @@ The generated lock is deterministic and records profile, pack, artifact, and per
 ```
 
 Use `/task` when the requirement is clear enough to implement.
+
+### Guarded Git workflows
+
+Pi Company intentionally keeps Git as a capability instead of adding a `/git-*` namespace. Use short workflow commands or natural language:
+
+```text
+/commit docs: update onboarding notes
+/pr Add guarded git workflow
+```
+
+`/commit` starts a governed local-commit workflow: inspect status/diff, stage only the intended files, run relevant verification, then commit locally. It does not push.
+
+`/pr` starts a governed pull-request workflow: inspect branch/status/commits, handle uncommitted changes explicitly, then ask for confirmation before any `git push` or GitHub PR create/update action. Draft PRs are the default unless the user asks for ready-for-review.
+
+Broad staging commands such as `git add .`, `git add -A`, `git add --all`, `git add -- .`, and `git add :/` require confirmation so unrelated or private files are not swept into a commit silently.
 
 For read-only investigation:
 
@@ -328,7 +350,7 @@ Most projects do not need shell init. Use this only when you want to pre-create 
 ```bash
 bash /path/to/pi_agent/scripts/setup.sh /path/to/project \
   --profile be-readonly-fe \
-  --package-source git:github.com/Vt-mmm/pi_agent@v0.4.5 \
+  --package-source git:github.com/Vt-mmm/pi_agent@vX.Y.Z \
   --mcp-preset core \
   --subagents-preset safe
 ```
@@ -439,7 +461,7 @@ This repository intentionally excludes:
 
 ## Maturity
 
-Current release: `v0.4.5`.
+The current package version is read from package metadata and release tags. User-facing install docs default to latest; team/project settings should pin an explicit `vX.Y.Z` tag when reproducibility matters.
 
 Ready for:
 

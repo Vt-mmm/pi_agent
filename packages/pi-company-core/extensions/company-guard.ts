@@ -332,7 +332,15 @@ const DEFAULT_POLICY: BasePolicy = {
       ["sudo"],
       ["env"]
     ],
-    rules: []
+    rules: [
+      {
+        id: "prompt-git-add-broad",
+        action: "prompt",
+        match: "regex",
+        value: "(?:^|\\s)git\\s+(?:-C\\s+\\S+\\s+)?add\\s+(?:(?:--all|-A)(?:\\s+(?:\\.|:/))?|--\\s+(?:\\.|:/)|(?:\\.|:/))(?:\\s|$)",
+        reason: "Broad git staging can include unrelated or sensitive changes; inspect git status/diff and confirm the exact scope first."
+      }
+    ]
   },
   contextBudget: {
     defaultMode: "enforce",

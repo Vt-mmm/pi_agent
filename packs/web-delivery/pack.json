@@ -3,7 +3,7 @@
   "kind": "CapabilityPack",
   "metadata": {
     "name": "web-delivery",
-    "version": "0.1.0",
+    "version": "0.1.1",
     "owner": "platform-maintainers",
     "lifecycle": "experimental",
     "license": "MIT",
@@ -19,7 +19,7 @@
       "packs": [
         {
           "name": "engineering-base",
-          "version": "0.1.0"
+          "version": "0.1.1"
         }
       ]
     },

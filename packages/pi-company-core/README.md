@@ -76,6 +76,8 @@ Inside Pi, slash commands can switch the current session without writing the pro
 - `/task`: governed implementation lifecycle.
 - `/task-preflight`: check whether the active session should run, compact, or start fresh before large work.
 - `/fresh-task`, `/fresh-scout`, `/fresh-be-to-fe`: start a fresh governed session and replay the compact workflow prompt.
+- `/commit`: create a guarded local commit from reviewed files only; no push.
+- `/pr`: prepare a pull request; push/PR creation still requires explicit operator confirmation.
 - `/plan`: bounded implementation plan.
 - `/discuss`: clarify a rough request before planning or editing.
 - `/review`: review source/diff with scope and verification checks.
@@ -93,8 +95,10 @@ When `pi-subagents` is installed, this package exposes:
 ## Install
 
 ```bash
-pi install git:github.com/Vt-mmm/pi_agent@v0.4.5
+pi install git:github.com/Vt-mmm/pi_agent
 ```
+
+Use `git:github.com/Vt-mmm/pi_agent@vX.Y.Z` when pinning a reproducible project package source.
 
 ## Project profile
 

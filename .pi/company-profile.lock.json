@@ -2,10 +2,10 @@
   "artifacts": [
     {
       "byteSize": 1901,
-      "digest": "sha256:5ee5f42e877537f286f54f2b222754ef8695f07b677f6d127fb23704625d456f",
+      "digest": "sha256:ea26f605974fdc2605d4d6d6b97cbb67e35b07e352038dbba6e29f585d90c4f8",
       "id": "generic",
       "kind": "adapters",
-      "pack": "engineering-base@0.1.0",
+      "pack": "engineering-base@0.1.1",
       "path": "adapters/generic/profile.json"
     },
     {
@@ -13,31 +13,47 @@
       "digest": "sha256:f4674f0cf76ecfecf66d8af2377c9fe34fbf21b99bf2b7ae5e524276938a7f08",
       "id": "capability-resolution",
       "kind": "evals",
-      "pack": "engineering-base@0.1.0",
+      "pack": "engineering-base@0.1.1",
       "path": "evals/scenarios/capability-resolution.json"
     },
     {
-      "byteSize": 3643,
-      "digest": "sha256:783f7648855f7486ce717e73f8a282a627d969c40f97d1fee8babbc9eb059412",
+      "byteSize": 4028,
+      "digest": "sha256:57167d97a7a947c154bf63a068d6d58731d85b12c649a777ead5bb234983bdb3",
       "id": "base-policy",
       "kind": "policies",
-      "pack": "engineering-base@0.1.0",
+      "pack": "engineering-base@0.1.1",
       "path": "packages/pi-company-core/policies/base-policy.json"
+    },
+    {
+      "byteSize": 1749,
+      "digest": "sha256:eaaf6a16d7c000adbdcf83a8e887904112f4cab48a39250d92765e58a16ec7e0",
+      "id": "commit",
+      "kind": "prompts",
+      "pack": "engineering-base@0.1.1",
+      "path": "packages/pi-company-core/prompts/commit.md"
     },
     {
       "byteSize": 1352,
       "digest": "sha256:203cd3f61d080566f425e57fb665d7704913fca9d33bfb6f03a0d17d49f81194",
       "id": "plan",
       "kind": "prompts",
-      "pack": "engineering-base@0.1.0",
+      "pack": "engineering-base@0.1.1",
       "path": "packages/pi-company-core/prompts/plan.md"
+    },
+    {
+      "byteSize": 1532,
+      "digest": "sha256:ce1df78ef4f32526294013efd6f0c938d078981fd0f4fd4da1dab6ca6c4cea39",
+      "id": "pr",
+      "kind": "prompts",
+      "pack": "engineering-base@0.1.1",
+      "path": "packages/pi-company-core/prompts/pr.md"
     },
     {
       "byteSize": 1399,
       "digest": "sha256:ecf19295c83bdc413b9a75abbba3cd6b0d20983b9c91c21d65b09b80b203e8d9",
       "id": "review",
       "kind": "prompts",
-      "pack": "engineering-base@0.1.0",
+      "pack": "engineering-base@0.1.1",
       "path": "packages/pi-company-core/prompts/review.md"
     },
     {
@@ -45,7 +61,7 @@
       "digest": "sha256:a569c5c6e4a3dd3c4443bbfded2f9b32172d361ebf96a942ada8589635b09f18",
       "id": "task",
       "kind": "prompts",
-      "pack": "engineering-base@0.1.0",
+      "pack": "engineering-base@0.1.1",
       "path": "packages/pi-company-core/prompts/task.md"
     },
     {
@@ -53,7 +69,7 @@
       "digest": "sha256:9d06e24da61671508e2e84d4e33c668029de6ca9fd3a0f474a546b6ad7086034",
       "id": "bounded-change",
       "kind": "recipes",
-      "pack": "engineering-base@0.1.0",
+      "pack": "engineering-base@0.1.1",
       "path": "packs/engineering-base/recipes/bounded-change.json"
     },
     {
@@ -61,7 +77,7 @@
       "digest": "sha256:3b1824fa2ce0d248ccec583db069f4d0c3d71cb6339180368a1a3b676a4a597f",
       "id": "company-ops",
       "kind": "skills",
-      "pack": "engineering-base@0.1.0",
+      "pack": "engineering-base@0.1.1",
       "path": "packages/pi-company-core/skills/company-ops/SKILL.md"
     },
     {
@@ -69,7 +85,7 @@
       "digest": "sha256:275e6e74a2328796d7574a30635d88f4e7c3808d0ecaf7df2563e5293d76033c",
       "id": "company-planner",
       "kind": "subagents",
-      "pack": "engineering-base@0.1.0",
+      "pack": "engineering-base@0.1.1",
       "path": "packages/pi-company-core/subagents/company-planner.md"
     },
     {
@@ -77,7 +93,7 @@
       "digest": "sha256:7b11bbf359270aad76dfdf0d0311c194832b7928936e3132e2af6a19f33645e5",
       "id": "company-reviewer",
       "kind": "subagents",
-      "pack": "engineering-base@0.1.0",
+      "pack": "engineering-base@0.1.1",
       "path": "packages/pi-company-core/subagents/company-reviewer.md"
     },
     {
@@ -85,7 +101,7 @@
       "digest": "sha256:15f5f435bde78b233aaf10c987b323f14d82584889383d746ca90392dc908f36",
       "id": "company-scout",
       "kind": "subagents",
-      "pack": "engineering-base@0.1.0",
+      "pack": "engineering-base@0.1.1",
       "path": "packages/pi-company-core/subagents/company-scout.md"
     },
     {
@@ -93,24 +109,24 @@
       "digest": "sha256:676e40f70b069421a707d83d0596a264fee2d85ddbfa89ad150dfa51f22f26af",
       "id": "company-worker",
       "kind": "subagents",
-      "pack": "engineering-base@0.1.0",
+      "pack": "engineering-base@0.1.1",
       "path": "packages/pi-company-core/subagents/company-worker.md"
     }
   ],
   "core": {
     "apiVersion": 1,
-    "packageDigest": "sha256:71a05e1a2c9575b5bb71383c0746383f71f57ca0ad16049d8dd96557b214cc9d",
+    "packageDigest": "sha256:73a990880b0f7988f349e65a86c81430d156f29eaa4d5de6f0baf27f65b5e32f",
     "packageSource": "../",
-    "packageVersion": "0.4.6",
+    "packageVersion": "0.4.7",
     "runtimeFiles": [
       {
         "byteSize": 2975,
-        "digest": "sha256:0152c5edebd74a53dc17acfcb272e6d0aa8dfa6022b836c7f6245b8dac58fe29",
+        "digest": "sha256:65d05939a0848f6fa45539fdaf098d695fbf69bbe5184cecc036a9433d4e79de",
         "path": "package.json"
       },
       {
         "byteSize": 734,
-        "digest": "sha256:1a04aa02fe661b14ab127b6906fcfb9576991d066d264a50409008a03439c3e6",
+        "digest": "sha256:c2526dfa548b87ff19ad98907e5f2203dd44429c6c4d6213fc3b2406099edd45",
         "path": "packages/pi-company-core/package.json"
       },
       {
@@ -124,8 +140,8 @@
         "path": "packages/pi-company-core/security/sensitive-data.js"
       },
       {
-        "byteSize": 153798,
-        "digest": "sha256:d9cf92d7bea889d77fbd114dc1846c056ec06594404392d330e59df89f9b53f7",
+        "byteSize": 154177,
+        "digest": "sha256:85f61b9a8d7bdae3c8b25c6d1d5fbd64e5ca8c46c8eeb632f2ac6592d9e86108",
         "path": "packages/pi-company-core/extensions/company-guard.ts"
       },
       {
@@ -147,11 +163,11 @@
   },
   "packs": [
     {
-      "digest": "sha256:f0b42e2fe31230590154f25b9c82297f5cf966f946126f52a87e3e4fb11a74d1",
+      "digest": "sha256:719967ae944d8e4101da6f9eee6ebcb13ff2894207cf479f4e8a5b1b47b9062a",
       "lifecycle": "experimental",
       "name": "engineering-base",
       "owner": "platform-maintainers",
-      "version": "0.1.0"
+      "version": "0.1.1"
     }
   ],
   "permissions": {
@@ -193,7 +209,7 @@
     ]
   },
   "profile": {
-    "digest": "sha256:89b6af4992c90ab44538deee64fae211ed9b5a05dec511563e0f563bc4153ff5",
+    "digest": "sha256:f6b2fb6757c08213249dfb1c195288bae4a41e2dcdcf0652305925540ccd0b49",
     "file": "company-profile.json",
     "mode": "platform-development",
     "projectId": "pi-company-platform"

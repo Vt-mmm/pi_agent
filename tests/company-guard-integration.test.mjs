@@ -369,6 +369,7 @@ describe("company guard integration", () => {
     const protectedRead = await callToolCall(toolCall, ctx, "custom_reader", { path: ".env" });
     const protectedShell = await callToolCall(toolCall, ctx, "bash", { command: "cat .env" });
     const destructivePrompt = await callToolCall(toolCall, ctx, "bash", { command: "git push" });
+    const broadStagePrompt = await callToolCall(toolCall, ctx, "bash", { command: "git add -A" });
 
     assert.notEqual(customSafeRead.block, true);
     assert.equal(protectedRead.block, true);
@@ -377,6 +378,20 @@ describe("company guard integration", () => {
     assert.match(protectedShell.reason, /protected path/);
     assert.equal(destructivePrompt.block, true);
     assert.match(destructivePrompt.reason, /User denied command|Confirmation required/);
+    assert.equal(broadStagePrompt.block, true);
+    assert.match(broadStagePrompt.reason, /prompt-git-add-broad|User denied command|Confirmation required/);
+  });
+
+  it("allows targeted git staging without a broad-stage confirmation prompt", async () => {
+    const { root, companyGuard } = await loadGuardFixture();
+    const cwd = createProject(root);
+    const ctx = createContext(cwd);
+    const harness = createPiHarness();
+    companyGuard(harness.pi);
+
+    const targetedStage = await callToolCall(harness.handlers.get("tool_call"), ctx, "bash", { command: "git add README.md" });
+
+    assert.notEqual(targetedStage.block, true);
   });
 
   it("applies a profile with a matching deterministic capability lock", async () => {

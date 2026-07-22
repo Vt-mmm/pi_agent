@@ -16,9 +16,10 @@ Options:
   -h, --help
 
 Package source examples:
-  git:github.com/Vt-mmm/pi_agent@v0.4.2
-  https://github.com/Vt-mmm/pi_agent/archive/refs/tags/v0.4.2.tar.gz
-  npm:@company/pi-agent-platform@0.4.2
+  # Exact sources are required here because init writes .pi/settings.json and a capability lock:
+  git:github.com/Vt-mmm/pi_agent@vX.Y.Z
+  https://github.com/Vt-mmm/pi_agent/archive/refs/tags/vX.Y.Z.tar.gz
+  npm:@company/pi-agent-platform@x.y.z
 
 Default package source:
   1. --package-source

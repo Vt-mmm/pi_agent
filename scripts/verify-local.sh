@@ -60,6 +60,8 @@ required_files=(
   "$ROOT/packages/pi-company-core/prompts/be-to-fe.md"
   "$ROOT/packages/pi-company-core/prompts/scout.md"
   "$ROOT/packages/pi-company-core/prompts/task.md"
+  "$ROOT/packages/pi-company-core/prompts/commit.md"
+  "$ROOT/packages/pi-company-core/prompts/pr.md"
   "$ROOT/packages/pi-company-core/prompts/discuss.md"
   "$ROOT/packages/pi-company-core/prompts/plan.md"
   "$ROOT/packages/pi-company-core/prompts/review.md"
@@ -261,6 +263,8 @@ grep -R "waitTool" "$ROOT/scripts/configure-subagents.sh" "$ROOT/docs/subagents-
 grep -R "company_profile_options" "$ROOT/packages/pi-company-core" "$ROOT/docs" >/dev/null
 grep -R "company_profile_apply" "$ROOT/packages/pi-company-core" "$ROOT/docs" >/dev/null
 grep -R "/profile auto" "$ROOT/README.md" "$ROOT/docs" "$ROOT/packages/pi-company-core" >/dev/null
+grep -R "/commit" "$ROOT/README.md" "$ROOT/docs" "$ROOT/packages/pi-company-core/prompts" >/dev/null
+grep -R "/pr" "$ROOT/README.md" "$ROOT/docs" "$ROOT/packages/pi-company-core/prompts" >/dev/null
 grep -R "company_project_onboarding_record" "$ROOT/packages/pi-company-core" "$ROOT/docs" >/dev/null
 grep -R "company_memory_status" "$ROOT/packages/pi-company-core" "$ROOT/docs" "$ROOT/templates/project/AGENTS.md" >/dev/null
 grep -R "company_memory_note" "$ROOT/packages/pi-company-core" "$ROOT/docs" >/dev/null

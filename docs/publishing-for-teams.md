@@ -8,20 +8,26 @@ Team khác có thể cài cùng một Pi platform mà không lấy secret của 
 
 ### Git repo
 
-Dùng cho team:
+Dùng cho global latest:
 
 ```bash
-pi install git:github.com/Vt-mmm/pi_agent@v0.4.5
+pi install git:github.com/Vt-mmm/pi_agent
 ```
 
-Nên pin tag hoặc commit.
+Dùng cho team/repo cần reproducible lock:
+
+```bash
+pi install git:github.com/Vt-mmm/pi_agent@vX.Y.Z
+```
+
+Pin tag hoặc commit cho `.pi/settings.json` đã commit vào project.
 
 ### npm private package
 
 Dùng khi muốn version/publish chuẩn:
 
 ```bash
-pi install npm:@company/pi-agent-platform@0.4.5
+pi install npm:@company/pi-agent-platform@x.y.z
 ```
 
 ### Local path

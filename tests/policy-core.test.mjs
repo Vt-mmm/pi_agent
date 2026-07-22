@@ -18,6 +18,13 @@ const policy = {
     bannedPrefixSuggestions: [["bash"], ["git"], ["sudo"]],
     rules: [
       {
+        id: "prompt-git-add-broad",
+        action: "prompt",
+        match: "regex",
+        value: "(?:^|\\s)git\\s+(?:-C\\s+\\S+\\s+)?add\\s+(?:(?:--all|-A)(?:\\s+(?:\\.|:/))?|--\\s+(?:\\.|:/)|(?:\\.|:/))(?:\\s|$)",
+        reason: "Broad git staging can include unrelated or sensitive changes; inspect git status/diff and confirm the exact scope first."
+      },
+      {
         id: "forbid-docker-volume-prune",
         action: "forbid",
         match: "contains",
@@ -204,6 +211,39 @@ describe("exec policy semantic shell safety", () => {
 
   for (const command of allowed) {
     it(`allows ${command}`, () => {
+      const result = evaluateExecPolicyCore(command, { policy, mode: "enforce" });
+      assert.equal(result.decision, "allow", JSON.stringify(result, null, 2));
+    });
+  }
+});
+
+describe("exec policy git workflow confirmations", () => {
+  const broadStageCommands = [
+    "git add .",
+    "git add -A",
+    "git add --all",
+    "git add -- .",
+    "git add :/",
+    "git -C repo add ."
+  ];
+
+  for (const command of broadStageCommands) {
+    it(`prompts before broad staging: ${command}`, () => {
+      const result = evaluateExecPolicyCore(command, { policy, mode: "enforce" });
+      assert.equal(result.decision, "prompt", JSON.stringify(result, null, 2));
+      assert.match(result.reasons.join("\n"), /prompt-git-add-broad/);
+    });
+  }
+
+  const targetedStageCommands = [
+    "git add README.md",
+    "git add packages/pi-company-core/extensions/company-guard.ts",
+    "git add -p",
+    "git status"
+  ];
+
+  for (const command of targetedStageCommands) {
+    it(`allows targeted git command without broad-stage prompt: ${command}`, () => {
       const result = evaluateExecPolicyCore(command, { policy, mode: "enforce" });
       assert.equal(result.decision, "allow", JSON.stringify(result, null, 2));
     });

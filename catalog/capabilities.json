@@ -13,7 +13,7 @@
       "artifacts": [
         {
           "byteSize": 1901,
-          "digest": "sha256:5ee5f42e877537f286f54f2b222754ef8695f07b677f6d127fb23704625d456f",
+          "digest": "sha256:ea26f605974fdc2605d4d6d6b97cbb67e35b07e352038dbba6e29f585d90c4f8",
           "id": "generic",
           "kind": "adapters",
           "path": "adapters/generic/profile.json"
@@ -26,11 +26,18 @@
           "path": "evals/scenarios/capability-resolution.json"
         },
         {
-          "byteSize": 3643,
-          "digest": "sha256:783f7648855f7486ce717e73f8a282a627d969c40f97d1fee8babbc9eb059412",
+          "byteSize": 4028,
+          "digest": "sha256:57167d97a7a947c154bf63a068d6d58731d85b12c649a777ead5bb234983bdb3",
           "id": "base-policy",
           "kind": "policies",
           "path": "packages/pi-company-core/policies/base-policy.json"
+        },
+        {
+          "byteSize": 1749,
+          "digest": "sha256:eaaf6a16d7c000adbdcf83a8e887904112f4cab48a39250d92765e58a16ec7e0",
+          "id": "commit",
+          "kind": "prompts",
+          "path": "packages/pi-company-core/prompts/commit.md"
         },
         {
           "byteSize": 1352,
@@ -38,6 +45,13 @@
           "id": "plan",
           "kind": "prompts",
           "path": "packages/pi-company-core/prompts/plan.md"
+        },
+        {
+          "byteSize": 1532,
+          "digest": "sha256:ce1df78ef4f32526294013efd6f0c938d078981fd0f4fd4da1dab6ca6c4cea39",
+          "id": "pr",
+          "kind": "prompts",
+          "path": "packages/pi-company-core/prompts/pr.md"
         },
         {
           "byteSize": 1399,
@@ -98,7 +112,7 @@
       ],
       "dependencies": [],
       "description": "Core engineering workflow, policy, verification, and task coordination capabilities.",
-      "digest": "sha256:f0b42e2fe31230590154f25b9c82297f5cf966f946126f52a87e3e4fb11a74d1",
+      "digest": "sha256:719967ae944d8e4101da6f9eee6ebcb13ff2894207cf479f4e8a5b1b47b9062a",
       "license": "MIT",
       "lifecycle": "experimental",
       "name": "engineering-base",
@@ -123,7 +137,7 @@
         "engineering",
         "governance"
       ],
-      "version": "0.1.0"
+      "version": "0.1.1"
     },
     {
       "activation": {
@@ -136,7 +150,7 @@
       "artifacts": [
         {
           "byteSize": 1950,
-          "digest": "sha256:78d94699a8b24651799106603ec3c708c427e8a1076467530d0eb18786f2b6a1",
+          "digest": "sha256:84ac29dcbe0c692070be302707424ea16130a5938cff309c5d7755204b6c2dc1",
           "id": "web-frontend",
           "kind": "adapters",
           "path": "adapters/web-frontend/profile.json"
@@ -152,11 +166,11 @@
       "dependencies": [
         {
           "name": "engineering-base",
-          "version": "0.1.0"
+          "version": "0.1.1"
         }
       ],
       "description": "Web application delivery capabilities with browser-assisted verification.",
-      "digest": "sha256:9cbd956c3eae942240f733fc38322efbdd7977cc8a8cb83af8e4988fb7c0e3aa",
+      "digest": "sha256:5961855868d19f4d1f053a1be3e91f2fa49ea2cdc07551bea94b741eb62dad8b",
       "license": "MIT",
       "lifecycle": "experimental",
       "name": "web-delivery",
@@ -181,7 +195,7 @@
         "frontend",
         "web"
       ],
-      "version": "0.1.0"
+      "version": "0.1.1"
     }
   ],
   "schemaVersion": 1

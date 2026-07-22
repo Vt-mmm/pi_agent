@@ -9,6 +9,7 @@ cleanup() {
 trap cleanup EXIT
 
 PROJECT="$TMP_ROOT/sample-project"
+PLATFORM_VERSION="$(node -p "require(process.argv[1]).version" "$ROOT/package.json")"
 mkdir -p "$PROJECT"
 cat > "$PROJECT/README.md" <<'README'
 # Sample Project
@@ -19,7 +20,7 @@ cat > "$PROJECT/AGENTS.md" <<'AGENTS'
 Use project profile and verify before done.
 AGENTS
 
-bash "$ROOT/scripts/init-project.sh" "$PROJECT" --profile generic --package-source "git:github.com/Vt-mmm/pi_agent@v0.4.2" >/dev/null
+bash "$ROOT/scripts/init-project.sh" "$PROJECT" --profile generic --package-source "git:github.com/Vt-mmm/pi_agent@v${PLATFORM_VERSION}" >/dev/null
 bash "$ROOT/scripts/profile-doctor.sh" "$PROJECT" >/dev/null
 bash "$ROOT/scripts/quality-benchmark.sh" "$PROJECT" --init >/dev/null
 bash "$ROOT/scripts/quality-benchmark.sh" "$PROJECT" --record --scenario smoke --surface pi --result pass --tokens 1 --verify "test -s README.md" >/dev/null

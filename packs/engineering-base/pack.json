@@ -3,7 +3,7 @@
   "kind": "CapabilityPack",
   "metadata": {
     "name": "engineering-base",
-    "version": "0.1.0",
+    "version": "0.1.1",
     "owner": "platform-maintainers",
     "lifecycle": "experimental",
     "license": "MIT",
@@ -31,6 +31,14 @@
         {
           "id": "review",
           "path": "packages/pi-company-core/prompts/review.md"
+        },
+        {
+          "id": "commit",
+          "path": "packages/pi-company-core/prompts/commit.md"
+        },
+        {
+          "id": "pr",
+          "path": "packages/pi-company-core/prompts/pr.md"
         }
       ],
       "skills": [

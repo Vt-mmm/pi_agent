@@ -10,9 +10,13 @@ Purpose:
   Install the company Pi package into the current user's global Pi settings.
 
 Package source examples:
-  git:github.com/Vt-mmm/pi_agent@v0.4.2
-  https://github.com/Vt-mmm/pi_agent/archive/refs/tags/v0.4.2.tar.gz
-  npm:@company/pi-agent-platform@0.4.2
+  # Latest global install is simpler with Pi directly:
+  pi install git:github.com/Vt-mmm/pi_agent
+
+  # Exact sources for audited/team rollout:
+  git:github.com/Vt-mmm/pi_agent@vX.Y.Z
+  https://github.com/Vt-mmm/pi_agent/archive/refs/tags/vX.Y.Z.tar.gz
+  npm:@company/pi-agent-platform@x.y.z
   /absolute/path/to/pi_agent
 
 Notes:

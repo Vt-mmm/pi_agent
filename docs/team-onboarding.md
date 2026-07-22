@@ -8,7 +8,7 @@ Một thành viên mới không cần biết local path của maintainer. Luồn
 
 ```bash
 npm install -g @earendil-works/pi-coding-agent@0.80.10
-pi install git:github.com/Vt-mmm/pi_agent@v0.4.5
+pi install git:github.com/Vt-mmm/pi_agent
 cd /path/to/project
 pi
 /login
@@ -29,18 +29,24 @@ pi
 
 ## Bước 1 — install global package một lần
 
-Khuyến nghị dùng tag cố định:
+Mặc định dùng global latest cho máy cá nhân:
 
 ```bash
 npm install -g @earendil-works/pi-coding-agent@0.80.10
-pi install git:github.com/Vt-mmm/pi_agent@v0.4.5
+pi install git:github.com/Vt-mmm/pi_agent
+```
+
+Khi seed `.pi/settings.json` cho team/repo cần audit lặp lại, dùng tag cố định:
+
+```bash
+pi install git:github.com/Vt-mmm/pi_agent@vX.Y.Z
 ```
 
 Nếu team publish npm private:
 
 ```bash
 npm install -g @earendil-works/pi-coding-agent@0.80.10
-pi install npm:@company/pi-agent-platform@0.4.5
+pi install npm:@company/pi-agent-platform@x.y.z
 ```
 
 Không cần chạy bash để set profile cho từng project.
@@ -112,7 +118,7 @@ Các script setup/init vẫn tồn tại cho case preseed config vào repo hoặ
 ```bash
 bash /path/to/pi_agent/scripts/setup.sh /path/to/project \
   --profile be-readonly-fe \
-  --package-source git:github.com/Vt-mmm/pi_agent@v0.4.5 \
+  --package-source git:github.com/Vt-mmm/pi_agent@vX.Y.Z \
   --mcp-preset core \
   --subagents-preset safe
 ```
@@ -120,7 +126,7 @@ bash /path/to/pi_agent/scripts/setup.sh /path/to/project \
 Nếu cần override profile:
 
 ```bash
-bash /path/to/pi_agent/scripts/setup.sh /path/to/project --project-only --profile backend-api --package-source git:github.com/Vt-mmm/pi_agent@v0.4.5 --mcp-preset core --subagents-preset safe
+bash /path/to/pi_agent/scripts/setup.sh /path/to/project --project-only --profile backend-api --package-source git:github.com/Vt-mmm/pi_agent@vX.Y.Z --mcp-preset core --subagents-preset safe
 ```
 
 Profile built-in trong Pi:

@@ -816,7 +816,7 @@
         <span>Pi Company Platform</span>
       </a>
       <div class="top-actions">
-        <span class="pill"><span class="pill-dot"></span>v0.4.6 docs</span>
+        <span class="pill"><span class="pill-dot"></span>latest docs</span>
         <a class="button social" href="https://github.com/Vt-mmm/pi_agent" target="_blank" rel="noopener noreferrer" aria-label="Mở GitHub repository">
           <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
             <path d="M7 17 17 7M9 7h8v8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
@@ -951,10 +951,22 @@
               <article class="step">
                 <div>
                   <h3>Cài package Pi Company</h3>
-                  <p>Cài từ repository đã phát hành. Khi có tag mới, thay version trong command.</p>
+                  <p>Cài global latest từ repository đã phát hành. Khi cần reproducible setup cho team, pin tag trong project settings.</p>
                   <div class="command-card">
-                    <header><span>Install</span><button class="clip-btn" data-clip="pi install git:github.com/Vt-mmm/pi_agent@v0.4.6">Lấy lệnh</button></header>
-                    <pre><code>pi install git:github.com/Vt-mmm/pi_agent@v0.4.6</code></pre>
+                    <header><span>Install latest</span><button class="clip-btn" data-clip="pi install git:github.com/Vt-mmm/pi_agent">Lấy lệnh</button></header>
+                    <pre><code>pi install git:github.com/Vt-mmm/pi_agent
+# update later
+pi update --extensions</code></pre>
+                  </div>
+                </div>
+              </article>
+              <article class="step">
+                <div>
+                  <h3>Pin version khi seed project</h3>
+                  <p>Không dùng latest cho file <span class="inline-code">.pi/settings.json</span> đã commit. Project cần audit lặp lại nên pin tag hoặc commit.</p>
+                  <div class="command-card">
+                    <header><span>Pinned source</span><button class="clip-btn" data-clip="git:github.com/Vt-mmm/pi_agent@vX.Y.Z">Lấy source</button></header>
+                    <pre><code>git:github.com/Vt-mmm/pi_agent@vX.Y.Z</code></pre>
                   </div>
                 </div>
               </article>
@@ -1271,6 +1283,16 @@ npm run typecheck</code></pre>
                 <p>Gói sẵn read context, task contract, implementation, verify evidence và final handoff.</p>
               </article>
               <article class="card">
+                <h3>Git handoff</h3>
+                <div class="tag-list">
+                  <span class="tag">/commit</span>
+                  <span class="tag">/pr</span>
+                  <span class="tag">git status</span>
+                  <span class="tag">git diff</span>
+                </div>
+                <p>Không cần namespace <span class="inline-code">/git</span>. Commit/PR đi qua shell guard; push và stage rộng như <span class="inline-code">git add -A</span> cần xác nhận.</p>
+              </article>
+              <article class="card">
                 <h3>Fresh sessions</h3>
                 <div class="tag-list">
                   <span class="tag">/fresh-task</span>
@@ -1307,6 +1329,11 @@ npm run typecheck</code></pre>
               Chọn workflow theo intent thay vì mô tả lại policy trong prompt. Cách này giảm context lặp và giữ output tập trung hơn.
             </p>
 
+            <div class="callout ok-callout">
+              <strong>Git trong Pi Company</strong>
+              <p>Không có namespace <span class="inline-code">/git</span> riêng. Dùng <span class="inline-code">/commit</span> để commit local đã review, dùng <span class="inline-code">/pr</span> để chuẩn bị PR. Các hành động như <span class="inline-code">git push</span> hoặc stage rộng <span class="inline-code">git add -A</span> vẫn cần operator xác nhận.</p>
+            </div>
+
             <div class="command-grid">
               <article class="command-card">
                 <header><span>Implementation bounded</span><button class="clip-btn" data-clip="/task Fix the failing checkout test and verify.">Lấy lệnh</button></header>
@@ -1323,6 +1350,14 @@ npm run typecheck</code></pre>
               <article class="command-card">
                 <header><span>Review diff</span><button class="clip-btn" data-clip="/review">Lấy lệnh</button></header>
                 <pre><code>/review</code></pre>
+              </article>
+              <article class="command-card">
+                <header><span>Commit local có guard</span><button class="clip-btn" data-clip="/commit &quot;feat: add guarded git workflow&quot;">Lấy lệnh</button></header>
+                <pre><code>/commit "feat: add guarded git workflow"</code></pre>
+              </article>
+              <article class="command-card">
+                <header><span>Chuẩn bị pull request</span><button class="clip-btn" data-clip="/pr &quot;Prepare PR for guarded git workflow&quot;">Lấy lệnh</button></header>
+                <pre><code>/pr "Prepare PR for guarded git workflow"</code></pre>
               </article>
               <article class="command-card">
                 <header><span>Backend spec sang frontend</span><button class="clip-btn" data-clip="/be-to-fe Implement frontend support for the new user status endpoint.">Lấy lệnh</button></header>
@@ -1400,7 +1435,7 @@ npm run typecheck</code></pre>
           </section>
 
           <footer class="footer">
-            <p>Pi Company Platform docs · static HTML · security-first agent workflow · v0.4.6</p>
+            <p>Pi Company Platform docs · static HTML · security-first agent workflow · latest</p>
             <div class="footer-links" aria-label="External links">
               <a href="https://github.com/Vt-mmm/pi_agent" target="_blank" rel="noopener noreferrer">GitHub repository</a>
               <a href="https://www.facebook.com/vinhtam0544/" target="_blank" rel="noopener noreferrer">Facebook profile</a>
