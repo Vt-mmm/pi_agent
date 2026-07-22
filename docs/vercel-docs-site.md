@@ -4,7 +4,7 @@
 
 Giữ tài liệu HTML trong cùng repository, dưới `docs-site/`.
 
-Production URL hiện tại: https://piagent.io.vn
+Production URL: https://piagent.io.vn
 
 Vercel project: `pi-agent`
 
@@ -12,29 +12,48 @@ Root Directory: `docs-site`
 
 Lý do:
 
-- Docs đi cùng version của package.
-- Review source và docs trong cùng pull request.
-- Vercel có thể trỏ Root Directory thẳng vào `docs-site`.
-- Không cần build step vì site là static HTML.
+- docs đi cùng source và version của package;
+- source và docs được review trong cùng release candidate;
+- Vercel trỏ Root Directory thẳng vào `docs-site/`;
+- site static không cần build step hoặc environment secret.
 
-Tách repository chỉ nên dùng khi docs cần domain, quyền truy cập, lịch phát hành, hoặc nhóm nội dung riêng với source Pi agent.
+Tách repository chỉ nên dùng khi docs cần domain, quyền truy cập, hoặc lịch phát hành riêng.
+
+## Production promotion policy
+
+Production docs không được advertise một release tag chưa tồn tại.
+
+Luồng canonical:
+
+1. Sửa source và versioned docs trên release-candidate branch.
+2. Chạy verification và chờ CI pass.
+3. Tạo/push tag trên đúng verified commit và chờ tag-triggered CI trên Ubuntu/macOS pass.
+4. Chạy stable dry-run và xác nhận resolved commit SHA khớp tag.
+5. Sau đó release maintainer mới dùng bypass actor đã giới hạn trong ruleset để non-force fast-forward đúng tagged commit vào `main` (Vercel production branch), hoặc checkout đúng commit đó rồi chạy Vercel link preflight trước khi deploy `docs-site/`; không merge/squash/rebase, force-push hay chèn docs-only commit khác trong lúc promote.
+6. Kiểm tra live version, canonical URL, link và install command.
+
+Nếu Vercel đang auto-deploy production branch, giữ vNext docs ngoài branch đó cho tới khi tag CI + SHA verification hoàn tất. Checklist duy nhất nằm tại [release/install policy](release-install-policy.md).
 
 ## Deploy bằng Dashboard
 
-1. Vào Vercel, chọn Add New Project.
-2. Chọn Git repository của Pi Company Platform.
-3. Set Root Directory: `docs-site`.
-4. Set Framework Preset: `Other`.
-5. Build Command: để trống.
-6. Output Directory: `.` hoặc để default.
-7. Deploy production.
+1. Vào Vercel project `pi-agent`.
+2. Set Root Directory: `docs-site`.
+3. Set Framework Preset: `Other`.
+4. Build Command: để trống.
+5. Output Directory: `.` hoặc default.
+6. Chỉ promote production sau release gate ở trên.
 
 ## Deploy bằng CLI
 
+Sau khi tag CI và stable SHA verification pass, từ checkout đúng tagged commit:
+
 ```bash
-cd docs-site
-vercel --prod
+vercel link --cwd docs-site --project pi-agent
+npm run vercel:preflight
+vercel --cwd docs-site --prod
 ```
+
+`npm run vercel:preflight` fail-closed nếu `.vercel/project.json` đang trỏ tới project cũ hoặc sai team. Không chạy production deploy bằng CLI trước khi preflight pass.
 
 Nếu CLI chưa đăng nhập:
 
@@ -42,25 +61,42 @@ Nếu CLI chưa đăng nhập:
 vercel login
 ```
 
-Sau khi site đã nối Git, các lần sau chỉ cần sửa `docs-site/index.html`, commit và push vào production branch.
-
 ## Custom domain
 
 Canonical domain: `piagent.io.vn`
 
-Trong Vercel project `pi-agent` → Settings → Domains, add:
+Trong Vercel project `pi-agent` → Settings → Domains:
 
-- `piagent.io.vn`
-- `www.piagent.io.vn`
+- add `piagent.io.vn` và đặt làm **Primary**;
+- add `www.piagent.io.vn` và redirect về `piagent.io.vn`.
 
-Trong iNET DNS, dùng cấu hình do Vercel Domains panel báo. Với cấu hình Vercel phổ biến:
+Trong iNET DNS, dùng đúng record Vercel Domains panel đang hiển thị; không hardcode một IP cũ trong runbook:
 
 | Type | Name/Host | Value |
 |---|---|---|
-| `A` | `@` | `76.76.21.21` |
-| `CNAME` | `www` | Vercel CNAME target, thường là `cname.vercel-dns-0.com` hoặc giá trị Vercel hiển thị |
+| `A` hoặc `ALIAS` theo Vercel | `@` | Exact apex target do Vercel hiển thị. |
+| `CNAME` | `www` | Exact CNAME target do Vercel hiển thị. |
 
 Không xoá `MX`, `TXT`, `NS`, hoặc email records nếu domain đang dùng mail. Sau khi DNS valid, Vercel sẽ cấp SSL tự động.
+
+Expected URL behavior:
+
+```text
+https://piagent.io.vn/      -> 200, không redirect
+https://www.piagent.io.vn/  -> redirect về https://piagent.io.vn/
+```
+
+Repo giữ canonical và Open Graph URL ở apex. Không đổi source sang `www` nếu hạ tầng vẫn được định hướng apex-primary.
+
+## Post-deploy verification
+
+```bash
+curl -I https://piagent.io.vn/
+curl -I https://www.piagent.io.vn/
+curl -sSL https://piagent.io.vn/ | grep 'vX.Y.Z docs'
+```
+
+Xác nhận thêm favicon/logo, GitHub/Facebook links, install commands, sidebar anchors và mobile layout.
 
 ## Local preview
 
@@ -74,5 +110,6 @@ Mở `http://localhost:4173`.
 ## Security notes
 
 - Không đặt secret, token, auth file hoặc session cache trong `docs-site/`.
-- File `docs-site/vercel.json` chỉ đặt static headers và URL behavior.
-- Không cần biến môi trường cho site tĩnh này.
+- `docs-site/vercel.json` chỉ chứa static headers và URL behavior.
+- Không cần environment variable cho site tĩnh.
+- `.vercel/project.json` là metadata local bị ignore; luôn relink và chạy preflight trên checkout/máy deploy thay vì tin state còn sót lại.

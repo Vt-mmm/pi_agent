@@ -26,8 +26,8 @@
           "path": "evals/scenarios/capability-resolution.json"
         },
         {
-          "byteSize": 4028,
-          "digest": "sha256:57167d97a7a947c154bf63a068d6d58731d85b12c649a777ead5bb234983bdb3",
+          "byteSize": 4983,
+          "digest": "sha256:850464635450b49be6a2ec0638c5e0d9f6418539d202810cef8a83bd4adfe8b9",
           "id": "base-policy",
           "kind": "policies",
           "path": "packages/pi-company-core/policies/base-policy.json"

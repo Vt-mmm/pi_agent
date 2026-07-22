@@ -34,12 +34,16 @@ done
 
 required_files=(
   "$ROOT/README.md"
+  "$ROOT/SECURITY.md"
   "$ROOT/AGENTS.md"
   "$ROOT/CHANGELOG.md"
+  "$ROOT/.npmignore"
   "$ROOT/package.json"
   "$ROOT/package-lock.json"
   "$ROOT/tsconfig.json"
   "$ROOT/.github/workflows/verify.yml"
+  "$ROOT/.github/workflows/codeql.yml"
+  "$ROOT/.github/dependabot.yml"
   "$ROOT/types/pi-runtime-shims.d.ts"
   "$ROOT/.pi/settings.json"
   "$ROOT/.pi/company-profile.json"
@@ -94,6 +98,7 @@ required_files=(
   "$ROOT/templates/project/.pi/memory/memory_summary.md"
   "$ROOT/templates/project/.pi/memory/MEMORY.md"
   "$ROOT/templates/project/.pi/.gitignore"
+  "$ROOT/templates/project/.pi/gitignore.template"
   "$ROOT/templates/project/REVIEW_GUIDELINES.md"
   "$ROOT/docs/quickstart-vietnamese.md"
   "$ROOT/docs/command-reference-vietnamese.md"
@@ -107,6 +112,7 @@ required_files=(
   "$ROOT/docs/subagents-and-multiagent.md"
   "$ROOT/docs/distribution-standard.md"
   "$ROOT/docs/release-install-policy.md"
+  "$ROOT/docs/security-threat-model.md"
   "$ROOT/docs/vercel-docs-site.md"
   "$ROOT/docs/publishing-for-teams.md"
   "$ROOT/docs/herdr-workflow.md"
@@ -137,6 +143,10 @@ required_files=(
   "$ROOT/catalog/capabilities.json"
   "$ROOT/templates/project/.pi/task-contract.template.json"
   "$ROOT/scripts/install-global.sh"
+  "$ROOT/scripts/audit-runtime-host.sh"
+  "$ROOT/scripts/verify-release-identity.mjs"
+  "$ROOT/scripts/verify-vercel-link.mjs"
+  "$ROOT/scripts/pi-company-cli.mjs"
   "$ROOT/scripts/init-project.sh"
   "$ROOT/scripts/setup.sh"
   "$ROOT/scripts/team-doctor.sh"
@@ -153,6 +163,9 @@ required_files=(
   "$ROOT/scripts/capability-catalog.mjs"
   "$ROOT/tests/capability-core.test.mjs"
   "$ROOT/tests/company-guard-integration.test.mjs"
+  "$ROOT/tests/install-global.test.mjs"
+  "$ROOT/tests/package-distribution.test.mjs"
+  "$ROOT/tests/release-identity.test.mjs"
   "$ROOT/tests/policy-core.test.mjs"
   "$ROOT/tests/redaction-core.test.mjs"
   "$ROOT/tests/runtime-evidence.test.mjs"
@@ -223,9 +236,9 @@ if (!rootPkg.pi.subagents?.agents?.length) {
   throw new Error("root package.json missing pi.subagents.agents");
 }
 const expectedPeers = {
-  "@earendil-works/pi-ai": "0.80.10",
-  "@earendil-works/pi-coding-agent": "0.80.10",
-  typebox: "1.3.6"
+  "@earendil-works/pi-ai": "0.81.1",
+  "@earendil-works/pi-coding-agent": "0.81.1",
+  typebox: "1.1.38"
 };
 for (const [name, version] of Object.entries(expectedPeers)) {
   if (rootPkg.peerDependencies?.[name] !== version) throw new Error(`root package peer ${name} must be pinned to ${version}`);
@@ -259,7 +272,38 @@ grep -R "pi-web-access" "$ROOT/README.md" "$ROOT/docs" "$ROOT/scripts/install-gl
 grep -F 'PI_MCP_ADAPTER_SOURCE="npm:pi-mcp-adapter@2.11.0"' "$ROOT/scripts/install-global.sh" >/dev/null
 grep -F 'PI_SUBAGENTS_SOURCE="npm:pi-subagents@0.35.1"' "$ROOT/scripts/install-global.sh" >/dev/null
 grep -F 'PI_WEB_ACCESS_SOURCE="npm:pi-web-access@0.13.0"' "$ROOT/scripts/install-global.sh" >/dev/null
-grep -F 'npm install -g @earendil-works/pi-coding-agent@0.80.10' "$ROOT/scripts/setup.sh" >/dev/null
+grep -F 'PI_MCP_ADAPTER_VERSION="2.11.0"' "$ROOT/scripts/audit-runtime-host.sh" >/dev/null
+grep -F 'PI_SUBAGENTS_VERSION="0.35.1"' "$ROOT/scripts/audit-runtime-host.sh" >/dev/null
+grep -F 'PI_WEB_ACCESS_VERSION="0.13.0"' "$ROOT/scripts/audit-runtime-host.sh" >/dev/null
+node --input-type=module - "$ROOT/scripts/install-global.sh" "$ROOT/scripts/audit-runtime-host.sh" <<'NODE'
+import fs from "node:fs";
+
+const installer = fs.readFileSync(process.argv[2], "utf8");
+const audit = fs.readFileSync(process.argv[3], "utf8");
+const pins = [
+  ["PI_MCP_ADAPTER_SOURCE", "PI_MCP_ADAPTER_VERSION", "pi-mcp-adapter"],
+  ["PI_SUBAGENTS_SOURCE", "PI_SUBAGENTS_VERSION", "pi-subagents"],
+  ["PI_WEB_ACCESS_SOURCE", "PI_WEB_ACCESS_VERSION", "pi-web-access"]
+];
+for (const [sourceName, versionName, packageName] of pins) {
+  const source = installer.match(new RegExp(`^${sourceName}="npm:${packageName}@([^"]+)"$`, "m"))?.[1];
+  const audited = audit.match(new RegExp(`^${versionName}="([^"]+)"$`, "m"))?.[1];
+  if (!source || !audited || source !== audited) {
+    throw new Error(`${packageName} installer pin (${source ?? "missing"}) does not match runtime audit pin (${audited ?? "missing"})`);
+  }
+}
+NODE
+grep -F 'actions/checkout@11d5960a326750d5838078e36cf38b85af677262' "$ROOT/.github/workflows/verify.yml" "$ROOT/.github/workflows/codeql.yml" >/dev/null
+grep -F 'actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020' "$ROOT/.github/workflows/verify.yml" >/dev/null
+grep -F 'github/codeql-action/init@e4fba868fa4b1b91e1fdab776edc8cfbe6e9fb81' "$ROOT/.github/workflows/codeql.yml" >/dev/null
+grep -F 'github/codeql-action/analyze@e4fba868fa4b1b91e1fdab776edc8cfbe6e9fb81' "$ROOT/.github/workflows/codeql.yml" >/dev/null
+grep -F 'git cat-file -t "refs/tags/$RELEASE_TAG"' "$ROOT/.github/workflows/verify.yml" >/dev/null
+if grep -R -E '^[[:space:]]*uses:[[:space:]]+[^@[:space:]]+@(main|master|v[0-9]+([.][0-9]+)*)[[:space:]]*(#.*)?$' "$ROOT/.github/workflows" >/dev/null; then
+  echo "GitHub Actions workflow contains a mutable action reference" >&2
+  exit 1
+fi
+grep -F 'p.peerDependencies?.["@earendil-works/pi-coding-agent"]' "$ROOT/scripts/setup.sh" >/dev/null
+grep -F 'run_cmd npm install -g --ignore-scripts "@earendil-works/pi-coding-agent@$expected_pi_version"' "$ROOT/scripts/setup.sh" >/dev/null
 grep -F 'validate-source --package-source "$PACKAGE_SOURCE"' "$ROOT/scripts/install-global.sh" >/dev/null
 grep -F 'verify_npm_integrity "$PI_MCP_ADAPTER_SOURCE" "$PI_MCP_ADAPTER_INTEGRITY"' "$ROOT/scripts/install-global.sh" >/dev/null
 grep -F 'verify_npm_integrity "$PI_SUBAGENTS_SOURCE" "$PI_SUBAGENTS_INTEGRITY"' "$ROOT/scripts/install-global.sh" >/dev/null
@@ -375,6 +419,7 @@ node --check "$ROOT/packages/pi-company-core/extensions/runtime-evidence.js" >/d
 node --check "$ROOT/packages/pi-company-core/security/sensitive-data.js" >/dev/null
 node --check "$ROOT/packages/pi-company-core/capabilities/capability-core.js" >/dev/null
 node --check "$ROOT/scripts/capability-catalog.mjs" >/dev/null
+node --check "$ROOT/scripts/pi-company-cli.mjs" >/dev/null
 (cd "$ROOT" && npm test) >/dev/null
 if [[ -x "$ROOT/node_modules/.bin/tsc" ]]; then
   (cd "$ROOT" && npm run typecheck) >/dev/null
@@ -387,7 +432,9 @@ bash -n "$ROOT/scripts/pi-model-catalog.sh"
 bash -n "$ROOT/scripts/configure-model-scope.sh"
 bash -n "$ROOT/scripts/configure-mcp.sh"
 bash -n "$ROOT/scripts/configure-subagents.sh"
+bash -n "$ROOT/scripts/install-global.sh"
 bash -n "$ROOT/scripts/init-project.sh"
+bash -n "$ROOT/scripts/setup.sh"
 if [[ "$OFFLINE" == true || "${PI_COMPANY_VERIFY_OFFLINE:-}" == "1" || "${CI:-}" == "true" ]]; then
   echo "WARN: skipping local Pi model catalog check in offline/CI mode" >&2
 else

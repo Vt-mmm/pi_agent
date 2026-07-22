@@ -3,9 +3,17 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
-import { describe, it } from "node:test";
+import { after, describe, it } from "node:test";
 
 const repoRoot = path.resolve(import.meta.dirname, "..");
+const temporaryRoots = new Set();
+
+after(() => {
+  for (const root of temporaryRoots) {
+    if (path.dirname(root) !== os.tmpdir() || !path.basename(root).startsWith("pi-guard-integration-")) continue;
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
 
 function writeModule(target, source) {
   fs.mkdirSync(path.dirname(target), { recursive: true });
@@ -63,10 +71,12 @@ function copyCompanyPackage(root) {
   return packageRoot;
 }
 
-async function loadGuardFixture() {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), "pi-guard-integration-"));
+async function loadGuardFixture(options = {}) {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), options.prefix ?? "pi-guard-integration-"));
+  temporaryRoots.add(root);
   writeRuntimeStubs(root);
   const packageRoot = copyCompanyPackage(root);
+  options.mutatePackage?.(packageRoot);
   const moduleUrl = pathToFileURL(path.join(packageRoot, "extensions", "company-guard.ts")).href;
   const imported = await import(`${moduleUrl}?t=${Date.now()}-${Math.random()}`);
   return { root, companyGuard: imported.default };
@@ -143,6 +153,7 @@ function createPiHarness() {
 
 function createContext(cwd, options = {}) {
   const notices = [];
+  const confirmations = [];
   return {
     cwd,
     mode: "test",
@@ -152,9 +163,12 @@ function createContext(cwd, options = {}) {
       notify(message, level) {
         notices.push({ message, level });
       },
-      confirm: async () => false
+      confirm: async (message, title) => {
+        confirmations.push({ message, title });
+        return options.confirm ?? false;
+      }
     },
-    isProjectTrusted: () => true,
+    isProjectTrusted: () => options.projectTrusted ?? true,
     getContextUsage: () => options.contextUsage ?? ({ tokens: 0, contextWindow: 1000, percent: 0 }),
     compact: () => {
       notices.push({ message: "compact called", level: "info" });
@@ -165,7 +179,8 @@ function createContext(cwd, options = {}) {
       getSessionName: () => "session",
       getEntries: () => [],
       getBranch: () => []
-    }
+    },
+    confirmations
   };
 }
 
@@ -186,10 +201,34 @@ async function callToolResult(handler, ctx, toolName, input, content) {
 }
 
 describe("company guard integration", () => {
+  it("loads the installed policy from paths containing URL-encoded characters", async () => {
+    const { root, companyGuard } = await loadGuardFixture({
+      prefix: "pi-guard-integration-space ",
+      mutatePackage(packageRoot) {
+        const policyPath = path.join(packageRoot, "policies", "base-policy.json");
+        const policy = JSON.parse(fs.readFileSync(policyPath, "utf8"));
+        policy.permissionProfiles.defaultMode = "read-only";
+        fs.writeFileSync(policyPath, `${JSON.stringify(policy, null, 2)}\n`);
+      }
+    });
+    const cwd = createProject(root);
+    const profilePath = path.join(cwd, ".pi", "company-profile.json");
+    const profile = JSON.parse(fs.readFileSync(profilePath, "utf8"));
+    delete profile.permissionProfile;
+    fs.writeFileSync(profilePath, `${JSON.stringify(profile, null, 2)}\n`);
+    const ctx = createContext(cwd);
+    const harness = createPiHarness();
+
+    companyGuard(harness.pi);
+    await harness.handlers.get("session_start")({}, ctx);
+
+    assert.match(ctx.ui.notices[0].message, /permission=read-only/);
+  });
+
   it("loads the extension and registers runtime hooks/tools/commands", async () => {
     const { root, companyGuard } = await loadGuardFixture();
     const cwd = createProject(root);
-    const ctx = createContext(cwd);
+    const ctx = createContext(cwd, { confirm: true });
     const harness = createPiHarness();
 
     companyGuard(harness.pi);
@@ -203,10 +242,118 @@ describe("company guard integration", () => {
     assert.match(ctx.ui.notices[0].message, /permission=workspace-write/);
   });
 
+  it("ignores project-local profiles until the project is trusted", async () => {
+    const { root, companyGuard } = await loadGuardFixture();
+    const cwd = createProject(root);
+    const profilePath = path.join(cwd, ".pi", "company-profile.json");
+    const localProfile = JSON.parse(fs.readFileSync(profilePath, "utf8"));
+    localProfile.mode = "malicious-local-profile";
+    localProfile.permissionProfile = "trusted-full-access";
+    localProfile.capabilityPacks = [];
+    fs.writeFileSync(profilePath, `${JSON.stringify(localProfile, null, 2)}\n`);
+    const ctx = createContext(cwd, { projectTrusted: false });
+    const harness = createPiHarness();
+    companyGuard(harness.pi);
+
+    await harness.handlers.get("session_start")({}, ctx);
+    const context = await harness.tools.get("company_context").execute(
+      "untrusted-context-test",
+      { detail: "full" },
+      undefined,
+      () => {},
+      ctx
+    );
+    const permission = await harness.tools.get("company_permission_status").execute(
+      "untrusted-permission-test",
+      { detail: "full" },
+      undefined,
+      () => {},
+      ctx
+    );
+    const safeShell = await callToolCall(harness.handlers.get("tool_call"), ctx, "bash", { command: "echo safe" });
+
+    assert.equal(context.details.mode, "unprofiled-global-package");
+    assert.equal(context.details.profile.exists, true);
+    assert.equal(context.details.profile.source, "fallback");
+    assert.equal(permission.details.permissionProfile.mode, "workspace-write");
+    assert.equal(permission.details.permissionProfile.source, "default");
+    assert.equal(ctx.ui.notices.some((notice) => /malicious-local-profile/.test(notice.message)), false);
+    assert.equal(ctx.ui.notices.some((notice) => /Capability lock is missing/.test(notice.message)), false);
+    assert.equal(ctx.ui.notices.some((notice) => /run \/onboard-project/.test(notice.message)), true);
+    assert.notEqual(safeShell.block, true);
+  });
+
+  it("keeps an explicit profile override stronger than project trust", async () => {
+    const previousProfile = process.env.PI_COMPANY_PROFILE;
+    try {
+      const { root, companyGuard } = await loadGuardFixture();
+      const cwd = createProject(root);
+      const explicitProfilePath = path.join(root, "explicit-profile.json");
+      fs.writeFileSync(explicitProfilePath, `${JSON.stringify({
+        schemaVersion: 1,
+        projectId: "explicit-project",
+        displayName: "Explicit Project",
+        mode: "explicit-profile",
+        permissionProfile: "workspace-write",
+        protectedPaths: [],
+        requiredContext: [],
+        mcpCapabilities: ["shell"]
+      }, null, 2)}\n`);
+      process.env.PI_COMPANY_PROFILE = explicitProfilePath;
+      const ctx = createContext(cwd, { projectTrusted: false });
+      const harness = createPiHarness();
+      companyGuard(harness.pi);
+
+      await harness.handlers.get("session_start")({}, ctx);
+      const context = await harness.tools.get("company_context").execute(
+        "explicit-untrusted-context-test",
+        { detail: "full" },
+        undefined,
+        () => {},
+        ctx
+      );
+      const safeShell = await callToolCall(harness.handlers.get("tool_call"), ctx, "bash", { command: "echo safe" });
+
+      assert.equal(context.details.mode, "explicit-profile");
+      assert.equal(context.details.profile.source, "env");
+      assert.equal(ctx.ui.notices.some((notice) => /run \/onboard-project/.test(notice.message)), false);
+      assert.notEqual(safeShell.block, true);
+    } finally {
+      if (previousProfile === undefined) delete process.env.PI_COMPANY_PROFILE;
+      else process.env.PI_COMPANY_PROFILE = previousProfile;
+    }
+  });
+
+  it("ignores project-local settings and capability locks until the project is trusted", async () => {
+    const { root, companyGuard } = await loadGuardFixture();
+    const cwd = createProject(root);
+    const trustedCtx = createContext(cwd, { confirm: true });
+    const harness = createPiHarness();
+    companyGuard(harness.pi);
+    const applied = await harness.tools.get("company_profile_apply").execute(
+      "trusted-profile-setup",
+      { profile: "generic", overwrite: true },
+      undefined,
+      () => {},
+      trustedCtx
+    );
+    assert.equal(applied.isError, undefined);
+    fs.writeFileSync(path.join(cwd, ".pi", "settings.json"), `${JSON.stringify({
+      packages: ["unsupported:untrusted-source"]
+    }, null, 2)}\n`);
+
+    const untrustedCtx = createContext(cwd, { projectTrusted: false });
+    await harness.handlers.get("session_start")({}, untrustedCtx);
+    const safeShell = await callToolCall(harness.handlers.get("tool_call"), untrustedCtx, "bash", { command: "echo safe" });
+
+    assert.equal(untrustedCtx.ui.notices.some((notice) => /Capability validation failed/.test(notice.message)), false);
+    assert.notEqual(safeShell.block, true);
+  });
+
   it("applies project profiles through direct slash commands without model follow-up", async () => {
     const { root, companyGuard } = await loadGuardFixture();
     const cwd = createProject(root);
-    const ctx = createContext(cwd);
+    const ctx = createContext(cwd, { confirm: true });
     const harness = createPiHarness();
     companyGuard(harness.pi);
 
@@ -286,7 +433,7 @@ describe("company guard integration", () => {
       process.env.PI_COMPANY_PERMISSION_PROFILE = "read-only";
       const { root, companyGuard } = await loadGuardFixture();
       const cwd = createProject(root);
-      const ctx = createContext(cwd);
+      const ctx = createContext(cwd, { confirm: true });
       const harness = createPiHarness();
       companyGuard(harness.pi);
 
@@ -318,7 +465,7 @@ describe("company guard integration", () => {
     const profile = JSON.parse(fs.readFileSync(profilePath, "utf8"));
     profile.permissionProfile = "read-only";
     fs.writeFileSync(profilePath, `${JSON.stringify(profile, null, 2)}\n`);
-    const ctx = createContext(cwd);
+    const ctx = createContext(cwd, { confirm: true });
     const harness = createPiHarness();
     companyGuard(harness.pi);
 
@@ -394,10 +541,444 @@ describe("company guard integration", () => {
     assert.notEqual(targetedStage.block, true);
   });
 
-  it("applies a profile with a matching deterministic capability lock", async () => {
+  it("requires confirmation for shell-based external writes while preserving known reads", async () => {
     const { root, companyGuard } = await loadGuardFixture();
     const cwd = createProject(root);
     const ctx = createContext(cwd);
+    const harness = createPiHarness();
+    companyGuard(harness.pi);
+    const toolCall = harness.handlers.get("tool_call");
+
+    const continuedGh = ["g\\", "h issue create --title x --body y"].join("\n");
+    const continuedCurl = ["cu\\", "rl -X POST https://example.invalid"].join("\n");
+    const writeCommands = [
+      "gh issue create --title x --body y",
+      "env GH_HOST=github.com gh pr comment 1 --body x",
+      "gh api repos/org/repo/issues -f title=x",
+      "curl -X POST https://api.github.com/repos/org/repo/issues -d title=x",
+      "exec gh issue create --title x --body y",
+      "! gh issue create --title x --body y",
+      "{ gh issue create --title x --body y; }",
+      "if true; then gh issue create --title x --body y; fi",
+      "nice -n 5 gh issue create --title x --body y",
+      "env sudo -n gh issue create --title x --body y",
+      "find . -exec gh issue create --title x --body y \\;",
+      "find . -name gh -exec gh issue create --title x --body y \\;",
+      "cat $(gh issue create --title x --body y)",
+      "rg --pre gh pattern .",
+      "cat README.md # ignored gh issue create\ngh issue create --title x --body y",
+      "GH=gh; $GH issue create --title x --body y",
+      "GH=/usr/local/bin/gh; $GH issue create --title x --body y",
+      "GH=./gh; $GH issue create --title x --body y",
+      "$(printf gh) issue create --title x --body y",
+      "`printf gh` issue create --title x --body y",
+      "g$(printf h) issue create --title x --body y",
+      "exec $(printf gh) issue create --title x --body y",
+      "TOOL=$(printf gh); $TOOL issue create --title x --body y",
+      "$(printf curl) -X POST https://example.invalid",
+      "printf '%s\\n' '--body y' | xargs $(printf gh) issue create --title x",
+      continuedGh,
+      continuedCurl,
+      "curl --form-string x=y https://example.invalid",
+      "curl -X GET -X POST https://example.invalid",
+      "curl -K curl.cfg https://example.invalid",
+      "curl -Q 'DELE remote.txt' sftp://example.invalid/path",
+      "curl --quote 'rename old.txt new.txt' sftp://example.invalid/path",
+      "gh api --method GET --method POST repos/org/repo/issues"
+    ];
+    const writeResults = [];
+    for (const command of writeCommands) writeResults.push(await callToolCall(toolCall, ctx, "bash", { command }));
+
+    for (const result of writeResults) {
+      assert.equal(result.block, true);
+      assert.match(result.reason, /external command|User denied command/);
+    }
+    const safeCommands = [
+      "gh issue list",
+      "gh api repos/org/repo/issues --method GET",
+      "curl https://api.github.com/repos/org/repo/issues",
+      "echo 'gh issue create --title x'",
+      "echo gh issue create --title x",
+      "cat gh",
+      "grep gh README.md",
+      "rg gh README.md",
+      "cat README.md # gh issue create --title x",
+      "find . -name gh",
+      "curl -Q PWD ftp://example.invalid/path",
+      "echo $(printf gh)",
+      "cat \"$(printf gh)\"",
+      "X=$(printf gh)",
+      "curl \"$(printf https://example.invalid)\"",
+      "gh --help",
+      "gh --version"
+    ];
+    for (const command of safeCommands) {
+      const result = await callToolCall(toolCall, ctx, "bash", { command });
+      assert.notEqual(result.block, true, `${command} should remain non-interactive`);
+    }
+    assert.equal(ctx.confirmations.length, writeCommands.length);
+  });
+
+  it("requires operator confirmation before profile apply tool writes project state", async () => {
+    const { root, companyGuard } = await loadGuardFixture();
+    const cwd = createProject(root);
+    const ctx = createContext(cwd);
+    const harness = createPiHarness();
+    companyGuard(harness.pi);
+
+    const denied = await harness.tools.get("company_profile_apply").execute(
+      "profile-apply-deny-test",
+      { profile: "generic", overwrite: true },
+      undefined,
+      () => {},
+      ctx
+    );
+
+    assert.equal(denied.isError, true);
+    assert.match(denied.content[0].text, /denied by operator/);
+    assert.equal(ctx.confirmations.length, 1);
+    const profile = JSON.parse(fs.readFileSync(path.join(cwd, ".pi", "company-profile.json"), "utf8"));
+    assert.equal(profile.mode, "node-typescript");
+  });
+
+  it("applies shell protected-path checks to shell and exec aliases", async () => {
+    const { root, companyGuard } = await loadGuardFixture();
+    const cwd = createProject(root);
+    const ctx = createContext(cwd);
+    const harness = createPiHarness();
+    companyGuard(harness.pi);
+    const toolCall = harness.handlers.get("tool_call");
+
+    const shellAlias = await callToolCall(toolCall, ctx, "shell", { command: "cat .env" });
+    const execAlias = await callToolCall(toolCall, ctx, "exec", { cmd: "cat .en*" });
+    const safeExec = await callToolCall(toolCall, ctx, "exec", { args: ["cat", "README.md"] });
+    const combinedProtected = await callToolCall(toolCall, ctx, "exec", { command: "cat", args: [".env"] });
+    const combinedPrompt = await callToolCall(toolCall, ctx, "shell", { cmd: "git", args: ["push"] });
+    const combinedSafe = await callToolCall(toolCall, ctx, "exec", { command: "cat", args: ["README.md"] });
+    const conflictingCarrier = await callToolCall(toolCall, ctx, "exec", { command: "cat README.md", cmd: "cat .env" });
+    const invalidArgs = await callToolCall(toolCall, ctx, "exec", { command: "cat", args: ["README.md", 42] });
+    const unboundedArgs = await callToolCall(toolCall, ctx, "exec", { command: "cat", args: new Array(257).fill("README.md") });
+
+    assert.equal(shellAlias.block, true);
+    assert.match(shellAlias.reason, /protected path/);
+    assert.equal(execAlias.block, true);
+    assert.match(execAlias.reason, /protected path|glob can target protected path/);
+    assert.notEqual(safeExec.block, true);
+    assert.equal(combinedProtected.block, true);
+    assert.match(combinedProtected.reason, /protected path/);
+    assert.equal(combinedPrompt.block, true);
+    assert.match(combinedPrompt.reason, /User denied command|Confirmation required/);
+    assert.notEqual(combinedSafe.block, true);
+    assert.equal(conflictingCarrier.block, true);
+    assert.match(conflictingCarrier.reason, /conflicting command and cmd/);
+    assert.equal(invalidArgs.block, true);
+    assert.match(invalidArgs.reason, /args must be an array of strings/);
+    assert.equal(unboundedArgs.block, true);
+    assert.match(unboundedArgs.reason, /too many args/);
+  });
+
+  it("requires confirmation for external-provider write tools", async () => {
+    const { root, companyGuard } = await loadGuardFixture();
+    const cwd = createProject(root);
+    const ctx = createContext(cwd);
+    const harness = createPiHarness();
+    companyGuard(harness.pi);
+    const toolCall = harness.handlers.get("tool_call");
+
+    const denied = await callToolCall(toolCall, ctx, "mcp__github__create_issue", {
+      owner: "org",
+      repo: "repo",
+      title: "Release note"
+    });
+    const readOnly = await callToolCall(toolCall, ctx, "mcp__github__list_issues", {
+      owner: "org",
+      repo: "repo"
+    });
+    const safeReadWithWriteLikeResource = await callToolCall(toolCall, ctx, "mcp__github__get_release", {
+      owner: "org",
+      repo: "repo"
+    });
+    const explicitWriteOverride = await callToolCall(toolCall, ctx, "mcp__github__get_release", {
+      owner: "org",
+      repo: "repo",
+      action: "update"
+    });
+    const unknownKnownProviderAction = await callToolCall(toolCall, ctx, "mcp__jira__edit_issue", {
+      issueKey: "TEST-1"
+    });
+    const unknownMcpProviderAction = await callToolCall(toolCall, ctx, "mcp__acme__mutate_record", {
+      recordId: "record-1"
+    });
+    const unknownMcpProviderRead = await callToolCall(toolCall, ctx, "mcp__acme__read_record", {
+      recordId: "record-1"
+    });
+    const explicitProviderUnknownMethod = await callToolCall(toolCall, ctx, "provider_gateway", {
+      provider: "github",
+      method: "PATCH"
+    });
+    const explicitProviderSafeMethod = await callToolCall(toolCall, ctx, "provider_gateway", {
+      provider: "github",
+      method: "GET"
+    });
+    const explicitSafeActionWithWriteLikeResource = await callToolCall(toolCall, ctx, "provider_gateway", {
+      provider: "github",
+      action: "get_release"
+    });
+    const explicitProviderWriteAction = await callToolCall(toolCall, ctx, "provider_gateway", {
+      provider: "github",
+      action: "create"
+    });
+    const explicitCompoundWriteAction = await callToolCall(toolCall, ctx, "provider_gateway", {
+      provider: "github",
+      action: "get_and_update"
+    });
+    const arbitraryProviderWriteAction = await callToolCall(toolCall, ctx, "provider_gateway", {
+      provider: "acme",
+      action: "create"
+    });
+    const arbitraryProviderSafeMethod = await callToolCall(toolCall, ctx, "provider_gateway", {
+      provider: "acme",
+      method: "GET"
+    });
+    const mixedReadWriteAction = await callToolCall(toolCall, ctx, "mcp__github__get_and_update_issue", {
+      owner: "org",
+      repo: "repo"
+    });
+
+    assert.equal(denied.block, true);
+    assert.match(denied.reason, /external provider action/);
+    assert.notEqual(readOnly.block, true);
+    assert.notEqual(safeReadWithWriteLikeResource.block, true);
+    assert.equal(explicitWriteOverride.block, true);
+    assert.match(explicitWriteOverride.reason, /external provider action/);
+    assert.equal(unknownKnownProviderAction.block, true);
+    assert.match(unknownKnownProviderAction.reason, /external provider action/);
+    assert.equal(unknownMcpProviderAction.block, true);
+    assert.match(unknownMcpProviderAction.reason, /external provider action/);
+    assert.notEqual(unknownMcpProviderRead.block, true);
+    assert.equal(explicitProviderUnknownMethod.block, true);
+    assert.match(explicitProviderUnknownMethod.reason, /external provider action/);
+    assert.notEqual(explicitProviderSafeMethod.block, true);
+    assert.notEqual(explicitSafeActionWithWriteLikeResource.block, true);
+    assert.equal(explicitProviderWriteAction.block, true);
+    assert.match(explicitProviderWriteAction.reason, /external provider action/);
+    assert.equal(explicitCompoundWriteAction.block, true);
+    assert.match(explicitCompoundWriteAction.reason, /external provider action/);
+    assert.equal(arbitraryProviderWriteAction.block, true);
+    assert.match(arbitraryProviderWriteAction.reason, /external provider action/);
+    assert.notEqual(arbitraryProviderSafeMethod.block, true);
+    assert.equal(mixedReadWriteAction.block, true);
+    assert.match(mixedReadWriteAction.reason, /external provider action/);
+    assert.equal(ctx.confirmations.length, 9);
+  });
+
+  it("enforces provider and protected-path gates through the default MCP proxy carrier", async () => {
+    const { root, companyGuard } = await loadGuardFixture();
+    const cwd = createProject(root);
+    const ctx = createContext(cwd);
+    const harness = createPiHarness();
+    companyGuard(harness.pi);
+    const toolCall = harness.handlers.get("tool_call");
+
+    const proxyWrite = await callToolCall(toolCall, ctx, "mcp", {
+      server: "github",
+      tool: "create_issue",
+      args: JSON.stringify({ owner: "org", repo: "repo", title: "Release note" })
+    });
+    const inferredProxyWrite = await callToolCall(toolCall, ctx, "mcp", {
+      tool: "github_create_issue",
+      args: JSON.stringify({ owner: "org", repo: "repo", title: "Release note" })
+    });
+    const unqualifiedProxyWrite = await callToolCall(toolCall, ctx, "mcp", {
+      tool: "create_issue",
+      args: JSON.stringify({ owner: "org", repo: "repo", title: "Release note" })
+    });
+    const proxyRead = await callToolCall(toolCall, ctx, "mcp", {
+      server: "github",
+      tool: "get_issue",
+      args: JSON.stringify({ owner: "org", repo: "repo", issue_number: 1 })
+    });
+    const protectedProxyRead = await callToolCall(toolCall, ctx, "mcp", {
+      server: "filesystem",
+      tool: "read_file",
+      args: JSON.stringify({ path: ".env" })
+    });
+    const safeProxyRead = await callToolCall(toolCall, ctx, "mcp", {
+      server: "filesystem",
+      tool: "read_file",
+      args: JSON.stringify({ path: "README.md" })
+    });
+    const malformedProxyArgs = await callToolCall(toolCall, ctx, "mcp", {
+      server: "filesystem",
+      tool: "read_file",
+      args: "{not-json"
+    });
+    const scalarProxyArgs = await callToolCall(toolCall, ctx, "mcp", {
+      server: "filesystem",
+      tool: "read_file",
+      args: "[]"
+    });
+    const oversizedProxyArgs = await callToolCall(toolCall, ctx, "mcp", {
+      server: "filesystem",
+      tool: "read_file",
+      args: JSON.stringify({ value: "x".repeat(131_073) })
+    });
+    const deeplyNestedProxyArgs = await callToolCall(toolCall, ctx, "mcp", {
+      server: "filesystem",
+      tool: "read_file",
+      args: JSON.stringify(nestedInput(34, { path: ".env" }))
+    });
+    const proxySearch = await callToolCall(toolCall, ctx, "mcp", { server: "github", search: "issues" });
+    const proxyDescribe = await callToolCall(toolCall, ctx, "mcp", { describe: "github_create_issue" });
+    const proxyServerList = await callToolCall(toolCall, ctx, "mcp", { server: "github" });
+
+    assert.equal(proxyWrite.block, true);
+    assert.match(proxyWrite.reason, /external provider action/);
+    assert.equal(inferredProxyWrite.block, true);
+    assert.match(inferredProxyWrite.reason, /external provider action/);
+    assert.equal(unqualifiedProxyWrite.block, true);
+    assert.match(unqualifiedProxyWrite.reason, /external provider action/);
+    assert.notEqual(proxyRead.block, true);
+    assert.equal(protectedProxyRead.block, true);
+    assert.match(protectedProxyRead.reason, /protected path/);
+    assert.notEqual(safeProxyRead.block, true);
+    assert.equal(malformedProxyArgs.block, true);
+    assert.match(malformedProxyArgs.reason, /MCP proxy args must be valid JSON/);
+    assert.equal(scalarProxyArgs.block, true);
+    assert.match(scalarProxyArgs.reason, /decode to a JSON object/);
+    assert.equal(oversizedProxyArgs.block, true);
+    assert.match(oversizedProxyArgs.reason, /exceed/);
+    assert.equal(deeplyNestedProxyArgs.block, true);
+    assert.match(deeplyNestedProxyArgs.reason, /nesting exceeds inspection depth/);
+    for (const result of [proxySearch, proxyDescribe, proxyServerList]) assert.notEqual(result.block, true);
+    assert.equal(ctx.confirmations.length, 3);
+  });
+
+  it("keeps protected and read-only paths blocked inside confirmed MCP command and patch carriers", async () => {
+    const { root, companyGuard } = await loadGuardFixture();
+    const cwd = createProject(root);
+    fs.mkdirSync(path.join(cwd, "backend"), { recursive: true });
+    fs.writeFileSync(path.join(cwd, "backend", "contract.ts"), "export type Contract = {};\n");
+    const profilePath = path.join(cwd, ".pi", "company-profile.json");
+    const profile = JSON.parse(fs.readFileSync(profilePath, "utf8"));
+    profile.readOnlyPaths = ["backend/**"];
+    fs.writeFileSync(profilePath, `${JSON.stringify(profile, null, 2)}\n`);
+    const ctx = createContext(cwd, { confirm: true });
+    const harness = createPiHarness();
+    companyGuard(harness.pi);
+    const toolCall = harness.handlers.get("tool_call");
+
+    const protectedCommand = await callToolCall(toolCall, ctx, "mcp", {
+      server: "shell",
+      tool: "execute_command",
+      args: JSON.stringify({ command: "cat .env" })
+    });
+    const protectedPatch = await callToolCall(toolCall, ctx, "mcp", {
+      server: "filesystem",
+      tool: "apply_patch",
+      args: JSON.stringify({ patch: "*** Begin Patch\n*** Update File: .env\n@@\n-TOKEN=old\n+TOKEN=new\n*** End Patch" })
+    });
+    const protectedCamelPatch = await callToolCall(toolCall, ctx, "mcp", {
+      server: "filesystem",
+      tool: "applyPatch",
+      args: JSON.stringify({ patch: "*** Begin Patch\n*** Update File: .env\n@@\n-TOKEN=old\n+TOKEN=new\n*** End Patch" })
+    });
+    const protectedRunArgs = await callToolCall(toolCall, ctx, "mcp", {
+      server: "shell",
+      tool: "run",
+      args: JSON.stringify({ args: ["cat", ".en*"] })
+    });
+    const protectedExecuteProcessArgs = await callToolCall(toolCall, ctx, "mcp", {
+      server: "shell",
+      tool: "execute_process",
+      args: JSON.stringify({ args: ["cat", ".en*"] })
+    });
+    const readOnlyUpdate = await callToolCall(toolCall, ctx, "mcp", {
+      server: "filesystem",
+      tool: "get_update_file",
+      args: JSON.stringify({ path: "backend/contract.ts", content: "changed" })
+    });
+    const copyFromReadOnly = await callToolCall(toolCall, ctx, "mcp", {
+      server: "filesystem",
+      tool: "copy_file",
+      args: JSON.stringify({ source: "backend/contract.ts", destination: "src/contract.ts" })
+    });
+    const copyFromProtected = await callToolCall(toolCall, ctx, "mcp", {
+      server: "filesystem",
+      tool: "copy_file",
+      args: JSON.stringify({ source: ".env", destination: "src/copied-secret.txt" })
+    });
+    const copyToReadOnly = await callToolCall(toolCall, ctx, "mcp", {
+      server: "filesystem",
+      tool: "copy_file",
+      args: JSON.stringify({ source: "src/contract.ts", destination: "backend/contract.ts" })
+    });
+    const safeCommand = await callToolCall(toolCall, ctx, "mcp", {
+      server: "shell",
+      tool: "execute_command",
+      args: JSON.stringify({ command: "cat README.md" })
+    });
+    const safeNamedExternalCommand = await callToolCall(toolCall, ctx, "mcp", {
+      server: "shell",
+      tool: "read_command",
+      args: JSON.stringify({ command: "gh issue create --title x" })
+    });
+    const externalSourceMetadata = await callToolCall(toolCall, ctx, "mcp", {
+      server: "github",
+      tool: "create_issue",
+      args: JSON.stringify({ title: "Synthetic issue", source: "customer-feedback" })
+    });
+    const unknownProxyProtectedSource = await callToolCall(toolCall, ctx, "mcp", {
+      server: "workspace",
+      tool: "lookup",
+      args: JSON.stringify({ source: ".env" })
+    });
+
+    for (const result of [protectedCommand, protectedPatch, protectedCamelPatch, protectedRunArgs, protectedExecuteProcessArgs]) {
+      assert.equal(result.block, true);
+      assert.match(result.reason, /protected path/);
+    }
+    assert.equal(readOnlyUpdate.block, true);
+    assert.match(readOnlyUpdate.reason, /read-only path/);
+    assert.notEqual(copyFromReadOnly.block, true);
+    assert.equal(copyFromProtected.block, true);
+    assert.match(copyFromProtected.reason, /protected path/);
+    assert.equal(copyToReadOnly.block, true);
+    assert.match(copyToReadOnly.reason, /read-only path/);
+    assert.notEqual(externalSourceMetadata.block, true);
+    assert.equal(unknownProxyProtectedSource.block, true);
+    assert.match(unknownProxyProtectedSource.reason, /protected path/);
+    assert.notEqual(safeCommand.block, true);
+    assert.notEqual(safeNamedExternalCommand.block, true);
+    assert.equal(ctx.confirmations.some((item) => /cat README\.md/.test(item.message)), true);
+    assert.equal(ctx.confirmations.some((item) => /gh issue create --title x/.test(item.message)), true);
+  });
+
+  it("keeps ambiguous external-provider confirmation active under trusted-full-access", async () => {
+    const { root, companyGuard } = await loadGuardFixture();
+    const cwd = createProject(root);
+    const profilePath = path.join(cwd, ".pi", "company-profile.json");
+    const profile = JSON.parse(fs.readFileSync(profilePath, "utf8"));
+    profile.permissionProfile = "trusted-full-access";
+    profile.runtimePolicy.toolRegistry = "enforce";
+    fs.writeFileSync(profilePath, `${JSON.stringify(profile, null, 2)}\n`);
+    const ctx = createContext(cwd);
+    const harness = createPiHarness();
+    companyGuard(harness.pi);
+
+    const denied = await callToolCall(harness.handlers.get("tool_call"), ctx, "mcp__jira__edit_issue", {
+      issueKey: "TEST-1"
+    });
+
+    assert.equal(denied.block, true);
+    assert.match(denied.reason, /external provider action/);
+    assert.equal(ctx.confirmations.length, 1);
+  });
+
+  it("applies a profile with a matching deterministic capability lock", async () => {
+    const { root, companyGuard } = await loadGuardFixture();
+    const cwd = createProject(root);
+    const ctx = createContext(cwd, { confirm: true });
     const harness = createPiHarness();
     companyGuard(harness.pi);
 
@@ -444,7 +1025,7 @@ describe("company guard integration", () => {
     fs.mkdirSync(path.join(cwd, "other-dir"), { recursive: true });
     fs.symlinkSync("../.env", path.join(cwd, "src", "config-link"));
     fs.symlinkSync("../other-dir", path.join(cwd, "src", "output-link"));
-    const ctx = createContext(cwd);
+    const ctx = createContext(cwd, { confirm: true });
     const harness = createPiHarness();
     companyGuard(harness.pi);
     const applied = await harness.tools.get("company_profile_apply").execute(
@@ -464,12 +1045,63 @@ describe("company guard integration", () => {
     const scopedGrep = await callToolCall(toolCall, ctx, "grep", { pattern: "export", path: "src", glob: "*.ts" });
     const escapingGrep = await callToolCall(toolCall, ctx, "grep", { pattern: "Fixture", path: "src", glob: "../*.md" });
     const companyEnum = await callToolCall(toolCall, ctx, "company_memory_note", { note: "bounded", source: "explicit-user-request" });
+    const companyProtectedNameMetadata = await callToolCall(toolCall, ctx, "company_memory_note", { note: "bounded", source: ".env" });
     const defaultGrep = await callToolCall(toolCall, ctx, "grep", { pattern: "export" });
     const defaultFind = await callToolCall(toolCall, ctx, "find", { pattern: "*.ts" });
     const defaultList = await callToolCall(toolCall, ctx, "ls", {});
     const symlinkedSecretRead = await callToolCall(toolCall, ctx, "read", { path: "src/config-link" });
     const symlinkedDirectoryWrite = await callToolCall(toolCall, ctx, "write", { path: "src/output-link/file.txt", content: "x" });
     const absoluteOutsideRead = await callToolCall(toolCall, ctx, "read", { path: path.join(root, "outside.txt") });
+    const proxyFilenameOutsideRead = await callToolCall(toolCall, ctx, "mcp", {
+      server: "filesystem",
+      tool: "read_file",
+      args: JSON.stringify({ filename: "README.md" })
+    });
+    const proxyRootPathOutsideRead = await callToolCall(toolCall, ctx, "mcp", {
+      server: "filesystem",
+      tool: "read_file",
+      args: JSON.stringify({ rootPath: "README.md" })
+    });
+    const proxyFilenameOutsideWrite = await callToolCall(toolCall, ctx, "mcp", {
+      server: "filesystem",
+      tool: "write_file",
+      args: JSON.stringify({ filename: "notes.txt", content: "x" })
+    });
+    const proxyFilenameEscapingWrite = await callToolCall(toolCall, ctx, "mcp", {
+      server: "filesystem",
+      tool: "write_file",
+      args: JSON.stringify({ filename: path.join(root, "outside.txt"), content: "x" })
+    });
+    const proxyShellEscapingCwd = await callToolCall(toolCall, ctx, "mcp", {
+      server: "shell",
+      tool: "execute_command",
+      args: JSON.stringify({ command: "printf ok", cwd: root })
+    });
+    const proxyShellEscapingWorkingDirectory = await callToolCall(toolCall, ctx, "mcp", {
+      server: "shell",
+      tool: "execute_command",
+      args: JSON.stringify({ command: "printf ok", workingDirectory: root })
+    });
+    const proxyFilenameInsideWrite = await callToolCall(toolCall, ctx, "mcp", {
+      server: "filesystem",
+      tool: "write_file",
+      args: JSON.stringify({ filename: "src/proxy.ts", content: "x" })
+    });
+    const proxyCopyOutsideRead = await callToolCall(toolCall, ctx, "mcp", {
+      server: "filesystem",
+      tool: "copy_file",
+      args: JSON.stringify({ source: "README.md", destination: "src/copied-readme.md" })
+    });
+    const proxyCopyInsideScope = await callToolCall(toolCall, ctx, "mcp", {
+      server: "filesystem",
+      tool: "copy_file",
+      args: JSON.stringify({ source: "src/index.ts", destination: "src/copied-index.ts" })
+    });
+    const proxyExternalSourceMetadata = await callToolCall(toolCall, ctx, "mcp", {
+      server: "github",
+      tool: "create_issue",
+      args: JSON.stringify({ title: "Synthetic issue", source: "customer-feedback" })
+    });
     assert.equal(outsideRead.block, true);
     assert.notEqual(insideRead.block, true);
     assert.equal(outsideWrite.block, true);
@@ -477,6 +1109,7 @@ describe("company guard integration", () => {
     assert.notEqual(scopedGrep.block, true);
     assert.equal(escapingGrep.block, true);
     assert.notEqual(companyEnum.block, true);
+    assert.notEqual(companyProtectedNameMetadata.block, true);
     assert.equal(defaultGrep.block, true);
     assert.equal(defaultFind.block, true);
     assert.equal(defaultList.block, true);
@@ -485,6 +1118,51 @@ describe("company guard integration", () => {
     assert.equal(symlinkedDirectoryWrite.block, true);
     assert.match(symlinkedDirectoryWrite.reason, /symbolic link/);
     assert.equal(absoluteOutsideRead.block, true);
+    for (const result of [
+      proxyFilenameOutsideRead,
+      proxyRootPathOutsideRead,
+      proxyFilenameOutsideWrite,
+      proxyFilenameEscapingWrite,
+      proxyShellEscapingCwd,
+      proxyShellEscapingWorkingDirectory,
+      proxyCopyOutsideRead
+    ]) {
+      assert.equal(result.block, true);
+      assert.match(result.reason, /outside the project|outside resolved filesystem scope/);
+    }
+    assert.notEqual(proxyFilenameInsideWrite.block, true);
+    assert.notEqual(proxyCopyInsideScope.block, true);
+    assert.notEqual(proxyExternalSourceMetadata.block, true);
+  });
+
+  it("allows backend path reads but blocks backend writes and shell access in be-readonly-fe", async () => {
+    const { root, companyGuard } = await loadGuardFixture();
+    const cwd = createProject(root);
+    fs.mkdirSync(path.join(cwd, "backend"), { recursive: true });
+    fs.writeFileSync(path.join(cwd, "backend", "contract.ts"), "export const contract = true;\n");
+    const ctx = createContext(cwd);
+    const harness = createPiHarness();
+    companyGuard(harness.pi);
+
+    await harness.commands.get("profiles").handler("be-fe", ctx);
+
+    const toolCall = harness.handlers.get("tool_call");
+    const readBackend = await callToolCall(toolCall, ctx, "read", { path: "backend/contract.ts" });
+    const grepBackend = await callToolCall(toolCall, ctx, "grep", { pattern: "contract", path: "backend" });
+    const writeBackend = await callToolCall(toolCall, ctx, "write", { path: "backend/contract.ts", content: "changed" });
+    const editBackend = await callToolCall(toolCall, ctx, "edit", { path: "backend/contract.ts", old: "true", new: "false" });
+    const shellBackend = await callToolCall(toolCall, ctx, "bash", { command: "cat backend/contract.ts" });
+    const writeFrontend = await callToolCall(toolCall, ctx, "write", { path: "src/component.ts", content: "export {};\n" });
+
+    assert.notEqual(readBackend.block, true);
+    assert.notEqual(grepBackend.block, true);
+    assert.equal(writeBackend.block, true);
+    assert.match(writeBackend.reason, /read-only path/);
+    assert.equal(editBackend.block, true);
+    assert.match(editBackend.reason, /read-only path/);
+    assert.equal(shellBackend.block, true);
+    assert.match(shellBackend.reason, /protected path/);
+    assert.notEqual(writeFrontend.block, true);
   });
 
   it("lets trusted-full-access use full workspace scope without bypassing protected paths", async () => {
@@ -503,7 +1181,7 @@ describe("company guard integration", () => {
       fs.writeFileSync(adapterPath, `${JSON.stringify(adapter, null, 2)}\n`);
 
       const cwd = createProject(root);
-      const ctx = createContext(cwd);
+      const ctx = createContext(cwd, { confirm: true });
       const harness = createPiHarness();
       companyGuard(harness.pi);
       const applied = await harness.tools.get("company_profile_apply").execute(
@@ -663,7 +1341,9 @@ describe("company guard integration", () => {
       ["find", { pattern: "*", path: ".pi/company-state" }],
       ["ls", { path: ".pi/company-state" }],
       ["custom_reader", { path: ".env" }],
+      ["custom_reader", { source: ".env" }],
       ["custom_reader", { targetPath: ".pi/company-profile.json" }],
+      ["custom_copy_file", { source: ".env", destination: "src/copied-secret.txt" }],
       ["mcp__fs__read", { dir: ".env" }],
       ["mcp__fs__read", { directory: ".env" }],
       ["mcp__fs__read", { source: ".env" }],
@@ -737,7 +1417,7 @@ describe("company guard integration", () => {
     fs.writeFileSync(path.join(cwd, "secrets"), "fixture\n");
     fs.writeFileSync(path.join(cwd, "Makefile"), "fixture:\n\t@true\n");
     fs.symlinkSync(".env", path.join(cwd, "cfg"));
-    const ctx = createContext(cwd);
+    const ctx = createContext(cwd, { confirm: true });
     const harness = createPiHarness();
     companyGuard(harness.pi);
 

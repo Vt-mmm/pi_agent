@@ -2,126 +2,220 @@
 
 ## Purpose
 
-Pi Company Platform uses explicit release sources for team rollout. Personal machines can follow a moving source when fast iteration matters, but committed project settings should use exact tags or reviewed commits so every developer receives the same platform package.
+Pi Company Platform uses explicit release sources for team rollout. Personal machines may follow a moving source when fast iteration matters, but team environments and committed project settings use exact tags or reviewed commits so every developer receives the same platform package.
+
+This file is the canonical install, update, rollback, and release checklist. Other docs link here instead of maintaining a second release procedure.
+
+## Supported runtime matrix
+
+| Surface | Status for v0.4.8 |
+|---|---|
+| macOS + Bash | Tested and supported. |
+| Linux + Bash | Tested and supported. |
+| Native Windows | Not verified; the terminal helpers require Bash. |
+| WSL | Not verified in the current release. |
+
+All supported environments require Node.js `>=22.19.0` and Pi Coding Agent `0.81.1`.
+
+## Runtime and two installation planes
+
+| Component | Installed by | Provides |
+|---|---|---|
+| Pi host runtime | `npm install -g --ignore-scripts @earendil-works/pi-coding-agent@<exact-version>` | The compatible `pi` executable. |
+| Terminal helper | `npm install -g --ignore-scripts github:Vt-mmm/pi_agent#vX.Y.Z` | `pi-company-*` commands on `PATH`. |
+| Pi package | `pi-company-install`, or `pi install ...` | Extensions, prompts, skills, and subagents loaded by Pi. |
+
+These three components are versioned independently. A full install, update, or rollback must use the exact Pi host declared by the target release, then install the target terminal helper, then let that helper install its matching Pi package. `pi-company-install` changes only the Pi package; it does not replace the Pi host or the npm-global terminal helper currently executing. In installer output, `currentRelease` is the terminal helper package version.
 
 ## Release channels
 
 | Channel | Source shape | Mutability | Use when |
 |---|---|---:|---|
-| `stable` | `git:github.com/Vt-mmm/pi_agent@v0.4.7` | Fixed | Default for team and production rollout. |
-| `exact` | `git:github.com/Vt-mmm/pi_agent@vX.Y.Z` or reviewed commit | Fixed | Roll forward, rollback, or reproduce a past install. |
-| `dev` | `git:github.com/Vt-mmm/pi_agent` | Moving | Personal machine or sandbox only. Do not commit into `.pi/settings.json`. |
+| `stable` | `git:github.com/Vt-mmm/pi_agent@<resolved-commit-sha>` from `v0.4.8` | Fixed after resolution | Default for team rollout. |
+| `exact` | Tag, reviewed commit, or a tag resolved with `--resolve-tag` | Fixed when using a commit SHA | Pi-package-only roll forward, rollback, or reproduction. |
+| `dev` | `git:github.com/Vt-mmm/pi_agent` | Moving | Personal machine or sandbox only. |
 | `local` | `/path/to/pi_agent` | Local workspace | Platform development and dry-run validation. |
 | `enterprise-npm` | `npm:@company/pi-agent-platform@x.y.z` | Fixed | Private registry distribution when available. |
 
-`stable` currently resolves to the package version in `package.json`: `v0.4.7`.
+`--stable` reads the helper package version from its own `package.json`, resolves that release tag through GitHub, and installs the resulting commit SHA. If the tag cannot be resolved, install fails closed. Release CI additionally sets `PI_COMPANY_EXPECTED_RELEASE_COMMIT`; the installer then rejects a tag that resolves anywhere except the commit being verified.
 
-## Install flow
+Exactly one CLI package selector is accepted: `--package-source`, `--channel`, `--stable`, `--dev`, `--local`, `--version`, or `--tag`. The first CLI selector may replace environment defaults; a second CLI selector is rejected before any install command is printed or executed.
 
-First install the compatible Pi Coding Agent runtime:
+## First install — full platform
 
-```bash
-node --version  # >= 20
-npm install -g @earendil-works/pi-coding-agent@0.80.10
-```
-
-For team rollout, install the exact stable tag:
+Use this flow when the team needs both terminal commands and the Pi package:
 
 ```bash
-pi install git:github.com/Vt-mmm/pi_agent@v0.4.7
-pi update --extensions
+node --version  # >= 22.19.0
+npm install -g --ignore-scripts @earendil-works/pi-coding-agent@0.81.1
+npm install -g --ignore-scripts github:Vt-mmm/pi_agent#v0.4.8
+pi-company-install --stable --dry-run
+pi-company-install --stable
 ```
 
-From a source checkout, the helper can preview and apply the same stable source:
+The stable preview and apply output includes:
+
+```text
+currentRelease: v0.4.8 (helper package version)
+tag: v0.4.8
+resolvedCommit: <40-char-sha>
+source: git:github.com/Vt-mmm/pi_agent@<40-char-sha>
+```
+
+From a checked-out platform repository, the same Pi-package install is available as:
 
 ```bash
 bash scripts/install-global.sh --stable --dry-run
 bash scripts/install-global.sh --stable
 ```
 
-Install a specific version:
+## First install — Pi package only
+
+Use this only when terminal commands are not needed:
 
 ```bash
-bash scripts/install-global.sh --version v0.4.7 --dry-run
-bash scripts/install-global.sh --version v0.4.7
+pi install git:github.com/Vt-mmm/pi_agent@v0.4.8
 ```
 
-Personal or sandbox moving install:
+Direct `pi install` does not create `pi-company-*` commands on `PATH`.
+
+## Full platform update
+
+Update the exact supported Pi host first, then the npm-global helper, then let that target helper resolve and install its matching stable Pi package:
 
 ```bash
-bash scripts/install-global.sh --dev --dry-run
-bash scripts/install-global.sh --dev
-```
-
-## Update flow
-
-1. Read `CHANGELOG.md` for the target version.
-2. Preview the target install:
-
-   ```bash
-   bash scripts/install-global.sh --version vX.Y.Z --dry-run
-   ```
-
-3. Apply the exact version:
-
-   ```bash
-   bash scripts/install-global.sh --version vX.Y.Z
-   pi update --extensions
-   ```
-
-4. Verify the target project:
-
-   ```bash
-   pi-company-doctor /path/to/project --strict-share
-   ```
-
-5. If working from the platform source repo, also run:
-
-   ```bash
-   npm run smoke
-   npm run verify
-   npm test
-   npm run typecheck
-   ```
-
-## Rollback flow
-
-Rollback is code-only first: reinstall the previous known-good tag while keeping project state intact.
-
-```bash
-bash scripts/install-global.sh --version vX.Y.Z --dry-run
-bash scripts/install-global.sh --version vX.Y.Z
-pi update --extensions
+npm install -g --ignore-scripts @earendil-works/pi-coding-agent@0.81.1
+npm install -g --ignore-scripts github:Vt-mmm/pi_agent#vX.Y.Z
+pi-company-install --stable --dry-run
+pi-company-install --stable
 pi-company-doctor /path/to/project --strict-share
 ```
 
-Restore project state only if a newer profile, lock, or runtime state cannot be read by the older package. Preserve the current state separately before restoring any project snapshot.
+Review the target `CHANGELOG.md` before applying the update. Confirm that `currentRelease`, `tag`, and `resolvedCommit` all describe the intended release.
 
-## Release checklist
+## Pi-package-only update
 
-1. Update package versions, `CHANGELOG.md`, docs install examples, and public docs metadata.
-2. Run:
+This flow changes the Pi package but intentionally leaves the npm-global helper unchanged:
+
+```bash
+pi-company-install --version vX.Y.Z --resolve-tag --dry-run
+pi-company-install --version vX.Y.Z --resolve-tag
+pi-company-doctor /path/to/project --strict-share
+```
+
+Alternatively, install a reviewed Pi source directly:
+
+```bash
+pi install git:github.com/Vt-mmm/pi_agent@vX.Y.Z
+```
+
+`pi update --extensions` refreshes configured package refs. It does not move a pinned project from one tag or commit to a different target; install the new reviewed ref explicitly.
+
+## Full platform rollback
+
+Rollback the host, helper, and Pi package together. Determine the exact host version from the target release's compatibility section before running this sequence; do not assume the current host is supported by an older helper.
+
+```bash
+TARGET_PI_VERSION=x.y.z  # replace from vPREVIOUS release policy before execution
+npm install -g --ignore-scripts "@earendil-works/pi-coding-agent@$TARGET_PI_VERSION"
+npm install -g --ignore-scripts github:Vt-mmm/pi_agent#vPREVIOUS
+pi-company-install --stable --dry-run
+pi-company-install --stable
+pi-company-doctor /path/to/project --strict-share
+```
+
+Older host versions may reintroduce dependency findings fixed by the current release; treat that as an explicit rollback risk. Restore project state only if the older package cannot read a newer profile, lock, or runtime-state format. Preserve the current state separately before restoring a project snapshot.
+
+## Pi-package-only rollback
+
+Use this when terminal helpers must remain at their current version:
+
+```bash
+pi-company-install --version vPREVIOUS --resolve-tag --dry-run
+pi-company-install --version vPREVIOUS --resolve-tag
+pi-company-doctor /path/to/project --strict-share
+```
+
+## Canonical release checklist
+
+Production docs must never advertise a tag that cannot yet be installed.
+
+### Required GitHub repository controls
+
+Before broad team access, a repository administrator must enable these external controls; source files cannot turn them on:
+
+1. Create an active branch ruleset for `main` that requires a pull request, blocks force-push and deletion, and requires the checks shown by the workflows, including `verify (ubuntu-latest)`, `verify (macos-latest)`, `analyze (actions)`, and `analyze (javascript-typescript)`. Add one narrowly scoped release-maintainer bypass actor for the exact non-force fast-forward promotion described below; do not give this bypass to the normal team role.
+2. Create an active tag ruleset targeting `v*`. Restrict creation to the maintainer/release role and block tag update and deletion. This is mandatory because the first npm-global helper install uses a release tag before that helper can resolve its Pi-package source to a commit SHA.
+3. Enable Dependency graph, Dependabot alerts, and Dependabot security updates. Keep `.github/dependabot.yml` enabled for scheduled npm and GitHub Actions update pull requests.
+4. Enable GitHub private vulnerability reporting so the form linked by `SECURITY.md` works before public rollout.
+5. Keep secret scanning and push protection enabled. Review CodeQL results after the workflow's first successful run.
+
+Verify these settings in GitHub **Settings → Rules** and **Settings → Code security and analysis**. Treat any missing control as an explicit rollout blocker, not as a passing source-code gate. Repository rules also close the remaining mutability risk of bootstrap-by-tag; tag-to-SHA resolution inside `pi-company-install` alone cannot protect the helper package before it starts.
+
+1. Update package versions, `CHANGELOG.md`, install examples, and docs metadata on a release-candidate branch.
+2. Verify the exact release-candidate source:
 
    ```bash
    npm run verify
    npm test
    npm run typecheck
-   bash scripts/install-global.sh --stable --dry-run --no-model-scope
+   npm run smoke
+   npm run benchmark:redaction
+   npm audit --audit-level=high
+   npm run audit:runtime
+   npm run release:identity
+   npm pack --dry-run --json
    bash scripts/setup.sh --global-only --package-source git:github.com/Vt-mmm/pi_agent@vX.Y.Z --dry-run
    ```
 
-3. Create a signed or reviewed tag where possible:
+3. Push the release-candidate branch, open a pull request to `main`, and wait for both Ubuntu/macOS verify jobs and both CodeQL matrix jobs to pass. Record the exact PR-head commit SHA that passed; do not merge it into the Vercel production branch yet, and do not tag a later unverified edit.
+4. Create an annotated, reviewed tag on that exact verified commit and push the tag:
 
    ```bash
-   git tag vX.Y.Z
+   RC_COMMIT=<verified-40-char-pr-head-sha>
+   git tag -a vX.Y.Z "$RC_COMMIT" -m "Pi Company Platform vX.Y.Z"
    git push origin vX.Y.Z
-   gh release create vX.Y.Z --title "vX.Y.Z" --notes-file /tmp/pi-agent-vX.Y.Z-release-notes.md
    ```
 
-4. After release, verify that stable install examples point to the new exact tag.
+   Use a signed tag when the maintainer signing setup is available. Tag CI requires an annotated tag, verifies that it equals `v<package-version>`, checks that its peeled commit equals the checked-out release SHA, confirms root/core/capability-lock/docs versions agree, requires the stable installer to resolve back to that same SHA, and runs high-severity dependency gates for both the helper tree and exact Pi host + pinned add-ons. Wait for the tag-triggered Ubuntu and macOS CI jobs to pass before continuing.
+
+5. Verify the remote tag and confirm stable resolution points to the tagged commit:
+
+   ```bash
+   git ls-remote --tags origin refs/tags/vX.Y.Z 'refs/tags/vX.Y.Z^{}'
+   RELEASE_COMMIT="$(git rev-parse vX.Y.Z^{})"
+   PI_COMPANY_EXPECTED_RELEASE_COMMIT="$RELEASE_COMMIT" bash scripts/install-global.sh --stable --dry-run --no-model-scope
+   ```
+
+6. Create a draft GitHub release from the matching `CHANGELOG.md` section. Keep it unpublished until production docs are verified:
+
+   ```bash
+   gh release create vX.Y.Z --draft --verify-tag --title "vX.Y.Z" --notes-file /tmp/pi-agent-vX.Y.Z-release-notes.md
+   ```
+
+7. Only after tag CI and stable SHA verification pass, the designated release maintainer uses the ruleset bypass for a non-force fast-forward of the exact tagged commit to `main`. Do not merge, squash, rebase, or introduce a different commit during promotion:
+
+   ```bash
+   git fetch --tags origin main:refs/remotes/origin/main
+   RELEASE_COMMIT="$(git rev-parse vX.Y.Z^{})"
+   test "$(git merge-base origin/main "$RELEASE_COMMIT")" = "$(git rev-parse origin/main)"
+   git push origin "$RELEASE_COMMIT:refs/heads/main"
+   ```
+
+   The open release pull request should then resolve against the same commit history. This bypass exists only to reconcile reviewed PR checks with tag-first Vercel promotion; it must never be used for an unreviewed commit or a force-push. If Vercel auto-deploys `main`, this exact fast-forward is the production promotion. For an explicit CLI deploy instead, check out the exact tag, run `vercel link --cwd docs-site --project pi-agent`, require `npm run vercel:preflight` to pass, then deploy with `vercel --cwd docs-site --prod`.
+8. Verify the live docs version, links, canonical domain, and install commands.
+9. Publish the already-reviewed draft only after production verification passes:
+
+   ```bash
+   gh release edit vX.Y.Z --draft=false
+   ```
+
+10. Announce the release, then roll out with the full platform update flow above and run doctor/smoke checks on representative team projects.
 
 ## Security notes
 
 - Do not use a moving source in committed project settings.
 - Do not publish local trust files, OAuth tokens, `auth.json`, sessions, caches, or `.env` files.
-- Run doctor after install/update so project profile, package source, protected paths, and share policy are checked together.
+- Review the resolved commit SHA before rollout; tag resolution improves reproducibility but is not signed package provenance by itself.
+- `npm audit --audit-level=high` covers this repository's helper dependency tree. `npm run audit:runtime` separately builds and audits the exact optional Pi host and pinned add-on dependency tree so `--legacy-peer-deps` cannot hide deployed runtime findings.
+- Run doctor after install, update, or rollback so package source, project profile, protected paths, and share policy are checked together.

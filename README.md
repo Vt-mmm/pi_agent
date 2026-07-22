@@ -83,23 +83,45 @@ Inside an active Pi session, use slash commands for a session-local switch:
 
 ## Install
 
-```bash
-node --version  # >= 20
-npm install -g @earendil-works/pi-coding-agent@0.80.10
-```
-
-For production/team quickstarts and reproducible project settings, pin the current release tag or a reviewed commit:
+Supported for this release: macOS and Linux with Bash. Native Windows and WSL have not been verified. Node.js `>=22.19.0` is required.
 
 ```bash
-pi install git:github.com/Vt-mmm/pi_agent@v0.4.7
-pi update --extensions
+node --version  # >= 22.19.0
+npm install -g --ignore-scripts @earendil-works/pi-coding-agent@0.81.1
+npm install -g --ignore-scripts github:Vt-mmm/pi_agent#v0.4.8
+pi-company-install --stable --dry-run
+pi-company-install --stable
 ```
 
-From a checked-out platform repo, preview and apply the current stable source:
+The npm command installs the `pi-company-*` terminal helpers. `pi-company-install --stable` then resolves the helper's release tag to a commit SHA and installs the matching Pi package. In its output, `currentRelease` is the version of the terminal helper currently executing.
+
+If you only need to install the Pi package and do not need the `pi-company-*` terminal commands, pin the current release tag or a reviewed commit directly:
+
+```bash
+pi install git:github.com/Vt-mmm/pi_agent@v0.4.8
+```
+
+From a checked-out platform repo, the same helper is available as a script:
 
 ```bash
 bash scripts/install-global.sh --stable --dry-run
 bash scripts/install-global.sh --stable
+```
+
+For a full update, update the exact Pi host first, then the npm-global helper, then apply its matching stable Pi package:
+
+```bash
+npm install -g --ignore-scripts @earendil-works/pi-coding-agent@0.81.1
+npm install -g --ignore-scripts github:Vt-mmm/pi_agent#vX.Y.Z
+pi-company-install --stable --dry-run
+pi-company-install --stable
+```
+
+For rollback, read the target release's compatibility section and install its exact Pi host before changing the helper to `vPREVIOUS`; older hosts may reintroduce known dependency findings. If you intentionally want to change only the Pi package while keeping the terminal helper at its current version:
+
+```bash
+pi-company-install --version vX.Y.Z --resolve-tag --dry-run
+pi-company-install --version vX.Y.Z --resolve-tag
 ```
 
 Use latest only for a personal machine or sandbox where fast updates are acceptable:
@@ -366,7 +388,7 @@ Most projects do not need shell init. Use this only when you want to pre-create 
 ```bash
 bash /path/to/pi_agent/scripts/setup.sh /path/to/project \
   --profile be-readonly-fe \
-  --package-source git:github.com/Vt-mmm/pi_agent@v0.4.7 \
+  --package-source git:github.com/Vt-mmm/pi_agent@v0.4.8 \
   --mcp-preset core \
   --subagents-preset safe
 ```
@@ -476,11 +498,12 @@ This repository intentionally excludes:
 - [Quality benchmark guide](docs/quality-benchmark.md)
 - [Sensitive-data redaction benchmark](docs/security-redaction-benchmark.md)
 - [Runtime policy design](docs/runtime-policy-design.md)
+- [Security threat model](docs/security-threat-model.md)
 - [Package architecture notes](docs/package-architecture-notes.md)
 
 ## Maturity
 
-The current package version is read from package metadata and release tags. Personal machines may follow the unpinned package source when accepting ongoing updates; production/team quickstarts and committed project settings should pin an explicit tag such as `v0.4.7` or a reviewed commit.
+The current package version is read from package metadata and release tags. Personal machines may follow the unpinned package source when accepting ongoing updates; production/team quickstarts and committed project settings should pin an explicit tag such as `v0.4.8` or a reviewed commit.
 
 Ready for:
 
@@ -497,18 +520,22 @@ Application-level policy layer:
 
 - The guard extension is an accident-prevention layer for agent mistakes and common prompt-injection patterns.
 - Raw path-like tool access to protected paths is blocked before execution. This covers Pi built-ins such as `read`, `write`, `edit`, `grep`, `find`, `ls`, and custom/MCP tools when their input contains path-like strings, including nested objects, arrays, and `file://` URIs.
+- The default MCP proxy carrier is decoded only from bounded object-shaped JSON. Provider/action confirmation and protected/read-only path checks then apply to the effective MCP tool; malformed, oversized, scalar, array, or excessively nested proxy payloads fail closed.
 - Runtime permission profiles control autonomy: `read-only`, `workspace-write`, and `trusted-full-access`. The full-access profile is explicit and auditable; it does not disable protected-path checks, secret redaction, capability lock integrity, or destructive/external confirmations.
 - Protected paths are matched case-insensitively, existing aliases are resolved to their canonical repository path, and scope-aware filesystem tools reject repository escape or symbolic-link traversal.
 - Path-like strings are percent-decoded once before matching. Excessively nested tool input fails closed instead of being silently skipped.
 - Known content fields such as `content`, `query`, `pattern`, `text`, and `command` are excluded from generic path extraction to preserve normal search/edit behavior. Tool-specific checks still validate `grep.glob` and `find.pattern` when they explicitly target protected paths.
+- The ambiguous `source` field remains metadata for configured external providers and company tools, but is treated as a filesystem path for file-oriented tools and unknown/local tools; protected-path and read-scope checks then apply before execution.
 - Broad `grep`, `find`, and `ls` sweeps get result-filter backstops: protected file content lines or protected path metadata are redacted before the model sees output. Text tool results and JSON-like result details also pass through shared sensitive-data redaction; image, audio, and resource payloads are left intact.
-- The redaction release gate is a synthetic/internal benchmark for contextual recall, benign preservation, structured fields, and bounded large output. It is not an independent security audit; stronger assurance still requires a threat model, attack vectors, OS and shell matrix, parser fuzzing, symlink/path traversal tests, third-party review, issue/CVE handling, and LTS support policy. Opaque entropy without a credential-bearing context remains observational rather than being redacted indiscriminately.
+- The redaction release gate is a synthetic/internal benchmark for contextual recall, benign preservation, structured fields, and bounded large output. The public security threat model maps current assumptions, attack vectors, controls, and residual risks; it is not an independent audit. Stronger assurance still requires a broader OS/shell matrix, more parser fuzzing, continued symlink/path-traversal testing, third-party review, and an LTS/backport policy. Opaque entropy without a credential-bearing context remains observational rather than being redacted indiscriminately.
 - Raw `bash` access to protected paths is blocked through shell operand extraction. The guard covers partial shell globs, bare filenames, canonical symbolic-link aliases, and attached input/output redirections. `.pi/company-state/**` and `.pi/company-profile.json` are self-protected; use `company_context` and company task tools instead.
+- External writes launched through guarded shell tools are confirmation-gated as well as direct provider tools. This includes GitHub CLI write actions and non-read-only `curl`/`wget` forms, including common execution wrappers; known read/list/GET forms remain non-interactive.
 - Verify evidence is accepted only when it matches an observed Pi bash tool result after task start. The observed ledger is persisted under `.pi/company-state/observed-bash.jsonl`, so parent agents can validate bash results produced by guarded subagent processes.
 - Observed command identity is retained as a SHA-256 hash while sensitive command text is redacted at both the in-memory and persisted evidence boundaries.
 - Passing final gates require an observed exit `0` command that exactly matches one of the task/profile `verifyCommands`; ad-hoc commands such as `true`, `echo ok`, or `npm test || true` are advisory only.
 - Project memory files are private-by-default in generated projects; opt in to shared memory only after review/redaction.
 - It is not an OS sandbox or complete security boundary. It depends on the controlled tool paths and shell parsing that the platform observes, and it cannot stop another process with the same OS permissions from reading or writing outside the guard. For untrusted code, untrusted prompts, or adversarial workloads, run Pi inside an isolated container/VM with filesystem, process, network, and credential boundaries.
+- Release verification audits the small helper dependency tree separately from the exact Pi host and pinned optional add-ons at the high-severity gate. Upstream lower-severity findings are still reported and tracked; a green helper-only audit is not treated as proof that the deployed runtime tree is clean.
 
 Still requires project-specific validation for:
 
@@ -516,6 +543,10 @@ Still requires project-specific validation for:
 - provider/model changes with materially different behavior;
 - complex parallel writer workflows;
 - environments requiring hard filesystem, network, or process sandboxing outside Pi.
+
+## Security reports
+
+Report suspected vulnerabilities privately using the process in [SECURITY.md](SECURITY.md). Do not put live credentials, OAuth sessions, customer data, or exploit details in a public issue.
 
 ## License
 

@@ -741,6 +741,7 @@ function buildCoreIntegrity(root) {
   const files = [
     "package.json",
     "packages/pi-company-core/package.json",
+    "packages/pi-company-core/policies/base-policy.json",
     "packages/pi-company-core/capabilities/capability-core.js",
     "packages/pi-company-core/security/sensitive-data.js",
     "packages/pi-company-core/extensions/company-guard.ts",
@@ -800,7 +801,8 @@ export function resolveCapabilityProfileDocument(root, profile, options = {}) {
     filesystemRead: new Set(),
     filesystemWrite: new Set(),
     protectedPaths: new Set([...basePolicy.protectedPaths, ...(profile.protectedPaths ?? [])]),
-    shellProtectedPaths: new Set([...basePolicy.shellProtectedPaths, ...((profile.shellProtectedPaths ?? profile.protectedPaths) ?? [])]),
+    readOnlyPaths: new Set(profile.readOnlyPaths ?? []),
+    shellProtectedPaths: new Set([...basePolicy.shellProtectedPaths, ...((profile.shellProtectedPaths ?? profile.protectedPaths) ?? []), ...(profile.readOnlyPaths ?? [])]),
     networkDomains: new Set(),
     externalActions: new Set()
   };

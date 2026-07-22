@@ -14,7 +14,7 @@ Repo này phải chạy được cho nhiều project/domain khác nhau. Vì vậ
 
 | Use case | Package source |
 |---|---|
-| Team pinned release | `git:github.com/Vt-mmm/pi_agent@v0.4.7` |
+| Team pinned release | `git:github.com/Vt-mmm/pi_agent@v0.4.8` |
 | Personal/sandbox dev | `git:github.com/Vt-mmm/pi_agent` |
 | Enterprise npm | `npm:@company/pi-agent-platform@x.y.z` |
 | Local platform dev | `/path/to/pi_agent` |
@@ -25,8 +25,8 @@ Latest tiện cho máy cá nhân muốn nhận cập nhật nhanh. Pin tag/commi
 
 | Channel | Command | Target | Policy |
 |---|---|---|---|
-| `stable` | `bash scripts/install-global.sh --stable` | Current package tag, currently `v0.4.7` | Default for team rollout. |
-| `exact` | `bash scripts/install-global.sh --version vX.Y.Z` | Requested tag | Use for rollout, rollback, and incident recovery. |
+| `stable` | `bash scripts/install-global.sh --stable` | Helper release tag resolved to commit SHA, currently `v0.4.8` | Install the Pi package matching the helper. |
+| `exact` | `bash scripts/install-global.sh --version vX.Y.Z --resolve-tag` | Requested tag resolved to commit SHA | Pi-package-only rollout, rollback, and incident recovery. |
 | `dev` | `bash scripts/install-global.sh --dev` | Moving Git source | Personal/sandbox only; do not commit into project settings. |
 | `local` | `bash scripts/install-global.sh --local` | Current checkout path | Platform development only. |
 
@@ -34,8 +34,12 @@ Always preview non-local rollout first:
 
 ```bash
 bash scripts/install-global.sh --stable --dry-run
-bash scripts/install-global.sh --version vX.Y.Z --dry-run
+bash scripts/install-global.sh --version vX.Y.Z --resolve-tag --dry-run
 ```
+
+Stable and resolved exact installs fail closed when the release tag cannot be resolved from GitHub. The install output prints the tag, resolved commit, and final `git:` package source before running `pi install`.
+
+`currentRelease` trong output là version của npm-global helper đang chạy. `--version` chỉ đổi Pi package; nó không tự thay binary `pi-company-*` trên `PATH`.
 
 ## Repo root là Pi package
 
@@ -48,20 +52,26 @@ Root `package.json` có `pi` manifest trỏ tới:
 Do đó team có thể:
 
 ```bash
-pi install git:github.com/Vt-mmm/pi_agent
+pi install git:github.com/Vt-mmm/pi_agent@v0.4.8
 ```
 
-Không cần biết internal folder `packages/pi-company-core`.
+Không cần biết internal folder `packages/pi-company-core`. Source không pin chỉ dành cho personal/sandbox như bảng channel ở trên.
 
 ## Default team setup
 
 Team nên install global package một lần:
 
 ```bash
-npm install -g @earendil-works/pi-coding-agent@0.80.10
-pi install git:github.com/Vt-mmm/pi_agent@v0.4.7
-pi update --extensions
+node --version  # >= 22.19.0
+npm install -g --ignore-scripts @earendil-works/pi-coding-agent@0.81.1
+npm install -g --ignore-scripts github:Vt-mmm/pi_agent#v0.4.8
+pi-company-install --stable --dry-run
+pi-company-install --stable
 ```
+
+`pi install git:github.com/Vt-mmm/pi_agent@v0.4.8` vẫn hợp lệ nếu chỉ cần cài Pi package. Lệnh đó không tự tạo các binary terminal `pi-company-*`; muốn có helper global thì dùng `npm install -g --ignore-scripts github:Vt-mmm/pi_agent#v0.4.8`.
+
+Support matrix hiện tại: macOS/Linux với Bash đã được verify; native Windows và WSL chưa được verify cho release này. Chi tiết và version runtime nằm trong [release/install policy](release-install-policy.md).
 
 Sau đó project nào cũng:
 
@@ -91,7 +101,7 @@ Nếu muốn commit sẵn `.pi/company-profile.json` vào repo hoặc bootstrap 
 ```bash
 bash scripts/setup.sh /path/to/project \
   --profile be-readonly-fe \
-  --package-source git:github.com/Vt-mmm/pi_agent@v0.4.7 \
+  --package-source git:github.com/Vt-mmm/pi_agent@v0.4.8 \
   --mcp-preset core \
   --subagents-preset safe
 ```
@@ -154,47 +164,37 @@ Files không commit:
 - `.pi-subagents/`
 - `progress.md` nếu chỉ là scratch runtime
 
-## Release checklist
+## Release, update và rollback
 
-1. Update `CHANGELOG.md`, public docs links, and GitHub release notes.
-2. Run:
+[Release/install policy](release-install-policy.md) là checklist canonical duy nhất. Production docs chỉ được promote sau khi tag đã tồn tại và stable dry-run resolve đúng commit SHA.
 
-   ```bash
-   bash scripts/verify-local.sh
-   bash scripts/verify-local.sh --offline   # CI / clean machine without Pi login catalog
-   bash scripts/team-doctor.sh . --strict-share
-   bash scripts/quality-benchmark.sh . --init
-   bash scripts/setup.sh --global-only --package-source git:github.com/Vt-mmm/pi_agent@vX.Y.Z --dry-run
-   bash scripts/configure-mcp.sh --dry-run --preset popular --scope project --project .
-   bash scripts/configure-subagents.sh --dry-run --preset safe
-   pi list
-   ```
+Full platform update phải đồng bộ Pi host, npm-global helper và Pi package:
 
-3. Tag and publish release notes:
+```bash
+npm install -g --ignore-scripts @earendil-works/pi-coding-agent@0.81.1
+npm install -g --ignore-scripts github:Vt-mmm/pi_agent#vX.Y.Z
+pi-company-install --stable --dry-run
+pi-company-install --stable
+pi-company-doctor /path/to/project --strict-share
+```
 
-   ```bash
-   git tag vX.Y.Z
-   git push origin vX.Y.Z
-   gh release create vX.Y.Z --title "vX.Y.Z" --notes-file /tmp/pi-agent-vX.Y.Z-release-notes.md
-   ```
+Full rollback dùng cùng flow với target trước đó. Lấy exact host version từ release policy của target; không giả định host hiện tại tương thích với release cũ:
 
-4. Team updates:
+```bash
+TARGET_PI_VERSION=x.y.z
+npm install -g --ignore-scripts "@earendil-works/pi-coding-agent@$TARGET_PI_VERSION"
+npm install -g --ignore-scripts github:Vt-mmm/pi_agent#vPREVIOUS
+pi-company-install --stable --dry-run
+pi-company-install --stable
+pi-company-doctor /path/to/project --strict-share
+```
 
-   ```bash
-   bash scripts/install-global.sh --version vX.Y.Z --dry-run
-   bash scripts/install-global.sh --version vX.Y.Z
-   pi update --extensions
-   bash scripts/team-doctor.sh /path/to/project --strict-share
-   ```
+Nếu chủ ý chỉ đổi Pi package và giữ terminal helper hiện tại:
 
-5. Rollback, if needed:
-
-   ```bash
-   bash scripts/install-global.sh --version vPREVIOUS --dry-run
-   bash scripts/install-global.sh --version vPREVIOUS
-   pi update --extensions
-   bash scripts/team-doctor.sh /path/to/project --strict-share
-   ```
+```bash
+pi-company-install --version vX.Y.Z --resolve-tag --dry-run
+pi-company-install --version vX.Y.Z --resolve-tag
+```
 
 ## Security review
 

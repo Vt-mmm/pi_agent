@@ -68,7 +68,7 @@ while [[ $# -gt 0 ]]; do
 done
 
 if ! command -v pi >/dev/null 2>&1; then
-  echo "FAIL: pi is not on PATH. Install with: npm install -g @earendil-works/pi-coding-agent" >&2
+  echo "FAIL: pi is not on PATH. Run pi-company-setup or follow the exact-version install flow in docs/release-install-policy.md." >&2
   exit 1
 fi
 

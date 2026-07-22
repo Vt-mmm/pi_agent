@@ -20,6 +20,28 @@
     "**/.env.*",
     "**/*.pem",
     "**/*.key",
+    "**/node_modules/**",
+    "**/dist/**",
+    "**/build/**",
+    "**/.next/**",
+    "**/coverage/**"
+  ],
+  "readOnlyPaths": [
+    "backend/**",
+    "server/**",
+    "api/**",
+    "apps/api/**",
+    "apps/server/**",
+    "services/backend/**",
+    "**/migrations/**"
+  ],
+  "shellProtectedPaths": [
+    ".git/**",
+    "**/auth.json",
+    "**/.env",
+    "**/.env.*",
+    "**/*.pem",
+    "**/*.key",
     "backend/**",
     "server/**",
     "api/**",

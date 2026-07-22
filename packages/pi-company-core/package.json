@@ -1,6 +1,6 @@
 {
   "name": "@pi-agent/core",
-  "version": "0.4.7",
+  "version": "0.4.8",
   "type": "module",
   "private": true,
   "license": "MIT",
@@ -33,11 +33,14 @@
     }
   },
   "peerDependencies": {
-    "@earendil-works/pi-coding-agent": "0.80.10",
-    "typebox": "1.3.6"
+    "@earendil-works/pi-coding-agent": "0.81.1",
+    "typebox": "1.1.38"
   },
   "peerDependenciesMeta": {
     "@earendil-works/pi-coding-agent": { "optional": true },
     "typebox": { "optional": true }
+  },
+  "engines": {
+    "node": ">=22.19.0"
   }
 }

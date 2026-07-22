@@ -1,0 +1,22 @@
+# Pi local runtime
+company-state/
+task-inbox/
+todos/
+sessions/
+session-control/
+cache/
+.pi-subagents/
+progress.md
+benchmarks/
+npm/
+git/
+trust.json
+auth.json
+memory/MEMORY.md
+memory/memory_summary.md
+memory/state.sqlite
+memory/raw_memories.md
+memory/rollout_summaries/
+memory/extensions/ad_hoc/
+memory/local/
+memory/.git/

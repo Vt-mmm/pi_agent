@@ -21,6 +21,11 @@ Output:
 USAGE
 }
 
+if [[ "${1:-}" == "-h" || "${1:-}" == "--help" ]]; then
+  usage
+  exit 0
+fi
+
 PROJECT_PATH="${1:-}"
 if [[ -z "$PROJECT_PATH" ]]; then
   usage

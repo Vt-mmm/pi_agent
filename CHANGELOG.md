@@ -4,14 +4,81 @@ This file records release-facing changes for Pi Agent Platform. Copy the relevan
 
 ## Unreleased
 
+No release-facing changes yet.
+
+## v0.4.8 - 2026-07-22
+
+### Added
+
+- Added release/install policy docs covering stable, exact, dev, local, update, and rollback flows.
+- Added `pi-company-install` channel options and dry-run preview for stable, exact, dev, and local installs.
+- Added a package-root dispatcher for global `pi-company-*` terminal commands.
+- Added `readOnlyPaths` to project profiles for read-only contract areas such as backend code in `be-readonly-fe`.
+- Added regression tests for untrusted project profiles, profile-apply confirmation, shell/exec aliases, external-provider write confirmation, BE-readonly/FE-write paths, package distribution, and installer edge cases.
+- Added tag-triggered CI verification with immutable GitHub Action revisions on both Ubuntu and macOS.
+- Added release identity verification across root/core manifests, package lock, capability lock, changelog, docs badge, tag, and checked-out commit.
+- Added a separate high-severity dependency audit for the exact Pi host and pinned optional add-ons instead of relying only on the helper package lock.
+- Added a public threat model and `SECURITY.md` with private vulnerability reporting, supported-version, disclosure, and scope guidance.
+- Added weekly Dependabot checks for npm and GitHub Actions plus pinned CodeQL v4 analysis for JavaScript/TypeScript and workflow code.
+- Added a fail-closed Vercel project-link preflight so a stale local `.vercel` link cannot silently deploy docs to the wrong project.
+
 ### Changed
 
 - Clarified public docs comparison with Codex CLI and Claude Code: Pi Company Platform brings similar governance concepts into Pi and packages them for team workflows.
 - Reworded security docs to describe the guard as an application-level policy enforcement layer, not a complete security boundary or OS sandbox.
-- Split install guidance so production/team setup pins `v0.4.7`, while latest is reserved for personal/sandbox use.
+- Split install guidance so production/team setup uses pinned `v0.4.8` or resolved commit sources, while latest is reserved for personal/sandbox use.
 - Clarified that redaction benchmarks and internal review are not equivalent to an external security audit.
-- Added release/install policy docs covering stable, exact, dev, local, update, and rollback flows.
-- Added `pi-company-install` channel options and dry-run preview for stable, exact, dev, and local installs.
+- Raised the supported Node.js runtime contract to `>=22.19.0`.
+- Raised the pinned Pi Coding Agent and Pi AI compatibility from `0.80.10` to `0.81.1`, retaining exact `typebox` compatibility and removing the known high-severity transitive finding present in the previous host tree.
+- Updated CI to verify on Ubuntu and macOS with Node.js 22.19.0.
+- Documented the three-component Pi-host/helper/Pi-package lifecycle, exact rollback flow, supported operating systems, and post-tag Vercel promotion gate.
+- Made setup install or upgrade to the exact Pi host required by the release and made package installation reject an incompatible host version.
+- Expanded runtime dependency verification from the Pi host alone to the exact host plus all pinned optional add-ons.
+
+### Fixed
+
+- Hardened local profile loading so `.pi/company-profile.json` is ignored until the project is trusted, unless an operator explicitly sets `PI_COMPANY_PROFILE`.
+- Hardened `pi-company-install --stable` so it resolves the release tag to a commit SHA before install and fails closed when resolution is unavailable.
+- Bound the deterministic capability lock to `packages/pi-company-core/policies/base-policy.json`.
+- Fixed `be-readonly-fe` so backend paths are readable through safe path tools but remain blocked for writes and shell access.
+- Applied shell protected-path checks consistently to `bash`, `shell`, and `exec` tool aliases.
+- Inspected complete structured shell invocations, including `command`/`cmd` plus `args`, and rejected conflicting, malformed, oversized, or unbounded carriers before execution.
+- Added a generic human confirmation gate for external-provider write or ambiguous tools while preserving known safe reads such as `get_release`.
+- Rejected conflicting installer package selectors before any install command can run; the first explicit CLI selector now cleanly overrides environment defaults.
+- Routed global commands through a package-root dispatcher and converted missing shell-runner failures into controlled errors.
+- Isolated runtime-evidence test ledgers so test runs no longer leave new `pi-ledger-*` temporary directories.
+- Decoded the extension module URL before locating its package policy so installs under paths containing spaces or other URL-encoded characters load the intended policy.
+- Made project init resilient to npm package tarballs that omit its `.pi/.gitignore` dotfile by shipping an explicit fallback template.
+- Prevented project init from creating `.pi/.npmignore`, which could override repository ignore rules and re-include local Pi auth, trust, ledger, or database state in an npm package.
+- Applied provider confirmation and path policy to the default serialized MCP proxy carrier, including bounded JSON parsing and fail-closed malformed/deep payload handling.
+- Closed MCP path-policy bypasses across common aliases such as `filename`, `rootPath`, `source`, `cwd`, and `workingDirectory`; copy sources now use read scope while destinations use write/read-only scope, without treating provider metadata as a local path.
+- Applied protected-path checks to camelCase patch carriers and shell proxy variants such as `run`, `execute_process`, and command-bearing aliases before an operator confirmation can allow execution.
+- Added confirmation gates for shell-launched GitHub CLI writes and non-read-only HTTP client operations, including wrappers, executable aliases, line continuations, dynamic command construction, `xargs`, and FTP/SFTP quote commands, while keeping recognized reads and argument-only substitutions non-interactive.
+- Made every packaged `pi-company-* --help` command succeed without requiring a project path or creating project state.
+
+### Security
+
+- Project-local profiles are not trusted before Pi project trust is active.
+- Capability locks now detect base policy tampering, not only runtime source-file changes.
+- Tool-based profile apply requires operator confirmation before writing `.pi/company-profile.json` and `.pi/company-profile.lock.json`.
+- External provider writes are treated as human-gated actions even under `trusted-full-access`.
+- Unknown MCP/provider actions fail closed to operator confirmation; explicit safe reads remain non-interactive.
+- Release tags are verified in CI, installer stable channels resolve tags to commit SHAs, and dependency setup actions are pinned by commit SHA.
+- Tag CI binds stable resolution to the exact release commit and rejects environment attempts to substitute the helper's package-derived release tag.
+- Tag CI now requires an annotated tag whose peeled commit is the exact verified release commit; repository ruleset requirements are documented for immutable `v*` tags.
+- Release CI includes redaction, release identity, dependency, CodeQL, package-content, and cross-platform policy gates; Actions are pinned to reviewed commit SHAs.
+
+### Verification
+
+- `npm run verify`: pass.
+- `npm test`: 224/224 pass.
+- `npm run typecheck`: pass.
+- `npm run smoke`: pass.
+- Helper dependency audit (`npm audit --audit-level=high`): 0 vulnerabilities.
+- Exact Pi 0.81.1 host + pinned add-on audit (`npm run audit:runtime`): 0 high/critical findings; npm reports 11 moderate dependency paths across two upstream advisory families (`@hono/node-server` encoded-backslash traversal on Windows and `protobufjs` parser DoS).
+- `npm run benchmark:redaction`: pass.
+- `npm pack --dry-run --json`: 144 packaged files; required runtime files present and local trust/secret state excluded; all 12 installed terminal binaries pass `--help` from the built artifact.
+- Docs browser/runtime check: 0 duplicate IDs, broken anchors, broken images, unsafe blank targets, or console errors; mobile viewport has no horizontal overflow.
 
 ## v0.4.7 - 2026-07-22
 
@@ -32,10 +99,10 @@ This file records release-facing changes for Pi Agent Platform. Copy the relevan
 
 ### Changed
 
-- Install docs distinguish personal latest from reproducible team setup:
-  - personal/sandbox latest: `pi install git:github.com/Vt-mmm/pi_agent`;
-  - team/production pin: `pi install git:github.com/Vt-mmm/pi_agent@v0.4.7`.
-- Pinned install examples use the current release tag where a reproducible setup is expected.
+- Install docs now default to latest:
+  - `pi install git:github.com/Vt-mmm/pi_agent`
+  - `pi update --extensions`
+- Pinned install examples use placeholders such as `vX.Y.Z` and `x.y.z` instead of hardcoding an old release.
 - Runtime smoke verification now reads the current package version from `package.json` instead of hardcoding a tag.
 - Docs site, README, package metadata, and Vercel docs now point to `https://piagent.io.vn`.
 

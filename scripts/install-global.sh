@@ -4,7 +4,7 @@ set -euo pipefail
 usage() {
   cat <<'USAGE'
 Usage:
-  scripts/install-global.sh [--stable|--dev|--local|--channel <stable|dev|local>] [--version <tag>] [--package-source <source>] [--dry-run] [--with-mcp] [--mcp-preset <preset>] [--with-subagents] [--subagents-preset <preset>] [--with-web-access] [--with-herdr] [--model-scope <preset>]
+  scripts/install-global.sh [--stable|--dev|--local|--channel <stable|dev|local>] [--version <tag>] [--resolve-tag] [--package-source <source>] [--dry-run] [--with-mcp] [--mcp-preset <preset>] [--with-subagents] [--subagents-preset <preset>] [--with-web-access] [--with-herdr] [--model-scope <preset>]
 
 Purpose:
   Install the company Pi package into the current user's global Pi settings.
@@ -12,9 +12,10 @@ Purpose:
 Package source examples:
   # Recommended stable install: exact current release tag
   scripts/install-global.sh --stable
+  # Installs the stable tag after resolving it to a commit SHA.
 
   # Pin a specific release:
-  scripts/install-global.sh --version v0.4.7
+  scripts/install-global.sh --version v0.4.8 --resolve-tag
 
   # Preview the planned install/update without changing user config:
   scripts/install-global.sh --stable --dry-run
@@ -29,6 +30,8 @@ Package source examples:
   scripts/install-global.sh --dev
 
 Notes:
+  - `currentRelease` in output is the version of the terminal helper executing this command.
+  - Use exactly one package selector. The first CLI selector overrides environment defaults; a second selector fails closed.
   - OAuth is intentionally not automated. Run `pi` then `/login`.
   - Model scope is configured with Pi's native `enabledModels` so users choose via `/model`, Ctrl+L, `/scoped-models`, and Ctrl+P.
   - Herdr integration is optional and modifies user-level Herdr/Pi config.
@@ -39,15 +42,11 @@ USAGE
 }
 
 PLATFORM_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-CURRENT_RELEASE_TAG="${PI_COMPANY_CURRENT_RELEASE_TAG:-}"
-if [[ -z "$CURRENT_RELEASE_TAG" ]]; then
-  if command -v node >/dev/null 2>&1; then
-    CURRENT_RELEASE_TAG="$(node -e 'const fs = require("node:fs"); const p = JSON.parse(fs.readFileSync(process.argv[1], "utf8")); process.stdout.write(`v${p.version}`);' "$PLATFORM_ROOT/package.json")"
-  else
-    CURRENT_RELEASE_TAG="v0.4.7"
-  fi
-fi
+CURRENT_RELEASE_TAG=""
+EXPECTED_PI_VERSION=""
+EXPECTED_RELEASE_COMMIT="${PI_COMPANY_EXPECTED_RELEASE_COMMIT:-}"
 DEFAULT_REPO_SOURCE="git:github.com/Vt-mmm/pi_agent"
+DEFAULT_REPO_REMOTE_URL="https://github.com/Vt-mmm/pi_agent.git"
 PACKAGE_SOURCE="${PI_COMPANY_PACKAGE_SOURCE:-}"
 PACKAGE_VERSION="${PI_COMPANY_PACKAGE_VERSION:-}"
 RELEASE_CHANNEL="${PI_COMPANY_RELEASE_CHANNEL:-}"
@@ -64,12 +63,53 @@ DEFAULT_MODEL="openai-codex/gpt-5.5:xhigh"
 DRY_RUN=false
 FLOATING_PACKAGE_SOURCE=false
 RESOLVED_CHANNEL_LABEL="custom"
+RESOLVE_TAG=false
+RESOLVED_PACKAGE_TAG=""
+RESOLVED_PACKAGE_COMMIT=""
+CLI_PACKAGE_SELECTOR=""
 PI_MCP_ADAPTER_SOURCE="npm:pi-mcp-adapter@2.11.0"
 PI_SUBAGENTS_SOURCE="npm:pi-subagents@0.35.1"
 PI_WEB_ACCESS_SOURCE="npm:pi-web-access@0.13.0"
 PI_MCP_ADAPTER_INTEGRITY="sha512-4Y/eLbhbxnRih519dJUxMyQ5QASvPcdWyBlS8+dDXteAzaMuLnd4nMTWgoZw3JRIW+0r93KAQcz1Rbli4xCwEQ=="
 PI_SUBAGENTS_INTEGRITY="sha512-nIH6liO541FZ1RoeEu58Ligd59tiNw0/ODPgHh7uvx9Dk4UpWH08F84/l1+hXCzUgC85OCmyVtngWkZjcK94Cg=="
 PI_WEB_ACCESS_INTEGRITY="sha512-ny0bHisMWdobmu1hcMp/jqjaRh6pYrH7dctBK2CVyRF4ia7bP47RnOPYdG1yiks9ohtcanWir5Hl9EFap8h0zQ=="
+
+require_value() {
+  local option="$1"
+  local value="${2:-}"
+  if [[ -z "$value" || "$value" == --* ]]; then
+    echo "Missing value for $option" >&2
+    exit 2
+  fi
+}
+
+require_node_version() {
+  if ! command -v node >/dev/null 2>&1; then
+    echo "FAIL: Node.js >=22.19.0 is required." >&2
+    exit 1
+  fi
+  local node_version
+  node_version="$(node -p 'process.versions.node' 2>/dev/null || true)"
+  if ! node -e 'const [major, minor, patch] = process.versions.node.split(".").map(Number); process.exit(major > 22 || (major === 22 && (minor > 19 || (minor === 19 && patch >= 0))) ? 0 : 1);'; then
+    echo "FAIL: Node.js >=22.19.0 is required; found ${node_version:-unknown}." >&2
+    exit 1
+  fi
+}
+
+claim_cli_package_selector() {
+  local option="$1"
+  if [[ -n "$CLI_PACKAGE_SELECTOR" ]]; then
+    echo "FAIL: only one CLI package selector is allowed; received $CLI_PACKAGE_SELECTOR before $option." >&2
+    exit 2
+  fi
+
+  CLI_PACKAGE_SELECTOR="$option"
+  # Environment values are defaults. The first explicit CLI selector replaces
+  # all of them; any later CLI selector is rejected above.
+  PACKAGE_SOURCE=""
+  PACKAGE_VERSION=""
+  RELEASE_CHANNEL=""
+}
 
 case "${PI_COMPANY_DRY_RUN:-}" in
   1|true|TRUE|yes|YES)
@@ -108,41 +148,76 @@ verify_npm_integrity() {
   fi
 }
 
+resolve_git_tag_commit() {
+  local tag="$1"
+  if [[ -z "$tag" ]]; then
+    echo "FAIL: tag is required for release resolution." >&2
+    exit 2
+  fi
+  if [[ "$tag" =~ ^[0-9a-fA-F]{40}$ ]]; then
+    echo "FAIL: --resolve-tag expects a tag, not a commit SHA: $tag" >&2
+    exit 2
+  fi
+  if [[ "$tag" == *".."* || "$tag" == *"~"* || "$tag" == *"^"* || "$tag" == *":"* || "$tag" == *" "* ]]; then
+    echo "FAIL: unsupported tag syntax for release resolution: $tag" >&2
+    exit 2
+  fi
+  if ! command -v git >/dev/null 2>&1; then
+    echo "FAIL: git is required to resolve release tag $tag to a commit SHA." >&2
+    exit 1
+  fi
+
+  local refs commit=""
+  refs="$(git ls-remote --tags "$DEFAULT_REPO_REMOTE_URL" "refs/tags/${tag}" "refs/tags/${tag}^{}" 2>/dev/null || true)"
+  if [[ -z "$refs" ]]; then
+    echo "FAIL: could not resolve release tag $tag from $DEFAULT_REPO_REMOTE_URL." >&2
+    exit 1
+  fi
+
+  commit="$(printf '%s\n' "$refs" | awk -v exact="refs/tags/${tag}^{}" '$2 == exact { print $1; exit }')"
+  if [[ -z "$commit" ]]; then
+    commit="$(printf '%s\n' "$refs" | awk -v exact="refs/tags/${tag}" '$2 == exact { print $1; exit }')"
+  fi
+  if [[ ! "$commit" =~ ^[0-9a-fA-F]{40}$ ]]; then
+    echo "FAIL: release tag $tag did not resolve to a valid commit SHA." >&2
+    exit 1
+  fi
+
+  printf '%s\n' "$commit"
+}
+
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --package-source)
-      if [[ $# -lt 2 ]]; then
-        echo "Missing value for --package-source" >&2
-        exit 2
-      fi
+      require_value "$1" "${2:-}"
+      claim_cli_package_selector "$1"
       PACKAGE_SOURCE="$2"
       shift 2
       ;;
     --channel)
-      if [[ $# -lt 2 ]]; then
-        echo "Missing value for --channel" >&2
-        exit 2
-      fi
+      require_value "$1" "${2:-}"
+      claim_cli_package_selector "$1"
       RELEASE_CHANNEL="$2"
       shift 2
       ;;
     --stable)
+      claim_cli_package_selector "$1"
       RELEASE_CHANNEL="stable"
       shift
       ;;
     --dev)
+      claim_cli_package_selector "$1"
       RELEASE_CHANNEL="dev"
       shift
       ;;
     --local)
+      claim_cli_package_selector "$1"
       RELEASE_CHANNEL="local"
       shift
       ;;
     --version|--tag)
-      if [[ $# -lt 2 ]]; then
-        echo "Missing value for $1" >&2
-        exit 2
-      fi
+      require_value "$1" "${2:-}"
+      claim_cli_package_selector "$1"
       PACKAGE_VERSION="$2"
       shift 2
       ;;
@@ -150,12 +225,17 @@ while [[ $# -gt 0 ]]; do
       DRY_RUN=true
       shift
       ;;
+    --resolve-tag)
+      RESOLVE_TAG=true
+      shift
+      ;;
     --with-mcp)
       WITH_MCP=true
       shift
       ;;
     --mcp-preset)
-      MCP_PRESET="${2:-}"
+      require_value "$1" "${2:-}"
+      MCP_PRESET="$2"
       shift 2
       ;;
     --with-subagents)
@@ -163,11 +243,13 @@ while [[ $# -gt 0 ]]; do
       shift
       ;;
     --subagents-preset)
-      SUBAGENTS_PRESET="${2:-}"
+      require_value "$1" "${2:-}"
+      SUBAGENTS_PRESET="$2"
       shift 2
       ;;
     --subagents-model-scope)
-      SUBAGENTS_MODEL_SCOPE="${2:-}"
+      require_value "$1" "${2:-}"
+      SUBAGENTS_MODEL_SCOPE="$2"
       shift 2
       ;;
     --with-web-access)
@@ -179,11 +261,13 @@ while [[ $# -gt 0 ]]; do
       shift
       ;;
     --model-scope)
-      MODEL_SCOPE_PRESET="${2:-}"
+      require_value "$1" "${2:-}"
+      MODEL_SCOPE_PRESET="$2"
       shift 2
       ;;
     --default-model)
-      DEFAULT_MODEL="${2:-}"
+      require_value "$1" "${2:-}"
+      DEFAULT_MODEL="$2"
       shift 2
       ;;
     --no-model-scope)
@@ -202,10 +286,22 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
+require_node_version
+CURRENT_RELEASE_TAG="$(node -e 'const fs = require("node:fs"); const p = JSON.parse(fs.readFileSync(process.argv[1], "utf8")); process.stdout.write(`v${p.version}`);' "$PLATFORM_ROOT/package.json")"
+EXPECTED_PI_VERSION="$(node -e 'const fs = require("node:fs"); const p = JSON.parse(fs.readFileSync(process.argv[1], "utf8")); process.stdout.write(p.peerDependencies?.["@earendil-works/pi-coding-agent"] ?? "");' "$PLATFORM_ROOT/package.json")"
+if [[ ! "$EXPECTED_PI_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+([+-][0-9A-Za-z.-]+)?$ ]]; then
+  echo "FAIL: package.json must pin an exact Pi Coding Agent version." >&2
+  exit 1
+fi
+
 resolve_package_source() {
   if [[ -n "$PACKAGE_SOURCE" ]]; then
     if [[ -n "$RELEASE_CHANNEL" || -n "$PACKAGE_VERSION" ]]; then
       echo "FAIL: use either --package-source or --channel/--version, not both." >&2
+      exit 2
+    fi
+    if [[ "$RESOLVE_TAG" == true ]]; then
+      echo "FAIL: --resolve-tag only works with --stable or --version <tag>." >&2
       exit 2
     fi
     RESOLVED_CHANNEL_LABEL="custom"
@@ -218,26 +314,46 @@ resolve_package_source() {
   fi
 
   if [[ -n "$PACKAGE_VERSION" ]]; then
-    PACKAGE_SOURCE="${DEFAULT_REPO_SOURCE}@${PACKAGE_VERSION}"
+    if [[ "$RESOLVE_TAG" == true ]]; then
+      RESOLVED_PACKAGE_TAG="$PACKAGE_VERSION"
+      RESOLVED_PACKAGE_COMMIT="$(resolve_git_tag_commit "$PACKAGE_VERSION")"
+      PACKAGE_SOURCE="${DEFAULT_REPO_SOURCE}@${RESOLVED_PACKAGE_COMMIT}"
+    else
+      PACKAGE_SOURCE="${DEFAULT_REPO_SOURCE}@${PACKAGE_VERSION}"
+    fi
     RESOLVED_CHANNEL_LABEL="exact"
     return
   fi
 
   case "$RELEASE_CHANNEL" in
     stable)
-      PACKAGE_SOURCE="${DEFAULT_REPO_SOURCE}@${CURRENT_RELEASE_TAG}"
+      RESOLVED_PACKAGE_TAG="$CURRENT_RELEASE_TAG"
+      RESOLVED_PACKAGE_COMMIT="$(resolve_git_tag_commit "$CURRENT_RELEASE_TAG")"
+      PACKAGE_SOURCE="${DEFAULT_REPO_SOURCE}@${RESOLVED_PACKAGE_COMMIT}"
       RESOLVED_CHANNEL_LABEL="stable"
       ;;
     dev|latest)
+      if [[ "$RESOLVE_TAG" == true ]]; then
+        echo "FAIL: --resolve-tag cannot be used with the floating dev/latest channel." >&2
+        exit 2
+      fi
       PACKAGE_SOURCE="$DEFAULT_REPO_SOURCE"
       FLOATING_PACKAGE_SOURCE=true
       RESOLVED_CHANNEL_LABEL="dev"
       ;;
     local)
+      if [[ "$RESOLVE_TAG" == true ]]; then
+        echo "FAIL: --resolve-tag cannot be used with the local channel." >&2
+        exit 2
+      fi
       PACKAGE_SOURCE="$PLATFORM_ROOT"
       RESOLVED_CHANNEL_LABEL="local"
       ;;
     "")
+      if [[ "$RESOLVE_TAG" == true ]]; then
+        echo "FAIL: --resolve-tag requires --stable or --version <tag>." >&2
+        exit 2
+      fi
       PACKAGE_SOURCE="$PLATFORM_ROOT"
       RESOLVED_CHANNEL_LABEL="local"
       echo "WARN: No exact package source provided. Installing from local path." >&2
@@ -253,6 +369,19 @@ resolve_package_source() {
 
 resolve_package_source
 
+if [[ -n "$EXPECTED_RELEASE_COMMIT" ]]; then
+  if [[ ! "$EXPECTED_RELEASE_COMMIT" =~ ^[0-9a-fA-F]{40}$ ]]; then
+    echo "FAIL: PI_COMPANY_EXPECTED_RELEASE_COMMIT must be a 40-character commit SHA." >&2
+    exit 2
+  fi
+  normalized_resolved_commit="$(printf '%s' "$RESOLVED_PACKAGE_COMMIT" | tr '[:upper:]' '[:lower:]')"
+  normalized_expected_commit="$(printf '%s' "$EXPECTED_RELEASE_COMMIT" | tr '[:upper:]' '[:lower:]')"
+  if [[ -z "$RESOLVED_PACKAGE_COMMIT" || "$normalized_resolved_commit" != "$normalized_expected_commit" ]]; then
+    echo "FAIL: resolved commit does not match the required release commit." >&2
+    exit 1
+  fi
+fi
+
 if [[ "$FLOATING_PACKAGE_SOURCE" == true ]]; then
   echo "WARN: Installing a floating dev/latest source. Use only for personal machines or sandbox testing." >&2
 else
@@ -265,14 +394,31 @@ if ! command -v pi >/dev/null 2>&1; then
   else
   echo "FAIL: pi is not on PATH." >&2
   echo "Install Pi first, then rerun this script." >&2
-    echo "Expected command on npm-based installs: npm install -g @earendil-works/pi-coding-agent@0.80.10" >&2
+    echo "Expected command on npm-based installs: npm install -g --ignore-scripts @earendil-works/pi-coding-agent@0.81.1" >&2
   exit 1
+  fi
+else
+  pi_version_output="$(pi --version 2>/dev/null || true)"
+  current_pi_version=""
+  if [[ "$pi_version_output" =~ ([0-9]+\.[0-9]+\.[0-9]+([+-][0-9A-Za-z.-]+)?) ]]; then
+    current_pi_version="${BASH_REMATCH[1]}"
+  fi
+  if [[ "$current_pi_version" != "$EXPECTED_PI_VERSION" ]]; then
+    echo "FAIL: Pi Coding Agent $EXPECTED_PI_VERSION is required; found ${current_pi_version:-${pi_version_output:-unknown}}." >&2
+    echo "Install the supported host with: npm install -g --ignore-scripts @earendil-works/pi-coding-agent@$EXPECTED_PI_VERSION" >&2
+    exit 1
   fi
 fi
 
 echo "Installing Pi Company Platform package:"
 echo "  channel: $RESOLVED_CHANNEL_LABEL"
-echo "  currentRelease: $CURRENT_RELEASE_TAG"
+echo "  currentRelease: $CURRENT_RELEASE_TAG (helper package version)"
+if [[ -n "$RESOLVED_PACKAGE_TAG" ]]; then
+  echo "  tag: $RESOLVED_PACKAGE_TAG"
+fi
+if [[ -n "$RESOLVED_PACKAGE_COMMIT" ]]; then
+  echo "  resolvedCommit: $RESOLVED_PACKAGE_COMMIT"
+fi
 echo "  source: $PACKAGE_SOURCE"
 run_cmd pi install "$PACKAGE_SOURCE"
 

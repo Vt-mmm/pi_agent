@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { describe, it } from "node:test";
+import { after, describe, it } from "node:test";
 import {
   appendObservedBashResult,
   claimedExitMatchesObserved,
@@ -13,6 +13,24 @@ import {
   observedBashResultFromToolResultEvent,
   readObservedBashResults
 } from "../packages/pi-company-core/extensions/runtime-evidence.js";
+
+const temporaryRoots = new Set();
+
+after(() => {
+  for (const root of temporaryRoots) {
+    if (path.dirname(root) !== os.tmpdir() || !path.basename(root).startsWith("pi-ledger-")) continue;
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+function createLedgerFixture() {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "pi-ledger-"));
+  temporaryRoots.add(root);
+  return {
+    root,
+    file: path.join(root, "observed-bash.jsonl")
+  };
+}
 
 describe("runtime verify evidence ledger", () => {
   const joined = (...parts) => parts.join("");
@@ -121,8 +139,7 @@ describe("runtime verify evidence ledger", () => {
   });
 
   it("matches verify evidence written by another process through persisted JSONL", () => {
-    const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "pi-ledger-"));
-    const file = path.join(tmp, "observed-bash.jsonl");
+    const { file } = createLedgerFixture();
 
     appendObservedBashResult(file, {
       cwd: "/repo",
@@ -148,8 +165,7 @@ describe("runtime verify evidence ledger", () => {
   });
 
   it("does not evict persisted evidence after more than 300 later bash results", () => {
-    const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "pi-ledger-"));
-    const file = path.join(tmp, "observed-bash.jsonl");
+    const { file } = createLedgerFixture();
 
     appendObservedBashResult(file, {
       cwd: "/repo",
@@ -180,8 +196,7 @@ describe("runtime verify evidence ledger", () => {
   });
 
   it("persists command hashes while keeping redacted command text for audit", () => {
-    const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "pi-ledger-"));
-    const file = path.join(tmp, "observed-bash.jsonl");
+    const { file } = createLedgerFixture();
     const rawCommand = joined("DATABASE", "_PASSWORD", "=", "CorrectHorse42", " npm test");
 
     appendObservedBashResult(file, {
@@ -207,8 +222,7 @@ describe("runtime verify evidence ledger", () => {
   });
 
   it("redacts command text at the in-memory and persistence boundaries", () => {
-    const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "pi-ledger-"));
-    const file = path.join(tmp, "observed-bash.jsonl");
+    const { file } = createLedgerFixture();
     const rawCommand = joined("DATABASE", "_PASSWORD", "=", "CorrectHorse42", " npm test");
     const ledger = createBashResultLedger();
 

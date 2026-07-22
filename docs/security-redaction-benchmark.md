@@ -39,14 +39,12 @@ Unlabeled high-entropy values are not automatically treated as secrets. A generi
 
 This benchmark measures pattern-based output containment. It does not authorize secret handling and does not turn the extension into an operating-system sandbox. Workloads that execute untrusted code or process untrusted prompts still require process, filesystem, network, and credential isolation.
 
-Before using redaction results as a strong security claim, complete and maintain:
+The current scope, assumptions, controls, and residual risks are documented in [security-threat-model.md](security-threat-model.md), and private intake/disclosure is documented in [SECURITY.md](../SECURITY.md). Before using redaction results as a stronger assurance claim, continue to complete and maintain:
 
-- a written threat model and attack-vector catalog;
 - Linux, macOS, Windows, and shell-behavior compatibility matrix;
 - parser fuzzing for shell/path extraction;
 - symlink and path-traversal adversarial tests;
 - third-party audit or independent review;
-- issue/CVE intake and disclosure process;
 - LTS support and backport policy for affected releases.
 
 When extending the detector:

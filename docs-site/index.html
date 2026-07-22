@@ -798,7 +798,7 @@
         <span>Pi Company Platform</span>
       </a>
       <div class="top-actions">
-        <span class="pill"><span class="pill-dot"></span>stable docs</span>
+        <span class="pill"><span class="pill-dot"></span>v0.4.8 docs</span>
         <a class="button social" href="https://github.com/Vt-mmm/pi_agent" target="_blank" rel="noopener noreferrer" aria-label="Mở GitHub repository">
           <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
             <path d="M7 17 17 7M9 7h8v8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
@@ -934,11 +934,11 @@
               <article class="step">
                 <div>
                   <h3>Chuẩn bị runtime</h3>
-                  <p>Dùng Node.js 20 trở lên và Pi Coding Agent <span class="inline-code">0.80.10</span>. Pi Company Platform <span class="inline-code">v0.4.7</span> đang pin compatibility với runtime này qua package metadata.</p>
+                  <p>Dùng Node.js 22.19.0 trở lên và Pi Coding Agent <span class="inline-code">0.81.1</span>. macOS/Linux với Bash đã được verify; native Windows và WSL chưa được verify. Pi Company Platform <span class="inline-code">v0.4.8</span> đang pin compatibility với runtime này.</p>
                   <div class="command-card">
-                    <header><span>Runtime prerequisites</span><button class="clip-btn" data-clip="node --version">Lấy lệnh</button></header>
-                    <pre><code>node --version  # &gt;= 20
-npm install -g @earendil-works/pi-coding-agent@0.80.10
+                    <header><span>Runtime prerequisites</span><button class="clip-btn" data-clip="node --version&#10;npm install -g --ignore-scripts @earendil-works/pi-coding-agent@0.81.1&#10;pi --version">Lấy lệnh</button></header>
+                    <pre><code>node --version  # &gt;= 22.19.0
+npm install -g --ignore-scripts @earendil-works/pi-coding-agent@0.81.1
 pi --version</code></pre>
                   </div>
                 </div>
@@ -946,11 +946,35 @@ pi --version</code></pre>
               <article class="step">
                 <div>
                   <h3>Cài Pi Company Platform có pin</h3>
-                  <p>Team, production và docs quickstart nên pin release tag hoặc commit cụ thể. Máy cá nhân có thể dùng source không pin nếu chấp nhận cập nhật theo nhánh hiện tại.</p>
+                  <p>Team nên cài npm-global helper trước, rồi dùng helper đó resolve stable tag thành commit SHA và cài Pi package matching. Trong output, <span class="inline-code">currentRelease</span> là version của terminal helper đang chạy. Direct Pi install chỉ dùng khi không cần command <span class="inline-code">pi-company-*</span>.</p>
                   <div class="command-card">
-                    <header><span>Pinned install</span><button class="clip-btn" data-clip="pi install git:github.com/Vt-mmm/pi_agent@v0.4.7">Lấy lệnh</button></header>
-                    <pre><code>pi install git:github.com/Vt-mmm/pi_agent@v0.4.7
-pi update --extensions</code></pre>
+                    <header><span>Stable helper install</span><button class="clip-btn" data-clip="npm install -g --ignore-scripts github:Vt-mmm/pi_agent#v0.4.8&#10;pi-company-install --stable --dry-run&#10;pi-company-install --stable">Lấy lệnh</button></header>
+                    <pre><code>npm install -g --ignore-scripts github:Vt-mmm/pi_agent#v0.4.8
+pi-company-install --stable --dry-run
+pi-company-install --stable</code></pre>
+                  </div>
+                  <div class="command-card">
+                    <header><span>Direct Pi package only</span><button class="clip-btn" data-clip="pi install git:github.com/Vt-mmm/pi_agent@v0.4.8">Lấy lệnh</button></header>
+                    <pre><code>pi install git:github.com/Vt-mmm/pi_agent@v0.4.8</code></pre>
+                  </div>
+                </div>
+              </article>
+
+              <article class="step">
+                <div>
+                  <h3>Update hoặc rollback đúng cả ba thành phần</h3>
+                  <p>Full update/rollback phải dùng exact Pi host của release target, đổi npm-global helper, rồi apply stable Pi package từ chính helper đó. Lệnh <span class="inline-code">--version ... --resolve-tag</span> chỉ đổi Pi package và giữ host/helper hiện tại.</p>
+                  <div class="command-card">
+                    <header><span>Full platform target</span><button class="clip-btn" data-clip="npm install -g --ignore-scripts @earendil-works/pi-coding-agent@0.81.1&#10;npm install -g --ignore-scripts github:Vt-mmm/pi_agent#vX.Y.Z&#10;pi-company-install --stable --dry-run&#10;pi-company-install --stable">Lấy lệnh</button></header>
+                    <pre><code>npm install -g --ignore-scripts @earendil-works/pi-coding-agent@0.81.1
+npm install -g --ignore-scripts github:Vt-mmm/pi_agent#vX.Y.Z
+pi-company-install --stable --dry-run
+pi-company-install --stable</code></pre>
+                  </div>
+                  <div class="command-card">
+                    <header><span>Pi package only</span><button class="clip-btn" data-clip="pi-company-install --version vX.Y.Z --resolve-tag --dry-run&#10;pi-company-install --version vX.Y.Z --resolve-tag">Lấy lệnh</button></header>
+                    <pre><code>pi-company-install --version vX.Y.Z --resolve-tag --dry-run
+pi-company-install --version vX.Y.Z --resolve-tag</code></pre>
                   </div>
                 </div>
               </article>
@@ -960,7 +984,7 @@ pi update --extensions</code></pre>
                   <h3>Latest chỉ cho cá nhân/sandbox</h3>
                   <p>Dùng latest khi muốn nhận thay đổi nhanh trên máy riêng. Khi đưa vào repo/team, đổi sang tag hoặc commit đã review để mọi developer nhận cùng một cấu hình.</p>
                   <div class="command-card">
-                    <header><span>Personal latest</span><button class="clip-btn" data-clip="pi install git:github.com/Vt-mmm/pi_agent">Lấy lệnh</button></header>
+                    <header><span>Personal latest</span><button class="clip-btn" data-clip="pi install git:github.com/Vt-mmm/pi_agent&#10;pi update --extensions">Lấy lệnh</button></header>
                     <pre><code>pi install git:github.com/Vt-mmm/pi_agent
 pi update --extensions</code></pre>
                   </div>
@@ -1031,7 +1055,7 @@ pi</code></pre>
                   <h3>Verify trước khi handoff</h3>
                   <p>Final gate chỉ tin kết quả command đã chạy thật, exit 0, và khớp verify plan. Với setup team, chạy doctor và smoke test sau khi pin hoặc nâng version.</p>
                   <div class="command-card">
-                    <header><span>Doctor + smoke</span><button class="clip-btn" data-clip="pi-company-doctor /path/to/project --strict-share">Lấy lệnh</button></header>
+                    <header><span>Doctor + smoke</span><button class="clip-btn" data-clip="pi-company-doctor /path/to/project --strict-share&#10;npm run smoke&#10;npm run verify&#10;npm test&#10;npm run typecheck">Lấy lệnh</button></header>
                     <pre><code>pi-company-doctor /path/to/project --strict-share
 # in pi_agent source repo:
 npm run smoke
@@ -1105,7 +1129,7 @@ npm run typecheck</code></pre>
               </article>
               <article class="card">
                 <h3>Human-action gate</h3>
-                <p>Destructive hoặc external-provider action vẫn cần operator xác nhận rõ, kể cả khi full-access đang bật.</p>
+                <p>Destructive hoặc external-provider action vẫn cần operator xác nhận rõ, kể cả khi full-access đang bật. Gate áp dụng cho direct tool, MCP proxy đã decode và các shell form như GitHub CLI write hoặc HTTP non-GET.</p>
               </article>
               <article class="card">
                 <h3>Verify evidence</h3>
@@ -1125,7 +1149,12 @@ npm run typecheck</code></pre>
 
             <div class="callout">
               <strong>Redaction cần kiểm toán độc lập</strong>
-              <p>Các benchmark hiện tại là kiểm thử synthetic/internal cho regression và release gate, chưa tương đương external security audit. Trước khi xem redaction như bảo đảm an toàn mạnh, cần threat model rõ, attack vectors, matrix Linux/macOS/Windows và shell, fuzz parser, kiểm tra symlink/path traversal, third-party audit, quy trình issue/CVE và chính sách LTS support.</p>
+              <p>Các benchmark hiện tại là kiểm thử synthetic/internal cho regression và release gate, chưa tương đương external security audit. Dự án công khai <a href="https://github.com/Vt-mmm/pi_agent/blob/main/docs/security-threat-model.md" target="_blank" rel="noopener noreferrer">threat model và attack-vector map</a>; phạm vi OS/shell rộng hơn, parser fuzzing, third-party audit, signed provenance và LTS vẫn là các mức bảo đảm cao hơn chưa được claim.</p>
+            </div>
+
+            <div class="callout">
+              <strong>Dependency gate tách hai lớp</strong>
+              <p>Release kiểm toán riêng dependency tree nhỏ của terminal helper và cây exact Pi host + pinned add-on. Gate hiện có 0 high/critical; npm vẫn báo 11 moderate dependency paths thuộc hai advisory upstream: encoded-backslash path traversal trên Windows trong Hono adapter và protobuf parser DoS. Native Windows chưa nằm trong matrix hỗ trợ, nhưng dự án vẫn theo dõi cả hai thay vì gọi runtime là “0 vulnerability”.</p>
             </div>
           </section>
 
@@ -1393,10 +1422,16 @@ npm run typecheck</code></pre>
                 <pre><code>pi-company-setup --mcp-preset core --subagents-preset safe</code></pre>
               </article>
               <article class="command-card">
-                <header><span>Release/update</span><button class="clip-btn" data-clip="pi-company-install --stable --dry-run">Lấy lệnh</button></header>
-                <pre><code>pi-company-install --stable --dry-run
-pi-company-install --stable
-pi-company-install --version v0.4.7</code></pre>
+                <header><span>Full update</span><button class="clip-btn" data-clip="npm install -g --ignore-scripts @earendil-works/pi-coding-agent@0.81.1&#10;npm install -g --ignore-scripts github:Vt-mmm/pi_agent#vX.Y.Z&#10;pi-company-install --stable --dry-run&#10;pi-company-install --stable">Lấy lệnh</button></header>
+                <pre><code>npm install -g --ignore-scripts @earendil-works/pi-coding-agent@0.81.1
+npm install -g --ignore-scripts github:Vt-mmm/pi_agent#vX.Y.Z
+pi-company-install --stable --dry-run
+pi-company-install --stable</code></pre>
+              </article>
+              <article class="command-card">
+                <header><span>Pi package only</span><button class="clip-btn" data-clip="pi-company-install --version vX.Y.Z --resolve-tag --dry-run&#10;pi-company-install --version vX.Y.Z --resolve-tag">Lấy lệnh</button></header>
+                <pre><code>pi-company-install --version vX.Y.Z --resolve-tag --dry-run
+pi-company-install --version vX.Y.Z --resolve-tag</code></pre>
               </article>
               <article class="command-card">
                 <header><span>Init project</span><button class="clip-btn" data-clip="pi-company-init /path/to/project">Lấy lệnh</button></header>
@@ -1412,12 +1447,12 @@ pi-company-install --version v0.4.7</code></pre>
 pi-company-auto --full-access -p "Run the trusted local benchmark suite."</code></pre>
               </article>
               <article class="command-card">
-                <header><span>Capabilities</span><button class="clip-btn" data-clip="pi-company-capabilities catalog --check">Lấy lệnh</button></header>
+                <header><span>Capabilities</span><button class="clip-btn" data-clip="pi-company-capabilities catalog --check&#10;pi-company-capabilities doctor --profile .pi/company-profile.json">Lấy lệnh</button></header>
                 <pre><code>pi-company-capabilities catalog --check
 pi-company-capabilities doctor --profile .pi/company-profile.json</code></pre>
               </article>
               <article class="command-card">
-                <header><span>Verification</span><button class="clip-btn" data-clip="npm run verify">Lấy lệnh</button></header>
+                <header><span>Verification</span><button class="clip-btn" data-clip="npm run verify&#10;npm test&#10;npm run typecheck">Lấy lệnh</button></header>
                 <pre><code>npm run verify
 npm test
 npm run typecheck</code></pre>
@@ -1446,6 +1481,11 @@ npm run typecheck</code></pre>
             <div class="callout ok-callout">
               <strong>Chuẩn handoff</strong>
               <p>Final response nên nói ngắn: đã đổi gì, verify nào đã chạy, có dùng subagent không, và còn rủi ro hoặc next step nào cần người review.</p>
+            </div>
+
+            <div class="callout">
+              <strong>Release docs gate</strong>
+              <p>Version docs mới chỉ được promote lên Vercel sau khi tag-triggered CI pass và stable dry-run resolve đúng commit SHA. Phải promote đúng tagged commit, không chèn merge commit hay docs-only edit khác. Domain canonical là <span class="inline-code">piagent.io.vn</span>; apex phải là Vercel primary và <span class="inline-code">www</span> redirect về apex.</p>
             </div>
           </section>
 

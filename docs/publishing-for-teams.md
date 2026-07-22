@@ -8,19 +8,19 @@ Team khác có thể cài cùng một Pi platform mà không lấy secret của 
 
 ### Git repo
 
-Dùng cho global latest:
-
-```bash
-pi install git:github.com/Vt-mmm/pi_agent
-```
-
-Dùng cho team/repo cần reproducible lock:
+Dùng tag hoặc reviewed commit cho team/repo cần reproducible lock:
 
 ```bash
 pi install git:github.com/Vt-mmm/pi_agent@vX.Y.Z
 ```
 
-Pin tag hoặc commit cho `.pi/settings.json` đã commit vào project.
+Pin tag hoặc commit cho `.pi/settings.json` đã commit vào project. Luồng cài host, terminal helper, Pi package, update và rollback canonical nằm tại [release/install policy](release-install-policy.md).
+
+Moving latest chỉ dành cho máy cá nhân hoặc sandbox chấp nhận thay đổi không đồng bộ:
+
+```bash
+pi install git:github.com/Vt-mmm/pi_agent
+```
 
 ### npm private package
 
@@ -54,8 +54,8 @@ pi install /path/to/pi_agent
 
 ## Team onboarding
 
-1. Install Pi.
-2. Install package.
+1. Install exact Pi host version declared by the target release.
+2. Install the pinned terminal helper and matching Pi package.
 3. Login OAuth provider.
 4. Run `pi` in the target project.
 5. Run `/onboard-project`.
