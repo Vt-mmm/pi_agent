@@ -14,12 +14,28 @@ Repo này phải chạy được cho nhiều project/domain khác nhau. Vì vậ
 
 | Use case | Package source |
 |---|---|
-| Personal/sandbox latest | `git:github.com/Vt-mmm/pi_agent` |
 | Team pinned release | `git:github.com/Vt-mmm/pi_agent@v0.4.7` |
+| Personal/sandbox dev | `git:github.com/Vt-mmm/pi_agent` |
 | Enterprise npm | `npm:@company/pi-agent-platform@x.y.z` |
 | Local platform dev | `/path/to/pi_agent` |
 
 Latest tiện cho máy cá nhân muốn nhận cập nhật nhanh. Pin tag/commit cho `.pi/settings.json` trong project nghiêm túc để tránh workflow đổi bất ngờ giữa các developer.
+
+## Release/install channels
+
+| Channel | Command | Target | Policy |
+|---|---|---|---|
+| `stable` | `bash scripts/install-global.sh --stable` | Current package tag, currently `v0.4.7` | Default for team rollout. |
+| `exact` | `bash scripts/install-global.sh --version vX.Y.Z` | Requested tag | Use for rollout, rollback, and incident recovery. |
+| `dev` | `bash scripts/install-global.sh --dev` | Moving Git source | Personal/sandbox only; do not commit into project settings. |
+| `local` | `bash scripts/install-global.sh --local` | Current checkout path | Platform development only. |
+
+Always preview non-local rollout first:
+
+```bash
+bash scripts/install-global.sh --stable --dry-run
+bash scripts/install-global.sh --version vX.Y.Z --dry-run
+```
 
 ## Repo root là Pi package
 
@@ -43,7 +59,8 @@ Team nên install global package một lần:
 
 ```bash
 npm install -g @earendil-works/pi-coding-agent@0.80.10
-pi install git:github.com/Vt-mmm/pi_agent
+pi install git:github.com/Vt-mmm/pi_agent@v0.4.7
+pi update --extensions
 ```
 
 Sau đó project nào cũng:
@@ -164,7 +181,19 @@ Files không commit:
 4. Team updates:
 
    ```bash
+   bash scripts/install-global.sh --version vX.Y.Z --dry-run
+   bash scripts/install-global.sh --version vX.Y.Z
    pi update --extensions
+   bash scripts/team-doctor.sh /path/to/project --strict-share
+   ```
+
+5. Rollback, if needed:
+
+   ```bash
+   bash scripts/install-global.sh --version vPREVIOUS --dry-run
+   bash scripts/install-global.sh --version vPREVIOUS
+   pi update --extensions
+   bash scripts/team-doctor.sh /path/to/project --strict-share
    ```
 
 ## Security review

@@ -95,11 +95,18 @@ pi install git:github.com/Vt-mmm/pi_agent@v0.4.7
 pi update --extensions
 ```
 
+From a checked-out platform repo, preview and apply the current stable source:
+
+```bash
+bash scripts/install-global.sh --stable --dry-run
+bash scripts/install-global.sh --stable
+```
+
 Use latest only for a personal machine or sandbox where fast updates are acceptable:
 
 ```bash
-pi install git:github.com/Vt-mmm/pi_agent
-pi update --extensions
+bash scripts/install-global.sh --dev --dry-run
+bash scripts/install-global.sh --dev
 ```
 
 Optional Herdr integration:
@@ -452,6 +459,7 @@ This repository intentionally excludes:
 - [Project adapters](docs/project-adapters.md)
 - [Architecture](docs/architecture.md)
 - [Distribution standard](docs/distribution-standard.md)
+- [Release and install policy](docs/release-install-policy.md)
 - [Publishing for teams](docs/publishing-for-teams.md)
 - [OAuth providers](docs/oauth-providers.md)
 - [Herdr workflow](docs/herdr-workflow.md)

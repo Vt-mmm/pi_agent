@@ -10,6 +10,8 @@ This file records release-facing changes for Pi Agent Platform. Copy the relevan
 - Reworded security docs to describe the guard as an application-level policy enforcement layer, not a complete security boundary or OS sandbox.
 - Split install guidance so production/team setup pins `v0.4.7`, while latest is reserved for personal/sandbox use.
 - Clarified that redaction benchmarks and internal review are not equivalent to an external security audit.
+- Added release/install policy docs covering stable, exact, dev, local, update, and rollback flows.
+- Added `pi-company-install` channel options and dry-run preview for stable, exact, dev, and local installs.
 
 ## v0.4.7 - 2026-07-22
 

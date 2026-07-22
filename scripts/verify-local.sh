@@ -106,6 +106,7 @@ required_files=(
   "$ROOT/docs/oauth-providers.md"
   "$ROOT/docs/subagents-and-multiagent.md"
   "$ROOT/docs/distribution-standard.md"
+  "$ROOT/docs/release-install-policy.md"
   "$ROOT/docs/vercel-docs-site.md"
   "$ROOT/docs/publishing-for-teams.md"
   "$ROOT/docs/herdr-workflow.md"

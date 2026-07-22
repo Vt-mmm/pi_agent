@@ -24,11 +24,18 @@ pi update --extensions
 
 Lệnh trên là setup có pin cho team/repo cần tái lập. `v0.4.7` là release hiện tại của docs này; khi nâng version, đổi tag sau khi đã review changelog và chạy doctor/smoke test.
 
+Nếu đang ở source checkout của platform, có thể preview và áp stable bằng helper:
+
+```bash
+bash scripts/install-global.sh --stable --dry-run
+bash scripts/install-global.sh --stable
+```
+
 Máy cá nhân hoặc sandbox có thể dùng latest nếu chấp nhận cập nhật nhanh:
 
 ```bash
-pi install git:github.com/Vt-mmm/pi_agent
-pi update --extensions
+bash scripts/install-global.sh --dev --dry-run
+bash scripts/install-global.sh --dev
 ```
 
 Sau bước này, project mới không cần chạy bash init profile. Chỉ cần:

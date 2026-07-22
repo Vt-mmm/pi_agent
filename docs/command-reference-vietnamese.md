@@ -346,6 +346,10 @@ Các lệnh này chạy ngoài Pi.
 | `npm install -g @earendil-works/pi-coding-agent@0.80.10` | Cài Pi CLI tương thích với release hiện tại. |
 | `pi install git:github.com/Vt-mmm/pi_agent@v0.4.7` | Cài pinned release khi cần reproducible team setup. |
 | `pi install git:github.com/Vt-mmm/pi_agent` | Cài latest package platform cho máy cá nhân/sandbox. |
+| `pi-company-install --stable --dry-run` | Preview stable install/update trước khi đổi package. |
+| `pi-company-install --stable` | Cài stable release hiện tại bằng exact tag. |
+| `pi-company-install --version vX.Y.Z` | Cài hoặc rollback về exact release tag. |
+| `pi-company-install --dev` | Theo moving source cho máy cá nhân/sandbox; không commit vào `.pi/settings.json`. |
 | `pi update --extensions` | Update packages đã cài, gồm package platform. |
 | `pi list --approve` | Xem package Pi đã install. |
 | `pi-company-auto` | Mở Pi với project trust `--approve` cho lần chạy hiện tại; guard vẫn bật. |
