@@ -1724,6 +1724,26 @@ function profileDescription(name: string): string {
   return descriptions[name] ?? "Custom project profile.";
 }
 
+function normalizeProjectProfileName(value: string): string {
+  const normalized = value.trim().toLowerCase();
+  const aliases: Record<string, string> = {
+    fe: "web-frontend",
+    frontend: "web-frontend",
+    web: "web-frontend",
+    be: "backend-api",
+    backend: "backend-api",
+    api: "backend-api",
+    full: "fullstack",
+    befe: "be-readonly-fe",
+    "be-fe": "be-readonly-fe",
+    "be-readonly": "be-readonly-fe",
+    "readonly-fe": "be-readonly-fe",
+    typescript: "node-typescript",
+    ts: "node-typescript"
+  };
+  return aliases[normalized] ?? normalized;
+}
+
 function buildProfileOptions(extensionDir: string, cwd: string, intent?: string): { recommended: string; reason: string; options: ProfileOption[] } {
   const recommendation = detectProfileName(cwd, intent);
   const options = readAdapterProfiles(extensionDir).map(({ name, profile }) => ({
@@ -2957,7 +2977,8 @@ export default function companyGuard(pi: ExtensionAPI) {
     promptSnippet: "Apply a selected profile during project onboarding or profile switching.",
     promptGuidelines: [
       "Only call after the user has explicitly selected a profile, or when the user explicitly asked to apply the recommended profile.",
-      "Use overwrite=true only when the user explicitly asked to replace the existing project profile."
+      "Use overwrite=true for direct profile-switch commands such as `/profile <profile>`, `/profiles apply <profile>`, or explicit replace/overwrite requests.",
+      "Do not use overwrite=true for exploratory show/list/status requests."
     ],
     parameters: Type.Object({
       profile: Type.String({ minLength: 1 }),
@@ -3425,14 +3446,163 @@ export default function companyGuard(pi: ExtensionAPI) {
   registerPermissionProfileCommand("full-access", "trusted-full-access", "Switch this session to trusted full-access permission profile");
   registerPermissionProfileCommand("trusted-full-access", "trusted-full-access", "Alias for /full-access");
 
+  function emitProfileStatus(ctx: ExtensionContext, detail = "concise"): void {
+    const profile = loadProfileFromContext(ctx);
+    const options = buildProfileOptions(extensionDir, ctx.cwd);
+    const projectContextExists = fs.existsSync(projectContextFilePath(ctx.cwd));
+    const profileExists = fs.existsSync(projectProfilePath(ctx.cwd));
+    const profileNames = options.options.map((option) => option.name);
+    const content = detail === "list"
+      ? [
+          `current: ${profile.mode ?? profile.projectId ?? "unprofiled"}`,
+          `recommended: ${options.recommended}`,
+          `profiles: ${profileNames.join(", ")}`,
+          "apply: /profile <profile> or /profiles apply <profile>",
+          "auto: /profile auto"
+        ].join("\n")
+      : [
+          `profile: ${profile.mode ?? profile.projectId ?? "unprofiled"}`,
+          `recommended: ${options.recommended}`,
+          `profileFile: ${profileExists ? "exists" : "missing"}`,
+          `projectContext: ${projectContextExists ? "exists" : "missing"}`,
+          "usage: /profile <profile> | /profile auto | /profile list"
+        ].join("\n");
+    pi.sendMessage(
+      {
+        customType: "company-profile-status",
+        content,
+        display: true,
+        details: {
+          current: {
+            projectId: profile.projectId,
+            displayName: profile.displayName,
+            mode: profile.mode,
+            permissionProfile: profile.permissionProfile
+          },
+          recommended: options.recommended,
+          reason: options.reason,
+          profiles: profileNames,
+          profileFile: profileExists,
+          projectContext: projectContextExists
+        }
+      },
+      { triggerTurn: false }
+    );
+  }
+
+  function registerProfileCommand(name: string): void {
+    pi.registerCommand(name, {
+      description: "Show or apply the current project profile without a model follow-up",
+      handler: async (args, ctx) => {
+        const raw = String(args ?? "").trim();
+        const tokens = raw.split(/\s+/).filter(Boolean);
+        const normalized = tokens.map((token) => token.toLowerCase());
+        if (!tokens.length || ["show", "status", "current"].includes(normalized[0])) {
+          emitProfileStatus(ctx);
+          return;
+        }
+        if (["list", "options", "help"].includes(normalized[0])) {
+          emitProfileStatus(ctx, "list");
+          return;
+        }
+
+        const cleaned = tokens.filter((token) => !/^--?(overwrite|replace|force)$/.test(token.toLowerCase()));
+        let profileName = cleaned[0];
+        let intent: string | undefined;
+        if (["apply", "use", "switch", "set", "to"].includes(profileName?.toLowerCase() ?? "")) {
+          profileName = cleaned[1];
+        } else if (profileName?.toLowerCase() === "intent") {
+          intent = cleaned[1];
+          profileName = buildProfileOptions(extensionDir, ctx.cwd, intent).recommended;
+        } else if (["auto", "recommended", "recommend"].includes(profileName?.toLowerCase() ?? "")) {
+          profileName = buildProfileOptions(extensionDir, ctx.cwd).recommended;
+        }
+
+        if (!profileName) {
+          ctx.ui.notify("Usage: /profile <profile> or /profile auto", "warning");
+          emitProfileStatus(ctx, "list");
+          return;
+        }
+        profileName = normalizeProjectProfileName(profileName);
+
+        const currentProfile = loadProfileFromContext(ctx);
+        try {
+          const applied = writeProfileFromAdapter(
+            extensionDir,
+            ctx.cwd,
+            profileName,
+            true,
+            currentProfile.projectId,
+            currentProfile.displayName
+          );
+          appendTrace(ctx.cwd, { event: "profile_apply_command", command: name, profile: profileName, projectId: applied.projectId, mode: applied.mode, intent });
+          appendSessionTrace(pi, { event: "profile_apply_command", command: name, profile: profileName, projectId: applied.projectId, mode: applied.mode, intent });
+          const projectContextExists = fs.existsSync(projectContextFilePath(ctx.cwd));
+          ctx.ui.notify(`Profile applied: ${applied.mode ?? profileName}`, "info");
+          pi.sendMessage(
+            {
+              customType: "company-profile-applied",
+              content: [
+                `profile: ${applied.mode ?? profileName}`,
+                "updated: .pi/company-profile.json",
+                "updated: .pi/company-profile.lock.json",
+                `projectContext: ${projectContextExists ? "exists" : "missing"}${projectContextExists ? "" : " — run /onboard-project"}`
+              ].join("\n"),
+              display: true,
+              details: {
+                profile: applied,
+                profileFile: ".pi/company-profile.json",
+                lockFile: ".pi/company-profile.lock.json",
+                projectContext: projectContextExists
+              }
+            },
+            { triggerTurn: false }
+          );
+        } catch (error) {
+          const message = error instanceof Error ? error.message : String(error);
+          ctx.ui.notify(`Profile apply failed: ${message}`, "warning");
+          emitProfileStatus(ctx, "list");
+        }
+      }
+    });
+  }
+
+  registerProfileCommand("profile");
+  registerProfileCommand("profiles");
+
   pi.registerCommand("company-status", {
     description: "Show company Pi profile and guard state",
     handler: async (_args, ctx) => {
       const profile = loadProfileFromContext(ctx);
+      const permissionProfile = resolvePermissionProfile(profile, policy, permissionOverrideFromContext(ctx));
+      const requiredContext = [
+        ...policy.defaultRequiredContext,
+        ...(profile.requiredContext ?? [])
+      ];
+      const content = [
+        `project: ${profile.displayName ?? profile.projectId ?? "unprofiled"}`,
+        `mode: ${profile.mode ?? "unknown"}`,
+        `permission: ${permissionProfile.mode}`,
+        `requiredContext: ${Array.from(new Set(requiredContext)).join(", ") || "none"}`,
+        `verifyGroups: ${Object.keys(profile.verifyCommands ?? {}).join(", ") || "none"}`
+      ].join("\n");
       ctx.ui.notify(`Project profile: ${profile.displayName ?? profile.projectId ?? "unprofiled"}`, "info");
-      pi.sendUserMessage("Use company_context with detail=full and summarize the active project guard profile.", {
-        deliverAs: "followUp"
-      });
+      pi.sendMessage(
+        {
+          customType: "company-status",
+          content,
+          display: true,
+          details: {
+            projectId: profile.projectId,
+            displayName: profile.displayName,
+            mode: profile.mode,
+            permissionProfile,
+            requiredContext: Array.from(new Set(requiredContext)),
+            verifyCommands: Object.keys(profile.verifyCommands ?? {})
+          }
+        },
+        { triggerTurn: false }
+      );
     }
   });
 
@@ -3442,9 +3612,21 @@ export default function companyGuard(pi: ExtensionAPI) {
       const profile = loadProfileFromContext(ctx);
       const settings = resolveMemorySettings(profile);
       ctx.ui.notify(`Project memory: ${settings.enabled ? settings.mode : "off"}`, "info");
-      pi.sendUserMessage("Use company_memory_status with detail=full and summarize the active project memory policy.", {
-        deliverAs: "followUp"
-      });
+      pi.sendMessage(
+        {
+          customType: "company-memory-status",
+          content: [
+            `memory: ${settings.enabled ? settings.mode : "off"}`,
+            `scope: ${settings.scope}`,
+            `summary: ${settings.summaryFile}`,
+            `handbook: ${settings.handbookFile}`,
+            `writePolicy: ${settings.writePolicy}`
+          ].join("\n"),
+          display: true,
+          details: settings
+        },
+        { triggerTurn: false }
+      );
     }
   });
 

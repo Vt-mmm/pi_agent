@@ -57,7 +57,7 @@ Profile selection rule:
 - In a new project, profile selection belongs here during `/onboard-project`.
 - `fullstack` means FE and BE may both be edited if the task allows.
 - `be-readonly-fe` means backend is source-of-truth/read-only and frontend is the write target.
-- The user may later switch profile with `/profiles apply <profile>`.
+- The user may later switch profile with `/profile <profile>`.
 
 Snapshot format:
 

@@ -196,11 +196,51 @@ describe("company guard integration", () => {
     await harness.handlers.get("session_start")({}, ctx);
 
     assert.equal(harness.tools.size, 20);
-    assert.equal(harness.commands.size, 12);
+    assert.equal(harness.commands.size, 14);
     assert.deepEqual([...harness.handlers.keys()].sort(), ["input", "session_start", "tool_call", "tool_result"]);
     assert.equal(harness.getSessionName(), "pi:Integration Project");
     assert.match(ctx.ui.notices[0].message, /Company Pi guard loaded: Integration Project/);
     assert.match(ctx.ui.notices[0].message, /permission=workspace-write/);
+  });
+
+  it("applies project profiles through direct slash commands without model follow-up", async () => {
+    const { root, companyGuard } = await loadGuardFixture();
+    const cwd = createProject(root);
+    const ctx = createContext(cwd);
+    const harness = createPiHarness();
+    companyGuard(harness.pi);
+
+    await harness.commands.get("profile").handler("apply web-frontend", ctx);
+
+    const profile = JSON.parse(fs.readFileSync(path.join(cwd, ".pi", "company-profile.json"), "utf8"));
+    assert.equal(profile.mode, "web-frontend");
+    assert.equal(profile.projectId, "integration-project");
+    assert.equal(profile.displayName, "Integration Project");
+    assert.equal(fs.existsSync(path.join(cwd, ".pi", "company-profile.lock.json")), true);
+    assert.equal(harness.entries.some((entry) => entry.type === "user-message"), false);
+    assert.equal(harness.entries.some((entry) => entry.payload?.customType === "company-profile-applied"), true);
+
+    await harness.commands.get("profiles").handler("be-fe", ctx);
+    const aliasedProfile = JSON.parse(fs.readFileSync(path.join(cwd, ".pi", "company-profile.json"), "utf8"));
+    assert.equal(aliasedProfile.mode, "be-readonly-fe");
+    assert.equal(aliasedProfile.projectId, "integration-project");
+  });
+
+  it("keeps status commands concise and local without model follow-up", async () => {
+    const { root, companyGuard } = await loadGuardFixture();
+    const cwd = createProject(root);
+    const ctx = createContext(cwd);
+    const harness = createPiHarness();
+    companyGuard(harness.pi);
+
+    await harness.commands.get("profiles").handler("", ctx);
+    await harness.commands.get("company-status").handler("", ctx);
+    await harness.commands.get("company-memory").handler("", ctx);
+
+    assert.equal(harness.entries.some((entry) => entry.type === "user-message"), false);
+    assert.equal(harness.entries.some((entry) => entry.payload?.customType === "company-profile-status"), true);
+    assert.equal(harness.entries.some((entry) => entry.payload?.customType === "company-status"), true);
+    assert.equal(harness.entries.some((entry) => entry.payload?.customType === "company-memory-status"), true);
   });
 
   it("switches the current session permission profile with slash commands", async () => {

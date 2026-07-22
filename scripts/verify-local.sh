@@ -260,6 +260,7 @@ grep -R "intercomBridge" "$ROOT/scripts/configure-subagents.sh" "$ROOT/docs/suba
 grep -R "waitTool" "$ROOT/scripts/configure-subagents.sh" "$ROOT/docs/subagents-and-multiagent.md" >/dev/null
 grep -R "company_profile_options" "$ROOT/packages/pi-company-core" "$ROOT/docs" >/dev/null
 grep -R "company_profile_apply" "$ROOT/packages/pi-company-core" "$ROOT/docs" >/dev/null
+grep -R "/profile auto" "$ROOT/README.md" "$ROOT/docs" "$ROOT/packages/pi-company-core" >/dev/null
 grep -R "company_project_onboarding_record" "$ROOT/packages/pi-company-core" "$ROOT/docs" >/dev/null
 grep -R "company_memory_status" "$ROOT/packages/pi-company-core" "$ROOT/docs" "$ROOT/templates/project/AGENTS.md" >/dev/null
 grep -R "company_memory_note" "$ROOT/packages/pi-company-core" "$ROOT/docs" >/dev/null

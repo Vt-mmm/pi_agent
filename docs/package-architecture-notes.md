@@ -69,7 +69,7 @@ Manifest data never executes code. Invalid paths, symbolic links, dependency cyc
 | Capability | Implementation |
 |---|---|
 | Project onboarding | `/onboard-project` + `company_project_onboarding_record` |
-| Profile switching | `/profiles` + `company_profile_options` / `company_profile_apply` |
+| Profile switching | `/profile` + `company_profile_options` / `company_profile_apply` |
 | Explicit memory | `/memory-policy` + `company_memory_*` |
 | Task lifecycle | `/task` + task/context/verify/trace tools |
 | Platform workflow | `/platform-improve` |

@@ -70,8 +70,8 @@ Nếu chưa có `.pi/company-profile.json`, model sẽ gọi `company_profile_op
 Đổi profile sau này:
 
 ```text
-/profiles
-/profiles apply be-readonly-fe
+/profile list
+/profile be-readonly-fe
 ```
 
 ## Auto detect trong shell script

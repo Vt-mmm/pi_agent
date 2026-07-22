@@ -42,9 +42,9 @@ Bash setup chỉ biết tạo template và detect marker. Nó không có model r
 Xem hoặc đổi profile trong Pi:
 
 ```text
-/profiles
-/profiles apply fullstack
-/profiles apply be-readonly-fe
+/profile list
+/profile fullstack
+/profile be-readonly-fe
 ```
 
 Khác biệt quan trọng:

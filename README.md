@@ -36,7 +36,7 @@ pi-company-auto --full-access -p "Run the trusted local benchmark suite."
 
 - Global Pi package with prompts, skills, guard extensions, and company subagents.
 - Runtime onboarding via `/onboard-project`.
-- Runtime profile selection via `/profiles`; no shell profile switch is required for daily use.
+- Runtime profile selection via `/profile`; no shell profile switch is required for daily use.
 - Explicit project memory via `/memory-policy` and `company_memory_*` tools.
 - MCP setup helpers for Context7, Chrome DevTools, GitHub, Playwright, and Figma.
 - Subagent setup helpers for read-only scouting, planning, implementation, review, and risk challenge.
@@ -83,7 +83,7 @@ Inside an active Pi session, use slash commands for a session-local switch:
 
 ```bash
 npm install -g @earendil-works/pi-coding-agent@0.80.10
-pi install git:github.com/Vt-mmm/pi_agent@v0.4.4
+pi install git:github.com/Vt-mmm/pi_agent@v0.4.5
 ```
 
 Optional Herdr integration:
@@ -122,11 +122,15 @@ First run inside a project:
 Switch profiles later:
 
 ```text
-/profiles
-/profiles apply fullstack
-/profiles apply be-readonly-fe
-/profiles apply web-frontend
-/profiles apply backend-api
+/profile                 # short status, no model follow-up
+/profile list            # compact profile list
+/profile fullstack       # apply immediately
+/profile be-readonly-fe  # apply immediately
+/profile web-frontend    # apply immediately
+/profile backend-api     # apply immediately
+/profile auto            # apply detected recommendation
+/profile fe              # alias for web-frontend
+/profile be-fe           # alias for be-readonly-fe
 ```
 
 ## Capability packs
@@ -217,7 +221,7 @@ Use `/platform-improve` for package-level work such as setup, MCP, model scope, 
 ### Backend spec to frontend
 
 ```text
-/profiles apply be-readonly-fe
+/profile be-readonly-fe
 /be-to-fe Implement frontend support for <backend endpoint/spec>. Backend is read-only.
 ```
 
@@ -324,7 +328,7 @@ Most projects do not need shell init. Use this only when you want to pre-create 
 ```bash
 bash /path/to/pi_agent/scripts/setup.sh /path/to/project \
   --profile be-readonly-fe \
-  --package-source git:github.com/Vt-mmm/pi_agent@v0.4.4 \
+  --package-source git:github.com/Vt-mmm/pi_agent@v0.4.5 \
   --mcp-preset core \
   --subagents-preset safe
 ```
@@ -404,6 +408,8 @@ This repository intentionally excludes:
 
 ## Documentation
 
+- [Static team docs site](docs-site/index.html)
+- [Vercel docs site deploy](docs/vercel-docs-site.md)
 - [Operator manual tiếng Việt](docs/operator-manual-vietnamese.md)
 - [Quickstart tiếng Việt](docs/quickstart-vietnamese.md)
 - [Command reference tiếng Việt](docs/command-reference-vietnamese.md)
@@ -433,7 +439,7 @@ This repository intentionally excludes:
 
 ## Maturity
 
-Current release: `v0.4.4`.
+Current release: `v0.4.5`.
 
 Ready for:
 

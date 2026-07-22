@@ -1,9 +1,9 @@
 ---
-description: Show or switch the active company project profile
-argument-hint: "[show | apply <profile> | intent be-readonly-fe]"
+description: Apply or show the active company project profile with minimal output
+argument-hint: "[<profile> | apply <profile> | auto | list]"
 ---
 
-Manage the current project's company profile.
+Manage the current project's company profile with minimal token use.
 
 Request:
 
@@ -13,16 +13,18 @@ $ARGUMENTS
 
 Rules:
 
-1. Call `company_context` with `detail=full`.
-2. Call `company_profile_options`.
-3. Show:
-   - current profile;
-   - recommended profile;
-   - available profiles;
-   - what changes if switching.
-4. If the user explicitly asked `apply <profile>`, call `company_profile_apply`.
-5. If `.pi/company-profile.json` already exists, do not overwrite unless the user explicitly asked for overwrite/replace.
-6. After applying, tell the user to run `/onboard-project` if `.pi/project-context.md` is missing or stale.
+1. If this package registered the direct `/profile` or `/profiles` extension command, prefer that command behavior and do not expand this prompt.
+2. If the request names a profile directly, or says `apply`, `use`, `switch`, or `set`, call `company_profile_apply` immediately with `overwrite=true`.
+3. Preserve the current `projectId` and `displayName` when known; do not print the full profile JSON.
+4. If the request is `auto`, `recommended`, or `intent <value>`, call `company_profile_options`, take the recommended profile, then call `company_profile_apply` with `overwrite=true`.
+5. If the request is empty, `show`, `status`, `current`, `list`, `options`, or `help`, call `company_context` with `detail=concise` and, only for list/options/help/auto, call `company_profile_options`.
+6. Never call `company_context` with `detail=full` unless the user explicitly asks for `full` or `debug`.
+7. Output at most 6 short lines:
+   - applied/current profile;
+   - updated files or current file status;
+   - recommended profile if relevant;
+   - next command only if needed.
+8. After applying, mention `/onboard-project` only if `.pi/project-context.md` is missing or stale.
 
 Common choices:
 

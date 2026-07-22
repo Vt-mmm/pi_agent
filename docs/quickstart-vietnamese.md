@@ -17,7 +17,7 @@ Phần còn lại — OAuth, package, context, harness, MCP, tool-call guard —
 
 ```bash
 npm install -g @earendil-works/pi-coding-agent@0.80.10
-pi install git:github.com/Vt-mmm/pi_agent@v0.4.4
+pi install git:github.com/Vt-mmm/pi_agent@v0.4.5
 ```
 
 Sau bước này, project mới không cần chạy bash init profile. Chỉ cần:
@@ -148,7 +148,7 @@ File này là snapshot context cho task sau. Nếu file còn `Generated: not yet
 bash /path/to/pi_agent/scripts/setup.sh /path/to/project \
   --project-only \
   --profile auto \
-  --package-source git:github.com/Vt-mmm/pi_agent@v0.4.4 \
+  --package-source git:github.com/Vt-mmm/pi_agent@v0.4.5 \
   --mcp-preset core \
   --subagents-preset safe
 ```
@@ -156,8 +156,8 @@ bash /path/to/pi_agent/scripts/setup.sh /path/to/project \
 Đổi profile sau này trong Pi:
 
 ```text
-/profiles
-/profiles apply be-readonly-fe
+/profile list
+/profile be-readonly-fe
 ```
 
 Profile built-in: `generic`, `web-frontend`, `backend-api`, `be-readonly-fe`, `fullstack`, `node-typescript`, `python`, `data`, `devops`, `mobile`, `docs`.
@@ -169,7 +169,7 @@ Script bash chỉ dùng khi muốn preseed config vào repo:
 ```bash
 bash /path/to/pi_agent/scripts/setup.sh /path/to/project \
   --profile be-readonly-fe \
-  --package-source git:github.com/Vt-mmm/pi_agent@v0.4.4 \
+  --package-source git:github.com/Vt-mmm/pi_agent@v0.4.5 \
   --mcp-preset core \
   --subagents-preset safe
 ```

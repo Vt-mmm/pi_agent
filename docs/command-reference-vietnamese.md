@@ -83,8 +83,11 @@ Các command này đến từ package `pi-company-core`.
 | `/full-access` | Bật trusted full-access | Khi repo đã trusted và muốn agent có quyền workspace rộng hơn. | Tool/scope autonomy được nới trong session; protected paths/redaction/human gates vẫn bật. |
 | `/full-access <task>` | Bật full-access rồi chạy task | Khi muốn một lệnh vừa cấp quyền vừa giao việc. | Session chuyển sang `trusted-full-access`, phần `<task>` được gửi tiếp cho agent. |
 | `/onboard-project` | Đọc project lần đầu | Lần đầu gắn repo vào Pi, sau `/login` và `/model`. | Tạo/cập nhật `.pi/company-profile.json`, `.pi/project-context.md`, `.pi/memory/*`. |
-| `/profiles` | Xem/chọn profile | Khi muốn đổi role làm việc: FE, BE, fullstack, docs, data, DevOps. | Hiện profile có sẵn và tradeoff. |
-| `/profiles apply <profile>` | Áp profile | Khi đã biết profile muốn dùng. | Ghi profile vào `.pi/company-profile.json`. |
+| `/profile` hoặc `/profiles` | Xem profile ngắn | Khi muốn biết mode hiện tại mà không burn token. | Hiện status ngắn, không gọi model follow-up. |
+| `/profile list` | Xem profile có sẵn | Khi chưa nhớ tên profile. | Hiện list compact. |
+| `/profile <profile>` | Áp profile ngay | Khi đã biết profile muốn dùng. | Ghi `.pi/company-profile.json` và lock ngay, không hỏi vòng. |
+| `/profile auto` | Áp profile recommend | Khi muốn auto-detect và apply luôn. | Detect profile rồi ghi profile/lock ngay. |
+| `/profile fe`, `/profile be`, `/profile full`, `/profile be-fe` | Alias ngắn | Khi muốn gõ nhanh. | Map sang `web-frontend`, `backend-api`, `fullstack`, `be-readonly-fe`. |
 | `/memory-policy` | Kiểm tra memory | Khi muốn biết Pi đang nhớ gì, hoặc muốn lưu memory explicit. | Hiện chính sách memory và file `.pi/memory/*`. |
 | `/model-options` | Giải thích model | Khi chưa rõ chọn provider model nào, thinking nào. | Giải thích selector, scope, thinking, benchmark rule. |
 | `/task-preflight` | Kiểm context trước task | Trước task lớn/risk cao hoặc khi session đã dài. | Báo nên chạy trực tiếp, compact, hay fresh session. |
@@ -301,7 +304,7 @@ Use company-reviewer before final.
 ### BE spec lên FE, không sửa BE
 
 ```text
-/profiles apply be-readonly-fe
+/profile be-readonly-fe
 /be-to-fe Implement FE support for <endpoint/spec>. Scout backend read-only, map contract, then edit frontend only.
 ```
 
@@ -330,7 +333,7 @@ Các lệnh này chạy ngoài Pi.
 | Command | Dùng khi nào |
 |---|---|
 | `npm install -g @earendil-works/pi-coding-agent` | Cài Pi CLI lần đầu. |
-| `pi install git:github.com/Vt-mmm/pi_agent@v0.4.4` | Cài package platform từ GitHub. |
+| `pi install git:github.com/Vt-mmm/pi_agent@v0.4.5` | Cài package platform từ GitHub. |
 | `pi list --approve` | Xem package Pi đã install. |
 | `pi-company-auto` | Mở Pi với project trust `--approve` cho lần chạy hiện tại; guard vẫn bật. |
 | `pi-company-auto --read-only -p "<task>"` | Auto-run scout/read-only; guard chặn shell/write/unknown tool. |

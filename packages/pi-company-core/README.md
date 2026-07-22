@@ -67,7 +67,7 @@ Inside Pi, slash commands can switch the current session without writing the pro
 - `/company-commands`: explain terminal, Pi, MCP, model, memory, and subagent commands in Vietnamese.
 - `/permission-status`, `/read-only`, `/workspace-write`, `/full-access`: inspect or switch the current session permission profile.
 - `/onboard-project`: first-run project context snapshot after login/model selection.
-- `/profiles`: show or switch the active project profile inside Pi.
+- `/profile`, `/profiles`: show a short profile status, list options, or apply a profile directly without a model follow-up. Short aliases include `fe`, `be`, `full`, and `be-fe`.
 - `/memory-policy`: inspect project memory policy and explicit remember workflow.
 - `/model-options`: explain model selector, scoped models, thinking levels, and benchmark discipline.
 - `/platform-improve`: improve package setup, runtime policy, docs, MCP, model, memory, or subagent workflows.
@@ -93,7 +93,7 @@ When `pi-subagents` is installed, this package exposes:
 ## Install
 
 ```bash
-pi install git:github.com/Vt-mmm/pi_agent@v0.4.4
+pi install git:github.com/Vt-mmm/pi_agent@v0.4.5
 ```
 
 ## Project profile

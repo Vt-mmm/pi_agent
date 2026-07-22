@@ -50,8 +50,8 @@ Dùng khi backend là source of truth nhưng frontend là nơi implement. Backen
 Setup project generic:
 
 ```text
-/profiles
-/profiles apply be-readonly-fe
+/profile list
+/profile be-readonly-fe
 ```
 
 Lệnh trong Pi:
