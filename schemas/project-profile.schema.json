@@ -63,6 +63,14 @@
         "minLength": 1
       }
     },
+    "readOnlyPaths": {
+      "type": "array",
+      "description": "Paths that may be inspected with read/grep/find/ls but must not be modified; shell access is also blocked by guard profiles that include these paths in shellProtectedPaths.",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
     "requiredContext": {
       "type": "array",
       "items": {

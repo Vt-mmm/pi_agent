@@ -8,8 +8,8 @@ Usage:
 
 Examples:
   scripts/pi-session-stats.sh .
-  scripts/pi-session-stats.sh /Users/vtamm/Documents/Working
-  scripts/pi-session-stats.sh /Users/vtamm/Documents/Working ~/.pi/agent/sessions/.../session.jsonl
+  scripts/pi-session-stats.sh /path/to/project
+  scripts/pi-session-stats.sh /path/to/project ~/.pi/agent/sessions/.../session.jsonl
 
 Notes:
   - Reads exact Pi token/cache/cost totals via RPC get_session_stats.

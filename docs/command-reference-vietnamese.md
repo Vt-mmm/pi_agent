@@ -10,7 +10,7 @@ Có 4 loại command khác nhau:
 
 | Loại | Gõ ở đâu | Ví dụ | Ý nghĩa |
 |---|---|---|---|
-| Terminal command | Terminal/macOS shell | `pi-company-mcp --preset core` | Cài, kiểm tra, hoặc cấu hình máy/project từ bên ngoài Pi. |
+| Terminal command | Terminal macOS/Linux với Bash | `pi-company-mcp --preset core` | Cài, kiểm tra, hoặc cấu hình máy/project từ bên ngoài Pi. Native Windows và WSL chưa được verify. |
 | Pi slash command | Bên trong Pi TUI | `/onboard-project` | Gọi workflow/prompt/package command trong Pi session hiện tại. |
 | Pi hotkey | Bên trong Pi TUI | `Ctrl+L` | Mở UI nhanh, thường dùng cho model/session. |
 | Tool syntax | Bên trong Pi, khi cần chính xác | `subagent({ action: "status" })` | Gọi đúng tool/action, dùng khi slash command hoặc natural prompt chưa đủ rõ. |
@@ -343,14 +343,18 @@ Các lệnh này chạy ngoài Pi.
 
 | Command | Dùng khi nào |
 |---|---|
-| `npm install -g @earendil-works/pi-coding-agent@0.80.10` | Cài Pi CLI tương thích với release hiện tại. |
-| `pi install git:github.com/Vt-mmm/pi_agent@v0.4.7` | Cài pinned release khi cần reproducible team setup. |
+| `npm install -g --ignore-scripts @earendil-works/pi-coding-agent@0.81.1` | Cài Pi CLI tương thích với release hiện tại. |
+| `npm install -g --ignore-scripts github:Vt-mmm/pi_agent#v0.4.8` | Cài terminal helper `pi-company-*` từ release tag hiện tại. |
+| `pi install git:github.com/Vt-mmm/pi_agent@v0.4.8` | Cài pinned release khi cần reproducible team setup. |
 | `pi install git:github.com/Vt-mmm/pi_agent` | Cài latest package platform cho máy cá nhân/sandbox. |
-| `pi-company-install --stable --dry-run` | Preview stable install/update trước khi đổi package. |
-| `pi-company-install --stable` | Cài stable release hiện tại bằng exact tag. |
-| `pi-company-install --version vX.Y.Z` | Cài hoặc rollback về exact release tag. |
+| Cài exact Pi host của release, rồi `npm install -g --ignore-scripts github:Vt-mmm/pi_agent#vX.Y.Z` và `pi-company-install --stable` | Full update: đồng bộ host, npm-global helper và Pi package. v0.4.8 yêu cầu Pi `0.81.1`. |
+| Cài exact Pi host ghi trong release cũ, rồi helper `vPREVIOUS` và `pi-company-install --stable` | Full rollback; đánh giá dependency risk của host cũ trước khi hạ version. |
+| `pi-company-install --stable --dry-run` | Preview Pi package matching với helper hiện tại; stable resolve tag → commit SHA. |
+| `pi-company-install --stable` | Cài Pi package matching với helper hiện tại bằng resolved commit SHA. |
+| `pi-company-install --version vX.Y.Z --resolve-tag` | Chỉ đổi Pi package; npm-global helper giữ nguyên version. |
+| `pi-company-install --version vX.Y.Z` | Chỉ đổi Pi package theo exact tag literal khi cần giữ behavior cũ. |
 | `pi-company-install --dev` | Theo moving source cho máy cá nhân/sandbox; không commit vào `.pi/settings.json`. |
-| `pi update --extensions` | Update packages đã cài, gồm package platform. |
+| `pi update --extensions` | Refresh package đã cài; với pinned tag/commit, muốn nâng version thì chạy lại install bằng ref mới. |
 | `pi list --approve` | Xem package Pi đã install. |
 | `pi-company-auto` | Mở Pi với project trust `--approve` cho lần chạy hiện tại; guard vẫn bật. |
 | `pi-company-auto --read-only -p "<task>"` | Auto-run scout/read-only; guard chặn shell/write/unknown tool. |
@@ -375,6 +379,8 @@ Các lệnh này chạy ngoài Pi.
 | `bash scripts/verify-local.sh --offline` | Verify trong CI/máy sạch, bỏ qua local Pi model catalog. |
 | `bash scripts/setup.sh <project> ...` | Preseed setup project; không bắt buộc cho daily flow. |
 | `bash scripts/quality-benchmark.sh ...` | Ghi quality benchmark theo scenario thật. |
+
+Trong output `pi-company-install`, `currentRelease` là version của terminal helper đang chạy, không phải lời xác nhận rằng npm-global helper vừa được update. Checklist đầy đủ nằm tại [release/install policy](release-install-policy.md).
 
 Khi đang develop chính repo `pi_agent`, có thể dùng npm scripts tương ứng:
 

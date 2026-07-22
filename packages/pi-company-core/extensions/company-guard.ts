@@ -3,7 +3,6 @@ import path from "node:path";
 import { execFileSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
-import { isToolCallEventType } from "@earendil-works/pi-coding-agent";
 import { StringEnum } from "@earendil-works/pi-ai";
 import { Type } from "typebox";
 import {
@@ -42,6 +41,7 @@ type ProjectProfile = {
   permissionProfile?: PermissionProfileMode;
   protectedPaths?: string[];
   shellProtectedPaths?: string[];
+  readOnlyPaths?: string[];
   requiredContext?: string[];
   verifyCommands?: Record<string, string[]>;
   mcpCapabilities?: string[];
@@ -161,6 +161,7 @@ type BasePolicy = {
   contextBudget?: ContextBudgetConfig;
   toolRegistry?: ToolRegistryConfig;
   finalGate?: FinalGateConfig;
+  externalActionPolicy?: ExternalActionPolicyConfig;
 };
 
 type CommandRule = {
@@ -191,6 +192,13 @@ type ToolRegistryConfig = {
   toolCapabilities?: Record<string, string[]>;
 };
 
+type ExternalActionPolicyConfig = {
+  defaultMode?: "advisory" | "enforce";
+  providerKeywords?: string[];
+  writeVerbs?: string[];
+  safeVerbs?: string[];
+};
+
 type FinalGateConfig = {
   defaultMode?: "advisory" | "enforce";
   requireTaskContract?: boolean;
@@ -198,6 +206,13 @@ type FinalGateConfig = {
   requireVerifyEvidence?: boolean;
   requireTrace?: boolean;
   requirePassingVerify?: boolean;
+};
+
+type EffectiveProtectedPaths = {
+  readProtectedPaths: string[];
+  writeProtectedPaths: string[];
+  shellProtectedPaths: string[];
+  readOnlyPaths: string[];
 };
 
 type UsageSnapshot = {
@@ -303,6 +318,10 @@ const PERMISSION_PROFILE_ALIASES: Record<string, PermissionProfileMode> = {
 const READ_ONLY_TOOL_NAMES = new Set(["read", "grep", "find", "ls"]);
 const WRITE_TOOL_NAMES = new Set(["write", "edit"]);
 const SHELL_TOOL_NAMES = new Set(["bash", "shell", "exec"]);
+const MAX_SHELL_ARG_COUNT = 256;
+const MAX_SHELL_ARG_CHARS = 16_384;
+const MAX_SHELL_COMMAND_CHARS = 131_072;
+const MAX_MCP_PROXY_ARGS_CHARS = 131_072;
 const SESSION_PERMISSION_OVERRIDES = new Map<string, PermissionProfileMode>();
 
 const DEFAULT_POLICY: BasePolicy = {
@@ -386,6 +405,67 @@ const DEFAULT_POLICY: BasePolicy = {
       github: ["github"]
     }
   },
+  externalActionPolicy: {
+    defaultMode: "enforce",
+    providerKeywords: [
+      "github",
+      "gitlab",
+      "bitbucket",
+      "vercel",
+      "netlify",
+      "cloudflare",
+      "aws",
+      "gcp",
+      "azure",
+      "slack",
+      "teams",
+      "jira",
+      "linear",
+      "notion",
+      "figma",
+      "stripe",
+      "supabase",
+      "firebase"
+    ],
+    writeVerbs: [
+      "add",
+      "approve",
+      "archive",
+      "assign",
+      "close",
+      "comment",
+      "create",
+      "delete",
+      "deploy",
+      "dispatch",
+      "merge",
+      "open",
+      "post",
+      "publish",
+      "push",
+      "release",
+      "remove",
+      "reopen",
+      "run",
+      "send",
+      "submit",
+      "trigger",
+      "update",
+      "upload",
+      "write"
+    ],
+    safeVerbs: [
+      "fetch",
+      "find",
+      "get",
+      "inspect",
+      "list",
+      "read",
+      "search",
+      "show",
+      "view"
+    ]
+  },
   finalGate: {
     defaultMode: "enforce",
     requireTaskContract: true,
@@ -451,6 +531,10 @@ function loadProfile(cwd: string, projectTrusted = false): ProjectProfile {
     return readJsonFile<ProjectProfile>(explicit) ?? fallbackProfile(cwd, "explicit-profile-unreadable");
   }
 
+  if (!projectTrusted) {
+    return fallbackProfile(cwd, "unprofiled-global-package");
+  }
+
   return readJsonFile<ProjectProfile>(path.join(cwd, ".pi", "company-profile.json")) ?? fallbackProfile(cwd, projectTrusted ? "unprofiled" : "unprofiled-global-package");
 }
 
@@ -509,8 +593,9 @@ type ProjectCapabilityState = {
   filesystemWrite?: string[];
 };
 
-function verifyProjectCapabilityState(extensionDir: string, cwd: string): ProjectCapabilityState {
+function verifyProjectCapabilityState(extensionDir: string, cwd: string, projectTrusted: boolean): ProjectCapabilityState {
   if (process.env.PI_COMPANY_PROFILE?.trim()) return { ok: true };
+  if (!projectTrusted) return { ok: true };
   const profilePath = projectProfilePath(cwd);
   if (!fs.existsSync(profilePath)) return { ok: true };
   const profile = readJsonFile<ProjectProfile>(profilePath);
@@ -602,30 +687,65 @@ const CONTENT_INPUT_FIELDS = new Set([
   "reason",
   "regex",
   "replacement",
+  "source",
   "summary",
   "text"
 ]);
 
 const FILESYSTEM_SCOPE_FIELDS = new Set([
   "absolutepath",
+  "basepath",
+  "cwd",
   "dest",
   "destination",
+  "destinationdirectory",
+  "destinationpath",
   "dir",
   "directory",
+  "directorypath",
   "file",
   "filepath",
+  "filename",
+  "filenames",
   "files",
+  "from",
+  "inputpath",
   "location",
+  "local",
+  "localpath",
+  "newpath",
   "notebookpath",
+  "oldpath",
   "output",
+  "outputfile",
   "outputpath",
   "path",
   "paths",
+  "rootpath",
+  "root",
   "source",
+  "sourcedirectory",
+  "sourcepath",
   "src",
   "target",
+  "targetdirectory",
   "targetpath",
+  "to",
+  "workingdirectory",
   "uri"
+]);
+
+const COPY_SOURCE_FIELDS = new Set([
+  "from",
+  "inputpath",
+  "oldpath",
+  "source",
+  "sourcedirectory",
+  "sourcepath",
+  "src"
+]);
+const FILESYSTEM_SCOPE_FIELD_SUFFIXES = new Set([
+  "cwd", "dir", "directory", "file", "filename", "folder", "path", "workdir"
 ]);
 
 function isContentInputField(field: string | undefined): boolean {
@@ -634,7 +754,53 @@ function isContentInputField(field: string | undefined): boolean {
 
 function isFilesystemScopeField(fieldPath: string): boolean {
   const field = fieldPath.split(".").at(-1)?.replace(/\[\d+\]$/, "");
-  return field !== undefined && FILESYSTEM_SCOPE_FIELDS.has(field.toLowerCase().replace(/[-_]/g, ""));
+  if (field === undefined) return false;
+  const normalized = field.toLowerCase().replace(/[-_]/g, "");
+  if (FILESYSTEM_SCOPE_FIELDS.has(normalized)) return true;
+  const finalToken = field
+    .replace(/([a-z0-9])([A-Z])/g, "$1-$2")
+    .toLowerCase()
+    .split(/[-_]/)
+    .filter(Boolean)
+    .at(-1);
+  return finalToken !== undefined && FILESYSTEM_SCOPE_FIELD_SUFFIXES.has(finalToken);
+}
+
+function filesystemFieldAccessMode(
+  toolName: string,
+  fieldPath: string,
+  writesFilesystem: boolean
+): "read" | "write" {
+  if (!writesFilesystem) return "read";
+  const toolTokens = new Set(actionTokens(toolName));
+  const rawField = fieldPath.split(".").at(-1)?.replace(/\[\d+\]$/, "") ?? "";
+  const field = rawField.toLowerCase().replace(/[-_]/g, "");
+  const firstFieldToken = rawField
+    .replace(/([a-z0-9])([A-Z])/g, "$1-$2")
+    .toLowerCase()
+    .split(/[-_]/)
+    .filter(Boolean)[0];
+  // Copy/upload read their local source and write only their destination.
+  // Move/rename are intentionally excluded because they also mutate source.
+  if (
+    (toolTokens.has("copy") || toolTokens.has("upload"))
+    && (COPY_SOURCE_FIELDS.has(field) || ["from", "input", "local", "old", "source", "src"].includes(firstFieldToken ?? ""))
+  ) return "read";
+  return "write";
+}
+
+function usesFilesystemContentFields(toolName: string, allowAmbiguousSource = true): boolean {
+  if (["read", "write", "edit", "grep", "find", "ls"].includes(toolName)) return true;
+  const tokens = new Set(actionTokens(toolName));
+  const strongFilesystemSemantics = [
+    "copy", "directory", "download", "file", "files", "filesystem", "folder", "fs",
+    "move", "path", "rename", "upload"
+  ].some((token) => tokens.has(token));
+  if (strongFilesystemSemantics) return true;
+  // `source` is ambiguous. Inspect it by default for protected paths, but let
+  // configured external providers use it as ordinary metadata unless the tool
+  // itself has strong filesystem semantics (for example upload_file).
+  return allowAmbiguousSource;
 }
 
 function inspectRepositoryPathBoundary(cwd: string, candidate: string): { reason?: string } {
@@ -718,21 +884,29 @@ type StringInputWalkResult = {
   maxDepthExceeded?: string;
 };
 
-function walkStringInputs(value: unknown, keyPath: string[] = [], depth = 0): StringInputWalkResult {
+function walkStringInputs(
+  value: unknown,
+  keyPath: string[] = [],
+  depth = 0,
+  includeFilesystemContentFields = false
+): StringInputWalkResult {
   if (depth > MAX_TOOL_INPUT_INSPECTION_DEPTH) {
     return { items: [], maxDepthExceeded: keyPath.join(".") || "(input)" };
   }
 
   if (typeof value === "string") {
     const field = keyPath.at(-1);
-    if (isContentInputField(field)) return { items: [] };
-    return { items: [{ field: keyPath.join(".") || "(input)", value }] };
+    const fieldPath = keyPath.join(".") || "(input)";
+    if (isContentInputField(field) && !(includeFilesystemContentFields && isFilesystemScopeField(fieldPath))) {
+      return { items: [] };
+    }
+    return { items: [{ field: fieldPath, value }] };
   }
 
   if (Array.isArray(value)) {
     const result: StringInputWalkResult = { items: [] };
     for (const item of value) {
-      const child = walkStringInputs(item, keyPath, depth + 1);
+      const child = walkStringInputs(item, keyPath, depth + 1, includeFilesystemContentFields);
       result.items.push(...child.items);
       if (child.maxDepthExceeded) result.maxDepthExceeded ??= child.maxDepthExceeded;
     }
@@ -743,20 +917,24 @@ function walkStringInputs(value: unknown, keyPath: string[] = [], depth = 0): St
 
   const result: StringInputWalkResult = { items: [] };
   for (const [key, child] of Object.entries(value as Record<string, unknown>)) {
-    const childResult = walkStringInputs(child, [...keyPath, key], depth + 1);
+    const childResult = walkStringInputs(child, [...keyPath, key], depth + 1, includeFilesystemContentFields);
     result.items.push(...childResult.items);
     if (childResult.maxDepthExceeded) result.maxDepthExceeded ??= childResult.maxDepthExceeded;
   }
   return result;
 }
 
-function inspectPathInputsFromInput(cwd: string, input: Record<string, unknown>): {
+function inspectPathInputsFromInput(
+  cwd: string,
+  input: Record<string, unknown>,
+  includeFilesystemContentFields = false
+): {
   paths: Array<{ field: string; path: string }>;
   maxDepthExceeded?: string;
 } {
   const paths: Array<{ field: string; path: string }> = [];
   const seen = new Set<string>();
-  const walked = walkStringInputs(input);
+  const walked = walkStringInputs(input, [], 0, includeFilesystemContentFields);
   for (const item of walked.items) {
     const normalized = normalizeRelative(cwd, item.value);
     if (normalized === undefined) continue;
@@ -1022,12 +1200,24 @@ function evaluatePathLikeToolAccess(
   cwd: string,
   toolName: string,
   input: Record<string, unknown>,
-  protectedPaths: string[],
-  shellProtectedPaths: string[],
+  writeProtectedPaths: string[],
+  readProtectedPaths: string[],
+  readOnlyPaths: string[],
   filesystemRead?: string[],
-  filesystemWrite?: string[]
+  filesystemWrite?: string[],
+  options: {
+    forceScopeAware?: boolean;
+    forceWrite?: boolean;
+    allowAmbiguousFilesystemContentFields?: boolean;
+  } = {}
 ): { block: boolean; reason?: string } {
-  const inspection = inspectPathInputsFromInput(cwd, input);
+  const scopeAwareTool = options.forceScopeAware === true || ["read", "write", "edit", "grep", "find", "ls"].includes(toolName)
+    || /(?:^|[_-])(?:fs|filesystem)(?:[_-]|$)/i.test(toolName);
+  const inspection = inspectPathInputsFromInput(
+    cwd,
+    input,
+    usesFilesystemContentFields(toolName, options.allowAmbiguousFilesystemContentFields !== false)
+  );
   if (inspection.maxDepthExceeded) {
     return {
       block: true,
@@ -1035,10 +1225,8 @@ function evaluatePathLikeToolAccess(
     };
   }
 
-  const scopeAwareTool = ["read", "write", "edit", "grep", "find", "ls"].includes(toolName)
-    || /(?:^|[_-])(?:fs|filesystem)(?:[_-]|$)/i.test(toolName);
-  const writesFilesystem = ["write", "edit"].includes(toolName)
-    || (scopeAwareTool && /(?:write|edit|create|delete|move|rename|upload)/i.test(toolName));
+  const writesFilesystem = options.forceWrite === true || ["write", "edit"].includes(toolName)
+    || (scopeAwareTool && /(?:write|edit|create|delete|move|rename|upload|update|patch|set|replace|append|copy)/i.test(toolName));
   const scopeGlobs = toolName === "grep"
     ? (Array.isArray(input.glob) ? input.glob : [input.glob])
     : toolName === "find"
@@ -1067,18 +1255,27 @@ function evaluatePathLikeToolAccess(
       if (boundary.reason) return { block: true, reason: `Blocked ${toolName}: ${boundary.reason}` };
     }
     const resolvedPath = resolveRepositoryPathCandidate(cwd, item.path);
-    const shellMatched = matchesProtectedPath(item.path, shellProtectedPaths)
-      ?? (resolvedPath ? matchesProtectedPath(resolvedPath, shellProtectedPaths) : undefined);
-    if (shellMatched) {
+    const readMatched = matchesProtectedPath(item.path, readProtectedPaths)
+      ?? (resolvedPath ? matchesProtectedPath(resolvedPath, readProtectedPaths) : undefined);
+    if (readMatched) {
       return {
         block: true,
-        reason: `Blocked ${toolName} access to protected path from ${item.field}: ${item.path} matches ${shellMatched}`
+        reason: `Blocked ${toolName} access to protected path from ${item.field}: ${item.path} matches ${readMatched}`
       };
     }
 
-    if (writesFilesystem) {
-      const writeMatched = matchesProtectedPath(item.path, protectedPaths)
-        ?? (resolvedPath ? matchesProtectedPath(resolvedPath, protectedPaths) : undefined);
+    const fieldAccessMode = filesystemFieldAccessMode(toolName, item.field, writesFilesystem);
+    if (fieldAccessMode === "write") {
+      const readOnlyMatched = matchesProtectedPath(item.path, readOnlyPaths)
+        ?? (resolvedPath ? matchesProtectedPath(resolvedPath, readOnlyPaths) : undefined);
+      if (readOnlyMatched) {
+        return {
+          block: true,
+          reason: `Blocked ${toolName} write to read-only path from ${item.field}: ${item.path} matches ${readOnlyMatched}`
+        };
+      }
+      const writeMatched = matchesProtectedPath(item.path, writeProtectedPaths)
+        ?? (resolvedPath ? matchesProtectedPath(resolvedPath, writeProtectedPaths) : undefined);
       if (writeMatched) {
         return {
           block: true,
@@ -1100,7 +1297,7 @@ function evaluatePathLikeToolAccess(
   }
 
   if (toolName === "grep") {
-    const hit = globTargetsProtectedPath(input.glob, shellProtectedPaths);
+    const hit = globTargetsProtectedPath(input.glob, readProtectedPaths);
     if (hit) {
       return {
         block: true,
@@ -1110,7 +1307,7 @@ function evaluatePathLikeToolAccess(
   }
 
   if (toolName === "find") {
-    const hit = globTargetsProtectedPath(input.pattern, shellProtectedPaths);
+    const hit = globTargetsProtectedPath(input.pattern, readProtectedPaths);
     if (hit) {
       return {
         block: true,
@@ -1421,6 +1618,15 @@ function toolRegistryConfig(policy: BasePolicy): Required<ToolRegistryConfig> {
   };
 }
 
+function externalActionPolicyConfig(policy: BasePolicy): Required<ExternalActionPolicyConfig> {
+  return {
+    defaultMode: policy.externalActionPolicy?.defaultMode ?? DEFAULT_POLICY.externalActionPolicy?.defaultMode ?? "enforce",
+    providerKeywords: policy.externalActionPolicy?.providerKeywords ?? DEFAULT_POLICY.externalActionPolicy?.providerKeywords ?? [],
+    writeVerbs: policy.externalActionPolicy?.writeVerbs ?? DEFAULT_POLICY.externalActionPolicy?.writeVerbs ?? [],
+    safeVerbs: policy.externalActionPolicy?.safeVerbs ?? DEFAULT_POLICY.externalActionPolicy?.safeVerbs ?? []
+  };
+}
+
 function finalGateConfig(policy: BasePolicy): Required<FinalGateConfig> {
   return {
     defaultMode: policy.finalGate?.defaultMode ?? DEFAULT_POLICY.finalGate?.defaultMode ?? "enforce",
@@ -1430,6 +1636,766 @@ function finalGateConfig(policy: BasePolicy): Required<FinalGateConfig> {
     requireTrace: policy.finalGate?.requireTrace ?? true,
     requirePassingVerify: policy.finalGate?.requirePassingVerify ?? true
   };
+}
+
+function uniqueStrings(values: string[]): string[] {
+  return [...new Set(values.filter((value) => typeof value === "string" && value.trim().length > 0))];
+}
+
+function effectiveProtectedPaths(policy: BasePolicy, profile: ProjectProfile): EffectiveProtectedPaths {
+  const baseReadProtectedPaths = policy.shellProtectedPaths ?? policy.protectedPaths;
+  const profileProtectedPaths = profile.protectedPaths ?? [];
+  const profileShellProtectedPaths = profile.shellProtectedPaths ?? profile.protectedPaths ?? [];
+  const readOnlyPaths = profile.readOnlyPaths ?? [];
+  return {
+    readProtectedPaths: uniqueStrings([
+      ...baseReadProtectedPaths,
+      ...profileProtectedPaths
+    ]),
+    writeProtectedPaths: uniqueStrings([
+      ...policy.protectedPaths,
+      ...profileProtectedPaths,
+      ...readOnlyPaths
+    ]),
+    shellProtectedPaths: uniqueStrings([
+      ...baseReadProtectedPaths,
+      ...profileShellProtectedPaths,
+      ...readOnlyPaths
+    ]),
+    readOnlyPaths: uniqueStrings(readOnlyPaths)
+  };
+}
+
+function normalizeActionToken(value: string): string {
+  return value
+    .replace(/([a-z0-9])([A-Z])/g, "$1-$2")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
+
+function actionTextMatchesAny(text: string, tokens: string[]): boolean {
+  const normalized = normalizeActionToken(text);
+  if (!normalized) return false;
+  return tokens.some((token) => {
+    const normalizedToken = normalizeActionToken(token);
+    return normalizedToken.length > 0
+      && new RegExp(`(?:^|-)${normalizedToken}(?:-|$)`).test(normalized);
+  });
+}
+
+type ActionClassification = {
+  decision: "safe-read" | "confirm";
+  kind: "safe" | "write" | "ambiguous";
+  action: string;
+};
+
+function actionTokens(value: string): string[] {
+  return normalizeActionToken(value).split("-").filter(Boolean);
+}
+
+function classifyActionTokenSequence(tokens: string[], config: Required<ExternalActionPolicyConfig>): ActionClassification {
+  const writeTokens = new Set(config.writeVerbs.map(normalizeActionToken));
+  const safeTokens = new Set(config.safeVerbs.map(normalizeActionToken));
+  const matches = tokens
+    .map((token, index) => ({ token, index, write: writeTokens.has(token), safe: safeTokens.has(token) }))
+    .filter((item) => item.write || item.safe);
+  const first = matches[0];
+  if (!first) return { decision: "confirm", kind: "ambiguous", action: "unknown" };
+  if (first.write) return { decision: "confirm", kind: "write", action: first.token };
+
+  // A safe prefix is not enough for compound/ambiguous names such as
+  // get_update_file. Keep the small set of established read resources whose
+  // noun also happens to be a configured write verb (for example get_release).
+  const safeReadResourceCollisions = new Set(["release", "run"]);
+  const laterWrite = matches.find((item) => item.index > first.index
+    && item.write
+    && !safeReadResourceCollisions.has(item.token));
+  if (laterWrite) return { decision: "confirm", kind: "write", action: laterWrite.token };
+  return { decision: "safe-read", kind: "safe", action: first.token };
+}
+
+function classifyExplicitActionValues(values: string[], config: Required<ExternalActionPolicyConfig>): ActionClassification | undefined {
+  if (values.length === 0) return undefined;
+  const classifications = values.map((value) => classifyActionTokenSequence(actionTokens(value), config));
+  return classifications.find((item) => item.kind === "write")
+    ?? classifications.find((item) => item.kind === "ambiguous")
+    ?? classifications[0];
+}
+
+function classifyToolNameAction(toolName: string, provider: string, config: Required<ExternalActionPolicyConfig>): ActionClassification {
+  let tokens = actionTokens(toolName);
+  if (tokens[0] === "mcp") tokens = tokens.slice(1);
+  const providerTokens = actionTokens(provider);
+  const providerIndex = tokens.findIndex((token, index) => providerTokens.every((providerToken, offset) => tokens[index + offset] === providerToken));
+  if (providerIndex >= 0) tokens = tokens.slice(providerIndex + providerTokens.length);
+
+  return classifyActionTokenSequence(tokens, config);
+}
+
+function classifyExternalAction(toolName: string, input: Record<string, unknown>, policy: BasePolicy): {
+  decision: "not-external" | "safe-read" | "confirm";
+  provider?: string;
+  action?: string;
+  evidence: string[];
+} {
+  const config = externalActionPolicyConfig(policy);
+  if (config.defaultMode === "advisory") return { decision: "not-external", evidence: [] };
+
+  const walked = walkStringInputs(input).items;
+  const providerValues = walked.filter((item) => /(?:^|\.)(?:provider|server)$/i.test(item.field));
+  const actionValues = walked.filter((item) => /(?:^|\.)(?:action|operation|method|type|tool)$/i.test(item.field));
+  const proxyToolValues = walked.filter((item) => item.field === "tool");
+  const isMcpProxy = normalizeActionToken(toolName) === "mcp";
+  const proxyTool = isMcpProxy ? proxyToolValues.map((item) => item.value.trim()).find(Boolean) : undefined;
+  const proxyAction = isMcpProxy && typeof input.action === "string" ? input.action.trim() : "";
+  if (isMcpProxy && !proxyTool && !proxyAction) return { decision: "not-external", evidence: [toolName] };
+  if (isMcpProxy && !proxyTool && normalizeActionToken(proxyAction) === "ui-messages") {
+    return { decision: "safe-read", provider: "mcp-proxy", action: "ui-messages", evidence: [toolName, proxyAction] };
+  }
+
+  const providerEvidence = [toolName, ...providerValues.map((item) => item.value), ...proxyToolValues.map((item) => item.value)];
+  const configuredProvider = config.providerKeywords.find((candidate) => actionTextMatchesAny(providerEvidence.join(" "), [candidate]));
+  const mcpMatch = toolName.match(/^mcp(?:__|[-_:]+)([^_:.-]+)/i);
+  const explicitProvider = providerValues.map((item) => item.value.trim()).find(Boolean);
+  const provider = explicitProvider ?? configuredProvider ?? mcpMatch?.[1] ?? (isMcpProxy ? "mcp-proxy" : undefined);
+  const evidence = [toolName, ...providerValues.map((item) => item.value), ...actionValues.map((item) => item.value)].slice(0, 8);
+  if (!provider) return { decision: "not-external", evidence };
+
+  const explicitAction = classifyExplicitActionValues(actionValues.map((item) => item.value), config);
+  const toolAction = classifyToolNameAction(toolName, provider, config);
+  const classification = explicitAction?.kind === "write"
+    ? explicitAction
+    : toolAction.kind === "write"
+      ? toolAction
+      : explicitAction ?? toolAction;
+  return { decision: classification.decision, provider, action: classification.action, evidence };
+}
+
+type PreparedToolInput = {
+  input: Record<string, unknown>;
+  proxyArgs?: Record<string, unknown>;
+  proxyTool?: string;
+  proxyToolName?: string;
+  proxyAction?: ActionClassification;
+  proxyShellCarrier?: boolean;
+  confirmationSummary?: string;
+  reason?: string;
+};
+
+function isMcpProxyShellCarrier(proxyTool: string, proxyArgs: Record<string, unknown>, provider: string): boolean {
+  if (Object.hasOwn(proxyArgs, "command") || Object.hasOwn(proxyArgs, "cmd")) return true;
+  if (!Array.isArray(proxyArgs.args)) return false;
+  const tokens = new Set(actionTokens(proxyTool));
+  const providerTokens = new Set(actionTokens(provider));
+  return providerTokens.has("shell")
+    || providerTokens.has("terminal")
+    || tokens.has("bash")
+    || tokens.has("shell")
+    || tokens.has("terminal")
+    || tokens.has("run")
+    || (tokens.has("execute") && (tokens.has("command") || tokens.has("process")));
+}
+
+function collectPatchTargetPaths(value: unknown, key = "", depth = 0): string[] {
+  if (depth > MAX_TOOL_INPUT_INSPECTION_DEPTH || value === null || value === undefined) return [];
+  if (Array.isArray(value)) return value.flatMap((item) => collectPatchTargetPaths(item, key, depth + 1));
+  if (typeof value === "object") {
+    return Object.entries(value as Record<string, unknown>)
+      .flatMap(([childKey, child]) => collectPatchTargetPaths(child, childKey, depth + 1));
+  }
+  if (typeof value !== "string" || !/(?:patch|diff|content|text)/i.test(key)) return [];
+
+  const paths: string[] = [];
+  for (const line of value.split(/\r?\n/)) {
+    const marker = line.match(/^\*\*\* (?:Add|Update|Delete) File:\s*(.+?)\s*$/)
+      ?? line.match(/^\*\*\* Move to:\s*(.+?)\s*$/);
+    if (marker?.[1]) paths.push(marker[1]);
+    const unified = line.match(/^(?:---|\+\+\+)\s+([^\t ]+)/);
+    if (unified?.[1] && unified[1] !== "/dev/null") paths.push(unified[1].replace(/^[ab]\//, ""));
+  }
+  return paths;
+}
+
+function prepareToolInputForPolicy(
+  toolName: string,
+  input: Record<string, unknown>,
+  policy: BasePolicy
+): PreparedToolInput {
+  if (normalizeActionToken(toolName) !== "mcp") return { input };
+
+  const proxyTool = typeof input.tool === "string" ? input.tool.trim() : "";
+  if (Object.hasOwn(input, "tool") && input.tool !== undefined && typeof input.tool !== "string") {
+    return { input, reason: "MCP proxy tool must be a string" };
+  }
+
+  let policyInput = input;
+  if (Object.hasOwn(input, "args") && input.args !== undefined && input.args !== "") {
+    if (typeof input.args !== "string") return { input, reason: "MCP proxy args must be a JSON object string" };
+    if (input.args.length > MAX_MCP_PROXY_ARGS_CHARS) {
+      return { input, reason: `MCP proxy args exceed ${MAX_MCP_PROXY_ARGS_CHARS} characters` };
+    }
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(input.args);
+    } catch {
+      return { input, reason: "MCP proxy args must be valid JSON" };
+    }
+    if (!isPlainRecord(parsed)) return { input, reason: "MCP proxy args must decode to a JSON object" };
+    const patchTargets = actionTokens(proxyTool).includes("patch")
+      ? collectPatchTargetPaths(parsed)
+      : [];
+    policyInput = patchTargets.length > 0
+      ? { ...input, proxyArgs: parsed, proxyPatchTargets: { paths: patchTargets } }
+      : { ...input, proxyArgs: parsed };
+    const summary = redactText(JSON.stringify(parsed)).replace(/\s+/g, " ");
+    const confirmationSummary = summary.length > 600 ? `${summary.slice(0, 600)}…` : summary;
+    if (!proxyTool) return { input: policyInput, proxyArgs: parsed, confirmationSummary };
+
+    const provider = typeof input.server === "string" && input.server.trim() ? input.server.trim() : "mcp-proxy";
+    const proxyShellCarrier = isMcpProxyShellCarrier(proxyTool, parsed, provider);
+    const classifiedAction = classifyActionTokenSequence(actionTokens(proxyTool), externalActionPolicyConfig(policy));
+    return {
+      input: policyInput,
+      proxyArgs: parsed,
+      proxyTool,
+      proxyToolName: `${provider}_${proxyTool}`,
+      proxyAction: proxyShellCarrier
+        ? { decision: "confirm", kind: "ambiguous", action: "shell-command" }
+        : classifiedAction,
+      proxyShellCarrier,
+      confirmationSummary
+    };
+  }
+
+  if (!proxyTool) return { input: policyInput };
+  const provider = typeof input.server === "string" && input.server.trim() ? input.server.trim() : "mcp-proxy";
+  return {
+    input: policyInput,
+    proxyTool,
+    proxyToolName: `${provider}_${proxyTool}`,
+    proxyAction: classifyActionTokenSequence(actionTokens(proxyTool), externalActionPolicyConfig(policy))
+  };
+}
+
+const GH_COMMAND_GROUPS = new Set([
+  "alias", "api", "auth", "cache", "codespace", "config", "extension", "gist", "gpg-key",
+  "issue", "label", "org", "pr", "project", "release", "repo", "ruleset", "run", "secret",
+  "ssh-key", "variable", "workflow"
+]);
+const GH_SAFE_ACTIONS = new Set([
+  "browse", "checks", "completion", "diff", "fetch", "find", "get", "help", "inspect", "list",
+  "read", "search", "show", "status", "version", "view"
+]);
+
+function executableBasename(value: string): string {
+  return path.posix.basename(value.replace(/\\/g, "/")).toLowerCase();
+}
+
+function externalCommandName(value: string, names: Set<string>, aliases: Map<string, string>): string | undefined {
+  const direct = executableBasename(value);
+  if (names.has(direct)) return direct;
+  const variable = value.match(/^\$(?:\{([A-Za-z_][A-Za-z0-9_]*)\}|([A-Za-z_][A-Za-z0-9_]*))$/);
+  const alias = variable ? aliases.get(variable[1] ?? variable[2]) : undefined;
+  return alias && names.has(alias) ? alias : undefined;
+}
+
+function externalExecutableIndex(
+  words: string[],
+  names: Set<string>,
+  aliases: Map<string, string>
+): number | undefined {
+  let index = 0;
+  while (index < words.length && /^[A-Za-z_][A-Za-z0-9_]*=/.test(words[index])) index += 1;
+
+  const controlPrefixes = new Set(["!", "{", "(", "then", "do", "elif", "else"]);
+  const nonExecutingCommands = new Set([
+    "cat", "echo", "egrep", "fgrep", "grep", "printf", "rg", "ripgrep", "test", "[", "true", "false"
+  ]);
+  while (index < words.length) {
+    const command = executableBasename(words[index]);
+    if (externalCommandName(words[index], names, aliases)) return index;
+    if (controlPrefixes.has(command)) {
+      index += 1;
+      continue;
+    }
+    const ripgrepPreprocessor = ["rg", "ripgrep"].includes(command) && hasOption(words.slice(index + 1), ["--pre"]);
+    if (nonExecutingCommands.has(command) && !ripgrepPreprocessor) return undefined;
+    if (["command", "exec", "nohup", "time"].includes(command)) {
+      index += 1;
+      while (index < words.length && words[index].startsWith("-")) {
+        const option = words[index];
+        index += ["-a", "-f", "-o", "--format", "--output"].includes(option) ? 2 : 1;
+      }
+      continue;
+    }
+    if (command === "env") {
+      index += 1;
+      while (index < words.length) {
+        if (/^[A-Za-z_][A-Za-z0-9_]*=/.test(words[index])) {
+          index += 1;
+          continue;
+        }
+        if (["-u", "--unset", "-C", "--chdir"].includes(words[index])) {
+          index += 2;
+          continue;
+        }
+        if (words[index].startsWith("-")) {
+          index += 1;
+          continue;
+        }
+        break;
+      }
+      continue;
+    }
+    if (command === "sudo") {
+      index += 1;
+      while (index < words.length) {
+        const option = words[index];
+        if (["-u", "--user", "-g", "--group", "-h", "--host", "-p", "--prompt", "-C", "--close-from", "-D", "--chdir"].includes(option)) {
+          index += 2;
+          continue;
+        }
+        if (option.startsWith("-")) {
+          index += 1;
+          continue;
+        }
+        break;
+      }
+      continue;
+    }
+    if (command === "nice") {
+      index += 1;
+      if (["-n", "--adjustment"].includes(words[index])) index += 2;
+      else if (words[index]?.startsWith("--adjustment=") || /^-\d+$/.test(words[index] ?? "")) index += 1;
+      continue;
+    }
+    if (command === "find") {
+      const execIndex = words.findIndex((word, nestedIndex) => nestedIndex > index && ["-exec", "-execdir"].includes(word));
+      if (execIndex < 0) return undefined;
+      const nested = words.findIndex((word, nestedIndex) => nestedIndex > execIndex && externalCommandName(word, names, aliases));
+      return nested >= 0 ? nested : undefined;
+    }
+    if (["xargs", "npx", "bunx"].includes(command) || (command === "pnpm" && words[index + 1] === "dlx")) {
+      const nested = words.findIndex((word, nestedIndex) => nestedIndex > index && externalCommandName(word, names, aliases));
+      return nested >= 0 ? nested : undefined;
+    }
+    // Unknown wrappers and shell constructs fail closed when they carry a
+    // literal external executable later in the same semantic segment.
+    const nested = words.findIndex((word, nestedIndex) => nestedIndex > index && externalCommandName(word, names, aliases));
+    return nested >= 0 ? nested : undefined;
+  }
+  return undefined;
+}
+
+function containsDynamicShellExpansion(value: string): boolean {
+  return /(?:\$\(|`|\$\{|\$[A-Za-z0-9_@*#?$!-])/.test(value);
+}
+
+function assignmentEndIndex(words: string[], startIndex: number): number {
+  let commandSubstitutionDepth = 0;
+  let parameterExpansionDepth = 0;
+  let insideBackticks = false;
+  for (let index = startIndex; index < words.length; index += 1) {
+    const equalsIndex = index === startIndex ? words[index].indexOf("=") : -1;
+    const value = equalsIndex >= 0 ? words[index].slice(equalsIndex + 1) : words[index];
+    for (let charIndex = 0; charIndex < value.length; charIndex += 1) {
+      const char = value[charIndex];
+      const next = value[charIndex + 1];
+      if (char === "`") {
+        insideBackticks = !insideBackticks;
+        continue;
+      }
+      if (insideBackticks) continue;
+      if (char === "$" && next === "(") {
+        commandSubstitutionDepth += 1;
+        charIndex += 1;
+        continue;
+      }
+      if (commandSubstitutionDepth > 0 && char === "(") commandSubstitutionDepth += 1;
+      else if (commandSubstitutionDepth > 0 && char === ")") commandSubstitutionDepth -= 1;
+      if (char === "$" && next === "{") {
+        parameterExpansionDepth += 1;
+        charIndex += 1;
+        continue;
+      }
+      if (parameterExpansionDepth > 0 && char === "{") parameterExpansionDepth += 1;
+      else if (parameterExpansionDepth > 0 && char === "}") parameterExpansionDepth -= 1;
+    }
+    if (commandSubstitutionDepth === 0 && parameterExpansionDepth === 0 && !insideBackticks) return index + 1;
+  }
+  return words.length;
+}
+
+function dynamicExecutableIndex(
+  words: string[],
+  names: Set<string>,
+  aliases: Map<string, string>
+): number | undefined {
+  let index = 0;
+  while (index < words.length && /^[A-Za-z_][A-Za-z0-9_]*=/.test(words[index])) {
+    // shellWords intentionally exposes nested command text as separate words;
+    // consume the balanced assignment value before looking for an executable.
+    index = assignmentEndIndex(words, index);
+  }
+
+  const controlPrefixes = new Set(["!", "{", "(", "then", "do", "elif", "else"]);
+  const nonExecutingCommands = new Set([
+    "cat", "echo", "egrep", "fgrep", "grep", "printf", "rg", "ripgrep", "test", "[", "true", "false"
+  ]);
+  while (index < words.length) {
+    const word = words[index];
+    const command = executableBasename(word);
+    if (externalCommandName(word, names, aliases)) return undefined;
+    if (containsDynamicShellExpansion(word)) return index;
+    if (controlPrefixes.has(command)) {
+      index += 1;
+      continue;
+    }
+    const ripgrepPreprocessor = ["rg", "ripgrep"].includes(command) && hasOption(words.slice(index + 1), ["--pre"]);
+    if (nonExecutingCommands.has(command) && !ripgrepPreprocessor) return undefined;
+    if (["command", "exec", "nohup", "time"].includes(command)) {
+      index += 1;
+      while (index < words.length && words[index].startsWith("-")) {
+        const option = words[index];
+        index += ["-a", "-f", "-o", "--format", "--output"].includes(option) ? 2 : 1;
+      }
+      continue;
+    }
+    if (command === "env") {
+      index += 1;
+      while (index < words.length) {
+        if (/^[A-Za-z_][A-Za-z0-9_]*=/.test(words[index])) {
+          index += 1;
+          continue;
+        }
+        if (["-u", "--unset", "-C", "--chdir"].includes(words[index])) {
+          index += 2;
+          continue;
+        }
+        if (words[index].startsWith("-")) {
+          index += 1;
+          continue;
+        }
+        break;
+      }
+      continue;
+    }
+    if (command === "sudo") {
+      index += 1;
+      while (index < words.length) {
+        const option = words[index];
+        if (["-u", "--user", "-g", "--group", "-h", "--host", "-p", "--prompt", "-C", "--close-from", "-D", "--chdir"].includes(option)) {
+          index += 2;
+          continue;
+        }
+        if (option.startsWith("-")) {
+          index += 1;
+          continue;
+        }
+        break;
+      }
+      continue;
+    }
+    if (command === "nice") {
+      index += 1;
+      if (["-n", "--adjustment"].includes(words[index])) index += 2;
+      else if (words[index]?.startsWith("--adjustment=") || /^-\d+$/.test(words[index] ?? "")) index += 1;
+      continue;
+    }
+    if (command === "find") {
+      const execIndex = words.findIndex((candidate, nestedIndex) => nestedIndex > index && ["-exec", "-execdir"].includes(candidate));
+      if (execIndex < 0) return undefined;
+      const nested = dynamicExecutableIndex(words.slice(execIndex + 1), names, aliases);
+      return nested === undefined ? undefined : execIndex + 1 + nested;
+    }
+    if (["xargs", "npx", "bunx"].includes(command) || (command === "pnpm" && words[index + 1] === "dlx")) {
+      let nestedIndex = index + (command === "pnpm" ? 2 : 1);
+      const optionsWithValues = new Set([
+        "-a", "--arg-file", "-d", "--delimiter", "-E", "--eof", "-I", "--replace", "-L", "--max-lines",
+        "-n", "--max-args", "-P", "--max-procs", "-s", "--max-chars", "-p", "--package"
+      ]);
+      while (nestedIndex < words.length) {
+        const option = words[nestedIndex];
+        if (option === "--") {
+          nestedIndex += 1;
+          break;
+        }
+        if (optionsWithValues.has(option)) {
+          nestedIndex += 2;
+          continue;
+        }
+        if (option.startsWith("-")) {
+          nestedIndex += 1;
+          continue;
+        }
+        break;
+      }
+      const nested = dynamicExecutableIndex(words.slice(nestedIndex), names, aliases);
+      return nested === undefined ? undefined : nestedIndex + nested;
+    }
+    return undefined;
+  }
+  return undefined;
+}
+
+function inspectOptionValues(words: string[], shortName: string, longName: string): {
+  found: boolean;
+  missing: boolean;
+  values: string[];
+} {
+  const result = { found: false, missing: false, values: [] as string[] };
+  for (let index = 0; index < words.length; index += 1) {
+    const word = words[index];
+    if ((shortName && word === shortName) || word === longName) {
+      result.found = true;
+      const value = words[index + 1];
+      if (!value || value.startsWith("-")) result.missing = true;
+      else {
+        result.values.push(value);
+        index += 1;
+      }
+      continue;
+    }
+    if (word.startsWith(`${longName}=`)) {
+      result.found = true;
+      const value = word.slice(longName.length + 1);
+      if (value) result.values.push(value);
+      else result.missing = true;
+      continue;
+    }
+    if (shortName.length === 2 && word.startsWith(shortName) && word.length > shortName.length) {
+      result.found = true;
+      result.values.push(word.slice(shortName.length));
+    }
+  }
+  return result;
+}
+
+function hasOption(words: string[], names: string[]): boolean {
+  return words.some((word) => names.some((name) => word === name || word.startsWith(`${name}=`)
+    || (name.length === 2 && word.startsWith(name) && word.length > name.length)));
+}
+
+function ghApiRequiresConfirmation(words: string[]): boolean {
+  const methods = inspectOptionValues(words, "-X", "--method");
+  if (methods.missing || methods.values.some((method) => !["GET", "HEAD"].includes(method.toUpperCase()))) return true;
+  const carriesFields = hasOption(words, ["-f", "-F", "--field", "--raw-field", "--input"]);
+  return carriesFields && !(methods.values.length > 0 && methods.values.every((method) => method.toUpperCase() === "GET"));
+}
+
+function ghRequiresConfirmation(words: string[]): boolean {
+  const args = words.slice(1);
+  if (hasOption(args, ["-h", "--help", "--version"])) return false;
+  const positionals: string[] = [];
+  const optionsWithValues = new Set(["-R", "--repo", "--hostname"]);
+  for (let index = 0; index < args.length; index += 1) {
+    const word = args[index];
+    if (optionsWithValues.has(word)) {
+      index += 1;
+      continue;
+    }
+    if (word.startsWith("-")) continue;
+    positionals.push(normalizeActionToken(word));
+    if (positionals.length >= 2) break;
+  }
+  const group = positionals[0] ?? "";
+  if (group === "api") return ghApiRequiresConfirmation(args.slice(1));
+  if (["search", "status", "browse", "completion", "help", "version"].includes(group)) return false;
+  const action = GH_COMMAND_GROUPS.has(group) ? positionals[1] : group;
+  return !action || !GH_SAFE_ACTIONS.has(action);
+}
+
+function curlRequiresConfirmation(words: string[]): boolean {
+  const args = words.slice(1);
+  const methods = inspectOptionValues(args, "-X", "--request");
+  if (methods.missing || methods.values.some((method) => !["GET", "HEAD"].includes(method.toUpperCase()))) return true;
+  if (hasOption(args, ["-K", "--config", "-T", "--upload-file", "-F", "--form", "--form-string", "--json"])) return true;
+  const quoteCommands = inspectOptionValues(args, "-Q", "--quote");
+  if (quoteCommands.missing) return true;
+  const safeQuoteCommands = /^(?:[+-])?(?:CWD|FEAT|HELP|NOOP|PWD|STAT|SYST)\b/i;
+  if (quoteCommands.values.some((command) => !safeQuoteCommands.test(command.trim()))) return true;
+  const carriesData = hasOption(args, ["-d", "--data", "--data-ascii", "--data-binary", "--data-raw", "--data-urlencode"]);
+  const forceGet = hasOption(args, ["-G", "--get"]);
+  return carriesData && !forceGet;
+}
+
+function wgetRequiresConfirmation(words: string[]): boolean {
+  const args = words.slice(1);
+  const methods = inspectOptionValues(args, "", "--method");
+  if (methods.missing || methods.values.some((method) => !["GET", "HEAD"].includes(method.toUpperCase()))) return true;
+  return hasOption(args, ["-e", "--execute", "--config", "--post-data", "--post-file", "--body-data", "--body-file", "--upload-file"]);
+}
+
+function findShellExternalConfirmationReason(
+  segments: Array<{ command: string; words: string[] }>,
+  policy: BasePolicy
+): string | undefined {
+  if (externalActionPolicyConfig(policy).defaultMode !== "enforce") return undefined;
+  const names = new Set(["gh", "curl", "wget"]);
+  const aliases = new Map<string, string>();
+  for (const segment of segments) {
+    for (const word of segment.words) {
+      const assignment = word.match(/^([A-Za-z_][A-Za-z0-9_]*)=(.+)$/);
+      if (!assignment) continue;
+      const executable = executableBasename(assignment[2]);
+      if (names.has(executable)) aliases.set(assignment[1], executable);
+    }
+  }
+  for (const segment of segments) {
+    const dynamicIndex = dynamicExecutableIndex(segment.words, names, aliases);
+    if (dynamicIndex !== undefined) {
+      return `External command requires confirmation: dynamic executable in ${segment.command}`;
+    }
+    const index = externalExecutableIndex(segment.words, names, aliases);
+    if (index === undefined) continue;
+    const invocation = segment.words.slice(index);
+    const command = externalCommandName(invocation[0], names, aliases);
+    if (!command) continue;
+    const requiresConfirmation = command === "gh"
+      ? ghRequiresConfirmation(invocation)
+      : command === "curl"
+        ? curlRequiresConfirmation(invocation)
+        : wgetRequiresConfirmation(invocation);
+    if (requiresConfirmation) return `External command requires confirmation: ${command} in ${segment.command}`;
+  }
+  return undefined;
+}
+
+function quoteShellArgument(value: string): string {
+  if (/^[A-Za-z0-9_@%+=:,./-]+$/.test(value)) return value;
+  return `'${value.replace(/'/g, `'"'"'`)}'`;
+}
+
+function normalizeShellCommandForPolicy(command: string): string {
+  const collapsed = command.replace(/\\(?:\r\n|\n)/g, "");
+  let normalized = "";
+  let quote: "'" | '"' | undefined;
+  let escaped = false;
+  for (let index = 0; index < collapsed.length; index += 1) {
+    const char = collapsed[index];
+    if (escaped) {
+      normalized += char;
+      escaped = false;
+      continue;
+    }
+    if (char === "\\") {
+      normalized += char;
+      escaped = true;
+      continue;
+    }
+    if ((char === "'" || char === '"') && !quote) {
+      quote = char;
+      normalized += char;
+      continue;
+    }
+    if (quote === char) {
+      quote = undefined;
+      normalized += char;
+      continue;
+    }
+    const previous = collapsed[index - 1];
+    const beginsShellWord = index === 0 || /\s/.test(previous) || /[;&|(){}]/.test(previous);
+    if (!quote && char === "#" && beginsShellWord) {
+      while (index < collapsed.length && collapsed[index] !== "\n") index += 1;
+      if (collapsed[index] === "\n") normalized += "\n";
+      continue;
+    }
+    normalized += char;
+  }
+  return normalized;
+}
+
+function extractShellCommandInput(input: Record<string, unknown>): { command?: string; reason?: string } {
+  const hasCommand = Object.hasOwn(input, "command");
+  const hasCmd = Object.hasOwn(input, "cmd");
+  const hasArgs = Object.hasOwn(input, "args");
+  if (hasCommand && typeof input.command !== "string") {
+    return { reason: "command must be a string" };
+  }
+  if (hasCmd && typeof input.cmd !== "string") {
+    return { reason: "cmd must be a string" };
+  }
+
+  const command = hasCommand ? input.command as string : undefined;
+  const cmd = hasCmd ? input.cmd as string : undefined;
+  if (command !== undefined && cmd !== undefined && command !== cmd) {
+    return { reason: "conflicting command and cmd values" };
+  }
+
+  let args: string[] = [];
+  if (hasArgs) {
+    if (!Array.isArray(input.args) || !input.args.every((arg) => typeof arg === "string")) {
+      return { reason: "args must be an array of strings" };
+    }
+    if (input.args.length > MAX_SHELL_ARG_COUNT) {
+      return { reason: `too many args: ${input.args.length} > ${MAX_SHELL_ARG_COUNT}` };
+    }
+    if (input.args.some((arg) => arg.length > MAX_SHELL_ARG_CHARS)) {
+      return { reason: `shell arg exceeds ${MAX_SHELL_ARG_CHARS} characters` };
+    }
+    args = input.args;
+  }
+
+  const baseCommand = command ?? cmd;
+  if (baseCommand !== undefined && (!baseCommand.trim() || baseCommand.length > MAX_SHELL_COMMAND_CHARS)) {
+    return { reason: `shell command must contain 1-${MAX_SHELL_COMMAND_CHARS} characters` };
+  }
+  if (baseCommand === undefined && args.length === 0) {
+    return { reason: "shell command input is missing or unsupported" };
+  }
+
+  const combined = [baseCommand?.trim(), ...args.map(quoteShellArgument)].filter((item): item is string => Boolean(item)).join(" ");
+  if (combined.length > MAX_SHELL_COMMAND_CHARS) {
+    return { reason: `combined shell command exceeds ${MAX_SHELL_COMMAND_CHARS} characters` };
+  }
+  return { command: combined };
+}
+
+function evaluateMcpProxyShellProtectedAccess(
+  cwd: string,
+  prepared: PreparedToolInput,
+  protectedPaths: string[]
+): { block: boolean; reason?: string } {
+  if (!prepared.proxyArgs || !prepared.proxyTool) return { block: false };
+  if (!prepared.proxyShellCarrier) return { block: false };
+
+  const shellInput = extractShellCommandInput(prepared.proxyArgs);
+  if (!shellInput.command) {
+    return { block: true, reason: `Blocked MCP shell carrier: ${shellInput.reason ?? "command is missing"}` };
+  }
+  const baseCommand = typeof prepared.proxyArgs.command === "string"
+    ? prepared.proxyArgs.command
+    : typeof prepared.proxyArgs.cmd === "string"
+      ? prepared.proxyArgs.cmd
+      : "";
+  const rawArgs = Array.isArray(prepared.proxyArgs.args)
+    ? prepared.proxyArgs.args.filter((arg): arg is string => typeof arg === "string")
+    : [];
+  const conservativeCommand = [baseCommand.trim(), ...rawArgs].filter(Boolean).join(" ") || shellInput.command;
+  const command = normalizeShellCommandForPolicy(conservativeCommand);
+  const protectedHit = findProtectedPathInCommand(command, protectedPaths);
+  if (protectedHit) {
+    return {
+      block: true,
+      reason: `MCP command touches protected path: ${protectedHit.candidate} matches ${protectedHit.pattern}`
+    };
+  }
+  const protectedGlobHit = shellGlobTargetsProtectedPath(command, protectedPaths);
+  if (protectedGlobHit) {
+    return {
+      block: true,
+      reason: `MCP command glob can target protected path: ${protectedGlobHit.glob} can match ${protectedGlobHit.example} via ${protectedGlobHit.pattern}`
+    };
+  }
+  const resolvedProtectedHit = findResolvedProtectedPathInCommand(cwd, command, protectedPaths);
+  if (resolvedProtectedHit) {
+    return {
+      block: true,
+      reason: `MCP command resolves to protected path: ${resolvedProtectedHit.candidate} resolves to ${resolvedProtectedHit.resolved} matching ${resolvedProtectedHit.pattern}`
+    };
+  }
+  return { block: false };
 }
 
 function projectFilePath(cwd: string, relativePath: string): string {
@@ -2369,18 +3335,22 @@ function checkoutReferenceRepo(repoRef: string, forceUpdate = false): ReferenceR
 }
 
 export default function companyGuard(pi: ExtensionAPI) {
-  const extensionDir = path.dirname(new URL(import.meta.url).pathname);
+  const extensionDir = path.dirname(fileURLToPath(import.meta.url));
   const policy = loadPolicy(extensionDir);
   const bashResults = createBashResultLedger({ maxEntries: 300 });
 
   pi.on("session_start", async (_event, ctx) => {
-    const profile = loadProfileFromContext(ctx);
+    const projectTrusted = ctx.isProjectTrusted();
+    const explicitProfile = Boolean(process.env.PI_COMPANY_PROFILE?.trim());
+    const profile = loadProfile(ctx.cwd, projectTrusted);
     const name = profile.displayName || profile.projectId || path.basename(ctx.cwd);
     pi.setSessionName(`pi:${name}`);
-    const profileHint = fs.existsSync(projectProfilePath(ctx.cwd)) ? "" : " (run /onboard-project to select a profile)";
+    const profileHint = explicitProfile || (projectTrusted && fs.existsSync(projectProfilePath(ctx.cwd)))
+      ? ""
+      : " (run /onboard-project to select a profile)";
     const snapshot = buildUsageSnapshot(ctx, String(pi.getThinkingLevel()));
     const preflight = buildContextPreflight(snapshot, "task", 0);
-    const capabilityState = verifyProjectCapabilityState(extensionDir, ctx.cwd);
+    const capabilityState = verifyProjectCapabilityState(extensionDir, ctx.cwd, projectTrusted);
     const permissionProfile = resolvePermissionProfile(profile, policy, permissionOverrideFromContext(ctx));
     const contextHint = preflight.recommendation === "fresh-session"
       ? " Context is high; use /fresh-task or /fresh-scout for new work."
@@ -2445,10 +3415,7 @@ export default function companyGuard(pi: ExtensionAPI) {
 
   pi.on("tool_result", async (event, ctx) => {
     const profile = loadProfileFromContext(ctx);
-    const shellProtectedPaths = [
-      ...(policy.shellProtectedPaths ?? policy.protectedPaths),
-      ...((profile.shellProtectedPaths ?? profile.protectedPaths) ?? [])
-    ];
+    const pathPolicy = effectiveProtectedPaths(policy, profile);
 
     const observed = observedBashResultFromToolResultEvent(event, ctx.cwd);
     if (observed) {
@@ -2469,7 +3436,7 @@ export default function companyGuard(pi: ExtensionAPI) {
     let resultChanged = false;
 
     if (event.toolName === "grep") {
-      const filtered = filterGrepProtectedContent(resultContent, shellProtectedPaths);
+      const filtered = filterGrepProtectedContent(resultContent, pathPolicy.readProtectedPaths);
       if (filtered.changed) {
         resultContent = filtered.content;
         resultDetails = resultDetails && typeof resultDetails === "object"
@@ -2484,7 +3451,7 @@ export default function companyGuard(pi: ExtensionAPI) {
         ? event.input as Record<string, unknown>
         : {};
       const basePath = extractLikelyPathFromInput(ctx.cwd, input) || ".";
-      const filtered = filterProtectedPathListContent(ctx.cwd, resultContent, shellProtectedPaths, basePath, event.toolName);
+      const filtered = filterProtectedPathListContent(ctx.cwd, resultContent, pathPolicy.readProtectedPaths, basePath, event.toolName);
       if (filtered.changed) {
         resultContent = filtered.content;
         resultDetails = resultDetails && typeof resultDetails === "object"
@@ -2514,22 +3481,16 @@ export default function companyGuard(pi: ExtensionAPI) {
   });
 
   pi.on("tool_call", async (event, ctx) => {
-    const capabilityState = verifyProjectCapabilityState(extensionDir, ctx.cwd);
+    const projectTrusted = ctx.isProjectTrusted();
+    const capabilityState = verifyProjectCapabilityState(extensionDir, ctx.cwd, projectTrusted);
     const recoveryTools = new Set(["company_profile_options", "company_profile_apply", "company_context", "read", "grep", "find", "ls"]);
     if (!capabilityState.ok && !recoveryTools.has(event.toolName)) {
       return { block: true, reason: capabilityState.reason ?? "Capability lock validation failed." };
     }
-    const profile = loadProfileFromContext(ctx);
+    const profile = loadProfile(ctx.cwd, projectTrusted);
     const runtime = resolveRuntimePolicy(profile);
     const permissionProfile = resolvePermissionProfile(profile, policy, permissionOverrideFromContext(ctx));
-    const protectedPaths = [
-      ...policy.protectedPaths,
-      ...(profile.protectedPaths ?? [])
-    ];
-    const shellProtectedPaths = [
-      ...(policy.shellProtectedPaths ?? policy.protectedPaths),
-      ...((profile.shellProtectedPaths ?? profile.protectedPaths) ?? [])
-    ];
+    const pathPolicy = effectiveProtectedPaths(policy, profile);
     const permissionDecision = evaluatePermissionProfileToolAccess(event.toolName, permissionProfile);
     if (permissionDecision.block) {
       return { block: true, reason: permissionDecision.reason };
@@ -2541,26 +3502,34 @@ export default function companyGuard(pi: ExtensionAPI) {
     const toolInput = event.input && typeof event.input === "object"
       ? event.input as Record<string, unknown>
       : {};
+    const preparedInput = prepareToolInputForPolicy(event.toolName, toolInput, policy);
+    if (preparedInput.reason) {
+      return { block: true, reason: `Blocked ${event.toolName}: ${preparedInput.reason}.` };
+    }
 
-    if (isToolCallEventType("bash", event)) {
-      const command = String(event.input.command ?? "");
+    if (SHELL_TOOL_NAMES.has(event.toolName)) {
+      const shellInput = extractShellCommandInput(toolInput);
+      if (!shellInput.command) {
+        return { block: true, reason: `Blocked ${event.toolName}: ${shellInput.reason ?? "shell command input is missing or unsupported"}.` };
+      }
+      const command = normalizeShellCommandForPolicy(shellInput.command);
       const execDecision = evaluateExecPolicy(command, profile, policy);
       if (execDecision.mode !== "off" && execDecision.decision === "forbid") {
         return { block: true, reason: execDecision.reasons.join("; ") };
       }
 
-      const protectedHit = findProtectedPathInCommand(command, shellProtectedPaths);
+      const protectedHit = findProtectedPathInCommand(command, pathPolicy.shellProtectedPaths);
       if (protectedHit) {
         return { block: true, reason: `Command touches protected path: ${protectedHit.candidate} matches ${protectedHit.pattern}` };
       }
-      const protectedGlobHit = shellGlobTargetsProtectedPath(command, shellProtectedPaths);
+      const protectedGlobHit = shellGlobTargetsProtectedPath(command, pathPolicy.shellProtectedPaths);
       if (protectedGlobHit) {
         return {
           block: true,
           reason: `Command glob can target protected path: ${protectedGlobHit.glob} can match ${protectedGlobHit.example} via ${protectedGlobHit.pattern}`
         };
       }
-      const resolvedProtectedHit = findResolvedProtectedPathInCommand(ctx.cwd, command, shellProtectedPaths);
+      const resolvedProtectedHit = findResolvedProtectedPathInCommand(ctx.cwd, command, pathPolicy.shellProtectedPaths);
       if (resolvedProtectedHit) {
         return {
           block: true,
@@ -2568,26 +3537,73 @@ export default function companyGuard(pi: ExtensionAPI) {
         };
       }
 
-      if (execDecision.mode !== "off" && execDecision.decision === "prompt") {
+      const confirmationReasons = execDecision.mode !== "off" && execDecision.decision === "prompt"
+        ? [...execDecision.reasons]
+        : [];
+      const externalReason = findShellExternalConfirmationReason(execDecision.segments, policy);
+      if (externalReason) confirmationReasons.push(externalReason);
+      if (confirmationReasons.length > 0) {
         const ok = await ctx.ui.confirm(
-          `Command requires confirmation.\n\n${execDecision.reasons.join("\n")}\n\nAllow?`,
+          `Command requires confirmation.\n\n${confirmationReasons.join("\n")}\n\nAllow?`,
           "Company exec policy confirmation"
         );
-        if (!ok) return { block: true, reason: `User denied command: ${execDecision.reasons.join("; ")}` };
+        if (!ok) return { block: true, reason: `User denied command: ${confirmationReasons.join("; ")}` };
       }
     }
 
+    const proxyShellDecision = evaluateMcpProxyShellProtectedAccess(
+      ctx.cwd,
+      preparedInput,
+      pathPolicy.shellProtectedPaths
+    );
+    if (proxyShellDecision.block) {
+      return { block: true, reason: proxyShellDecision.reason };
+    }
+
+    const policyToolIdentity = preparedInput.proxyToolName ?? event.toolName;
+    const usesKnownExternalProvider = externalActionPolicyConfig(policy).providerKeywords
+      .some((provider) => actionTextMatchesAny(policyToolIdentity, [provider]));
     const pathDecision = evaluatePathLikeToolAccess(
       ctx.cwd,
-      event.toolName,
-      toolInput,
-      protectedPaths,
-      shellProtectedPaths,
+      preparedInput.proxyToolName ?? event.toolName,
+      preparedInput.input,
+      pathPolicy.writeProtectedPaths,
+      pathPolicy.readProtectedPaths,
+      pathPolicy.readOnlyPaths,
       permissionProfile.mode === "trusted-full-access" ? undefined : capabilityState.filesystemRead,
-      permissionProfile.mode === "trusted-full-access" ? undefined : capabilityState.filesystemWrite
+      permissionProfile.mode === "trusted-full-access" ? undefined : capabilityState.filesystemWrite,
+      {
+        forceScopeAware: Boolean(preparedInput.proxyToolName),
+        forceWrite: preparedInput.proxyAction?.decision === "confirm",
+        allowAmbiguousFilesystemContentFields: !usesKnownExternalProvider && !isCompanyTool(event.toolName)
+      }
     );
     if (pathDecision.block) {
       return { block: true, reason: pathDecision.reason };
+    }
+
+    if (!SHELL_TOOL_NAMES.has(event.toolName)) {
+      const classifiedExternalAction = classifyExternalAction(event.toolName, preparedInput.input, policy);
+      const externalAction = preparedInput.proxyShellCarrier && classifiedExternalAction.decision !== "confirm"
+        ? {
+            decision: "confirm" as const,
+            provider: typeof toolInput.server === "string" && toolInput.server.trim() ? toolInput.server.trim() : "mcp-proxy",
+            action: "shell-command",
+            evidence: classifiedExternalAction.evidence
+          }
+        : classifiedExternalAction;
+      if (externalAction.decision === "confirm") {
+        const inputSummary = preparedInput.confirmationSummary
+          ? `\ninput: ${preparedInput.confirmationSummary}`
+          : "";
+        const ok = await ctx.ui.confirm(
+          `External provider action requires confirmation.\n\nprovider: ${externalAction.provider}\naction: ${externalAction.action}\ntool: ${event.toolName}${inputSummary}\n\nAllow?`,
+          "Company external action confirmation"
+        );
+        if (!ok) {
+          return { block: true, reason: `User denied external provider action: ${event.toolName}` };
+        }
+      }
     }
 
     if (runtime.contextBudget !== "off" && ["write", "edit"].includes(event.toolName)) {
@@ -2617,6 +3633,7 @@ export default function companyGuard(pi: ExtensionAPI) {
       const detail = params.detail ?? "concise";
       const profile = loadProfileFromContext(ctx);
       const permissionProfile = resolvePermissionProfile(profile, policy, permissionOverrideFromContext(ctx));
+      const pathPolicy = effectiveProtectedPaths(policy, profile);
       const requiredContext = [
         ...policy.defaultRequiredContext,
         ...(profile.requiredContext ?? [])
@@ -2629,7 +3646,11 @@ export default function companyGuard(pi: ExtensionAPI) {
         profile: {
           path: ".pi/company-profile.json",
           exists: fs.existsSync(projectProfilePath(ctx.cwd)),
-          source: fs.existsSync(projectProfilePath(ctx.cwd)) ? "project" : "fallback"
+          source: process.env.PI_COMPANY_PROFILE?.trim()
+            ? "env"
+            : ctx.isProjectTrusted() && fs.existsSync(projectProfilePath(ctx.cwd))
+              ? "project"
+              : "fallback"
         },
         projectContext: {
           path: ".pi/project-context.md",
@@ -2637,6 +3658,8 @@ export default function companyGuard(pi: ExtensionAPI) {
         },
         protectedPaths: profile.protectedPaths ?? [],
         shellProtectedPaths: profile.shellProtectedPaths ?? profile.protectedPaths ?? [],
+        readOnlyPaths: profile.readOnlyPaths ?? [],
+        effectivePaths: pathPolicy,
         requiredContext: Array.from(new Set(requiredContext)),
         verifyCommands: profile.verifyCommands ?? {},
         mcpCapabilities: profile.mcpCapabilities ?? [],
@@ -2648,6 +3671,7 @@ export default function companyGuard(pi: ExtensionAPI) {
           execPolicy: execPolicyConfig(policy),
           contextBudget: contextBudgetConfig(policy),
           toolRegistry: toolRegistryConfig(policy),
+          externalActionPolicy: externalActionPolicyConfig(policy),
           finalGate: finalGateConfig(policy)
         }
       };
@@ -2996,6 +4020,16 @@ export default function companyGuard(pi: ExtensionAPI) {
     }),
     async execute(_toolCallId, params, _signal, _onUpdate, ctx) {
       try {
+        const ok = await ctx.ui.confirm(
+          `Apply company profile "${params.profile}" to this project?\n\nThis writes .pi/company-profile.json and .pi/company-profile.lock.json.`,
+          "Company profile apply confirmation"
+        );
+        if (!ok) {
+          return {
+            content: [{ type: "text", text: `Profile apply denied by operator: ${params.profile}` }],
+            isError: true
+          };
+        }
         const profile = writeProfileFromAdapter(extensionDir, ctx.cwd, params.profile, params.overwrite === true, params.projectId, params.displayName);
         appendTrace(ctx.cwd, { event: "profile_apply", profile: params.profile, projectId: profile.projectId, mode: profile.mode });
         appendSessionTrace(pi, { event: "profile_apply", profile: params.profile, projectId: profile.projectId, mode: profile.mode });

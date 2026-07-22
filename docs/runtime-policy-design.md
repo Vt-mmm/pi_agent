@@ -49,6 +49,7 @@ Profiles define:
 - `rootMarkers`
 - `protectedPaths`
 - `shellProtectedPaths`
+- `readOnlyPaths`
 - `requiredContext`
 - `verifyCommands`
 - `mcpCapabilities`
@@ -56,6 +57,8 @@ Profiles define:
 - `hardGates`
 
 The same platform can operate as `web-frontend`, `backend-api`, `fullstack`, `be-readonly-fe`, `data`, `devops`, `docs`, `python`, `node-typescript`, or `mobile` by switching profile.
+
+`readOnlyPaths` is for contracts such as `be-readonly-fe`: path tools may inspect these files with `read`, `grep`, `find`, and `ls`, but write/edit is blocked and shell access is kept inside `shellProtectedPaths`.
 
 ## Permission profiles
 

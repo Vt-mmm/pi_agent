@@ -28,6 +28,11 @@ Default package source:
 USAGE
 }
 
+if [[ "${1:-}" == "-h" || "${1:-}" == "--help" ]]; then
+  usage
+  exit 0
+fi
+
 if [[ $# -lt 1 ]]; then
   usage >&2
   exit 2
@@ -294,7 +299,11 @@ if [[ ! -f "$PROJECT_PATH/.pi/mcp.json" ]]; then
 fi
 
 if [[ ! -f "$PROJECT_PATH/.pi/.gitignore" ]]; then
-  cp "$PLATFORM_ROOT/templates/project/.pi/.gitignore" "$PROJECT_PATH/.pi/.gitignore"
+  if [[ -f "$PLATFORM_ROOT/templates/project/.pi/gitignore.template" ]]; then
+    cp "$PLATFORM_ROOT/templates/project/.pi/gitignore.template" "$PROJECT_PATH/.pi/.gitignore"
+  else
+    cp "$PLATFORM_ROOT/templates/project/.pi/.gitignore" "$PROJECT_PATH/.pi/.gitignore"
+  fi
 fi
 
 PROJECT_GITIGNORE="$PROJECT_PATH/.gitignore"

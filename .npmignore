@@ -1,12 +1,9 @@
-# Local platform runtime state is not part of the published package.
-/.mcp.json
 /.pi/
-!templates/project/.pi/memory/
-!templates/project/.pi/memory/MEMORY.md
-!templates/project/.pi/memory/memory_summary.md
-
-# Repository automation and local verification assets are useful in git,
-# but not required for a Pi package install.
-/.github/
-/tests/
-*.tsbuildinfo
+/.codex/
+/.mcp.json
+.DS_Store
+node_modules/
+coverage/
+plans/
+*.tgz
+npm-debug.log*

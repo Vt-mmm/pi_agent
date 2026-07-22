@@ -47,7 +47,7 @@ Options:
   -h, --help
 
 Package source examples:
-  # Latest global install is simpler with Pi directly:
+  # Moving latest for a personal machine or sandbox only:
   pi install git:github.com/Vt-mmm/pi_agent
 
   # Exact sources for .pi/settings.json and capability lock:
@@ -264,25 +264,69 @@ run_cmd() {
   fi
 }
 
+require_node_version() {
+  if ! command -v node >/dev/null 2>&1; then
+    echo "FAIL: Node.js >=22.19.0 is required." >&2
+    exit 1
+  fi
+  local node_version
+  node_version="$(node -p 'process.versions.node' 2>/dev/null || true)"
+  if ! node -e 'const [major, minor, patch] = process.versions.node.split(".").map(Number); process.exit(major > 22 || (major === 22 && (minor > 19 || (minor === 19 && patch >= 0))) ? 0 : 1);'; then
+    echo "FAIL: Node.js >=22.19.0 is required; found ${node_version:-unknown}." >&2
+    exit 1
+  fi
+}
+
 ensure_pi_cli() {
-  if command -v pi >/dev/null 2>&1; then
-    return
+  local expected_pi_version current_output current_version=""
+  expected_pi_version="$(node -e 'const fs=require("node:fs"); const p=JSON.parse(fs.readFileSync(process.argv[1], "utf8")); process.stdout.write(p.peerDependencies?.["@earendil-works/pi-coding-agent"] ?? "");' "$PLATFORM_ROOT/package.json")"
+  if [[ ! "$expected_pi_version" =~ ^[0-9]+\.[0-9]+\.[0-9]+([+-][0-9A-Za-z.-]+)?$ ]]; then
+    echo "FAIL: package.json must pin an exact Pi Coding Agent version." >&2
+    exit 1
   fi
 
-  if [[ "$AUTO_INSTALL_PI" == false ]]; then
+  if command -v pi >/dev/null 2>&1; then
+    current_output="$(pi --version 2>/dev/null || true)"
+    if [[ "$current_output" =~ ([0-9]+\.[0-9]+\.[0-9]+([+-][0-9A-Za-z.-]+)?) ]]; then
+      current_version="${BASH_REMATCH[1]}"
+    fi
+    if [[ "$current_version" == "$expected_pi_version" ]]; then
+      return
+    fi
+    if [[ "$AUTO_INSTALL_PI" == false ]]; then
+      echo "FAIL: Pi Coding Agent $expected_pi_version is required; found ${current_version:-${current_output:-unknown}}. Remove --no-install-pi or upgrade it manually." >&2
+      exit 1
+    fi
+    echo "Pi CLI ${current_version:-unknown} is not supported; installing exact host $expected_pi_version:"
+  elif [[ "$AUTO_INSTALL_PI" == false ]]; then
     echo "FAIL: pi is not on PATH. Rerun without --no-install-pi or install Pi manually." >&2
     exit 1
+  else
+    echo "Pi CLI not found; installing exact host $expected_pi_version:"
   fi
 
   if ! command -v npm >/dev/null 2>&1; then
-    echo "FAIL: pi is not on PATH and npm is unavailable." >&2
-    echo "Install Node.js/npm first, then rerun setup." >&2
+    echo "FAIL: npm is required to install Pi Coding Agent $expected_pi_version." >&2
+    echo "Install Node.js >=22.19.0 with npm, then rerun setup." >&2
     exit 1
   fi
 
-  echo "Pi CLI not found; installing with npm:"
-  run_cmd npm install -g @earendil-works/pi-coding-agent@0.80.10
+  run_cmd npm install -g --ignore-scripts "@earendil-works/pi-coding-agent@$expected_pi_version"
+  if [[ "$DRY_RUN" == false ]]; then
+    hash -r
+    current_output="$(pi --version 2>/dev/null || true)"
+    current_version=""
+    if [[ "$current_output" =~ ([0-9]+\.[0-9]+\.[0-9]+([+-][0-9A-Za-z.-]+)?) ]]; then
+      current_version="${BASH_REMATCH[1]}"
+    fi
+    if [[ "$current_version" != "$expected_pi_version" ]]; then
+      echo "FAIL: Pi Coding Agent upgrade did not activate version $expected_pi_version; found ${current_version:-${current_output:-unknown}}." >&2
+      exit 1
+    fi
+  fi
 }
+
+require_node_version
 
 if [[ -z "$PROJECT_PATH" && "$DO_PROJECT" == true ]]; then
   if [[ "$(pwd)" == "$PLATFORM_ROOT" ]]; then

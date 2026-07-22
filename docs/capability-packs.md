@@ -159,7 +159,7 @@ Pack không thể cấp thêm quyền cho chính nó:
 ### Permission boundary
 
 - Resolver chỉ chấp nhận permission là tập con của profile grant.
-- Lock ghi lại `protectedPaths` và `shellProtectedPaths` hợp nhất từ base policy và profile, cùng filesystem scope do pack yêu cầu.
+- Lock ghi lại `protectedPaths`, `shellProtectedPaths`, `readOnlyPaths` và filesystem scope do pack yêu cầu.
 - Network và external action mặc định rỗng.
 - Action proposal bắt buộc `riskLane=high-risk`, `dryRun=true`, `containsSecrets=false`.
 - Proposal dùng canonical UTC timestamp, chưa hết hạn, có hiệu lực tối đa 24 giờ và không chứa raw payload hay credential.

@@ -3,7 +3,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
-import { describe, it } from "node:test";
+import { after, describe, it } from "node:test";
 import {
   CapabilityValidationError,
   buildCapabilityCatalog,
@@ -18,8 +18,16 @@ import {
   writeProfileLockAtomic
 } from "../packages/pi-company-core/capabilities/capability-core.js";
 
-const repositoryRoot = path.resolve(path.dirname(new URL(import.meta.url).pathname), "..");
+const repositoryRoot = path.resolve(import.meta.dirname, "..");
 const actionValidationNow = Date.parse("2026-07-21T01:30:00.000Z");
+const temporaryRoots = new Set();
+
+after(() => {
+  for (const root of temporaryRoots) {
+    if (path.dirname(root) !== os.tmpdir() || !path.basename(root).startsWith("pi-capability-")) continue;
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
 
 function writeJson(file, value) {
   fs.mkdirSync(path.dirname(file), { recursive: true });
@@ -93,6 +101,7 @@ function baseProfile() {
 
 function createPlatformFixture() {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "pi-capability-"));
+  temporaryRoots.add(root);
   writeJson(path.join(root, "package.json"), { name: "fixture", version: "1.0.0" });
   fs.cpSync(path.join(repositoryRoot, "packages", "pi-company-core"), path.join(root, "packages", "pi-company-core"), { recursive: true });
   fs.writeFileSync(path.join(root, "artifact.txt"), "bounded artifact\n");
@@ -172,6 +181,14 @@ describe("capability catalog and profile lock", () => {
     const profilePath = path.join(root, "profile.json");
     const lock = resolveCapabilityProfile(root, profilePath);
     fs.appendFileSync(path.join(root, "packages", "pi-company-core", "extensions", "policy-core.js"), "\n// integrity change\n");
+    assert.equal(verifyCapabilityLock(root, profilePath, lock).ok, false);
+  });
+
+  it("detects a base policy change", () => {
+    const root = createPlatformFixture();
+    const profilePath = path.join(root, "profile.json");
+    const lock = resolveCapabilityProfile(root, profilePath);
+    fs.appendFileSync(path.join(root, "packages", "pi-company-core", "policies", "base-policy.json"), "\n");
     assert.equal(verifyCapabilityLock(root, profilePath, lock).ok, false);
   });
 });

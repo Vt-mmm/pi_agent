@@ -15,14 +15,23 @@ Phần còn lại — OAuth, package, context, harness, MCP, tool-call guard —
 
 ## Bước 1 — install runtime và package
 
+Support matrix của release hiện tại: macOS/Linux với Bash đã được verify. Native Windows và WSL chưa được verify. Node.js phải từ `22.19.0` trở lên.
+
 ```bash
-node --version  # >= 20
-npm install -g @earendil-works/pi-coding-agent@0.80.10
-pi install git:github.com/Vt-mmm/pi_agent@v0.4.7
-pi update --extensions
+node --version  # >= 22.19.0
+npm install -g --ignore-scripts @earendil-works/pi-coding-agent@0.81.1
+npm install -g --ignore-scripts github:Vt-mmm/pi_agent#v0.4.8
+pi-company-install --stable --dry-run
+pi-company-install --stable
 ```
 
-Lệnh trên là setup có pin cho team/repo cần tái lập. `v0.4.7` là release hiện tại của docs này; khi nâng version, đổi tag sau khi đã review changelog và chạy doctor/smoke test.
+Lệnh trên cài Pi CLI, cài terminal command `pi-company-*`, rồi install Pi Company Platform bằng stable release đã resolve tag thành commit SHA. Trong output installer, `currentRelease` là version của terminal helper đang chạy. `v0.4.8` là release hiện tại của docs này.
+
+Nếu chỉ cần cài package vào Pi và không cần terminal command helper:
+
+```bash
+pi install git:github.com/Vt-mmm/pi_agent@v0.4.8
+```
 
 Nếu đang ở source checkout của platform, có thể preview và áp stable bằng helper:
 
@@ -30,6 +39,26 @@ Nếu đang ở source checkout của platform, có thể preview và áp stable
 bash scripts/install-global.sh --stable --dry-run
 bash scripts/install-global.sh --stable
 ```
+
+Helper stable sẽ resolve tag release hiện tại thành commit SHA trước khi install, nên user vẫn dùng lệnh ngắn nhưng team nhận source bất biến hơn.
+
+Khi update toàn bộ platform, cập nhật exact Pi host trước rồi dùng helper target để cài Pi package tương ứng:
+
+```bash
+npm install -g --ignore-scripts @earendil-works/pi-coding-agent@0.81.1
+npm install -g --ignore-scripts github:Vt-mmm/pi_agent#vX.Y.Z
+pi-company-install --stable --dry-run
+pi-company-install --stable
+```
+
+Rollback toàn bộ dùng cùng flow với `vPREVIOUS`, nhưng phải lấy exact host version từ release policy của target và đánh giá lại dependency risk trước khi hạ host. Nếu chủ ý chỉ đổi Pi package và giữ host/helper hiện tại:
+
+```bash
+pi-company-install --version vX.Y.Z --resolve-tag --dry-run
+pi-company-install --version vX.Y.Z --resolve-tag
+```
+
+Checklist release canonical nằm tại [release-install-policy.md](release-install-policy.md).
 
 Máy cá nhân hoặc sandbox có thể dùng latest nếu chấp nhận cập nhật nhanh:
 
@@ -166,7 +195,7 @@ File này là snapshot context cho task sau. Nếu file còn `Generated: not yet
 bash /path/to/pi_agent/scripts/setup.sh /path/to/project \
   --project-only \
   --profile auto \
-  --package-source git:github.com/Vt-mmm/pi_agent@v0.4.7 \
+  --package-source git:github.com/Vt-mmm/pi_agent@v0.4.8 \
   --mcp-preset core \
   --subagents-preset safe
 ```
@@ -187,7 +216,7 @@ Script bash chỉ dùng khi muốn preseed config vào repo:
 ```bash
 bash /path/to/pi_agent/scripts/setup.sh /path/to/project \
   --profile be-readonly-fe \
-  --package-source git:github.com/Vt-mmm/pi_agent@v0.4.7 \
+  --package-source git:github.com/Vt-mmm/pi_agent@v0.4.8 \
   --mcp-preset core \
   --subagents-preset safe
 ```

@@ -17,8 +17,8 @@
       "path": "evals/scenarios/capability-resolution.json"
     },
     {
-      "byteSize": 4028,
-      "digest": "sha256:57167d97a7a947c154bf63a068d6d58731d85b12c649a777ead5bb234983bdb3",
+      "byteSize": 4983,
+      "digest": "sha256:850464635450b49be6a2ec0638c5e0d9f6418539d202810cef8a83bd4adfe8b9",
       "id": "base-policy",
       "kind": "policies",
       "pack": "engineering-base@0.1.1",
@@ -115,23 +115,28 @@
   ],
   "core": {
     "apiVersion": 1,
-    "packageDigest": "sha256:e1b18b0017671866570a39ab5afdbe400af1607dd08f7d419f611042cab06c06",
+    "packageDigest": "sha256:d0938f66eae9c03297aa9ef97e9162636464a44d62a358fc4d3b2cbc97f2f49a",
     "packageSource": "../",
-    "packageVersion": "0.4.7",
+    "packageVersion": "0.4.8",
     "runtimeFiles": [
       {
-        "byteSize": 3108,
-        "digest": "sha256:b9cc063bf5b840af176b38bd1173b9c4790006af82c1726e1201aadd82b1a756",
+        "byteSize": 3658,
+        "digest": "sha256:576cbc41261cb15f4fa99b6737194b8d21ecc9d4b17be313dbfc24540b14e0eb",
         "path": "package.json"
       },
       {
-        "byteSize": 912,
-        "digest": "sha256:0d16781c0952774989d8de67a7041a65718c0f46fb58d8260889dfef01425305",
+        "byteSize": 956,
+        "digest": "sha256:1b3bd2e5f54f9ad6491d66dcece78d69bdfb1bd7110efbf0b04bd7b2b0290fdb",
         "path": "packages/pi-company-core/package.json"
       },
       {
-        "byteSize": 52768,
-        "digest": "sha256:e5ca7e490af049f324d93fa6beea40a87f6df5d84258ae4328607ccfb3b24402",
+        "byteSize": 4983,
+        "digest": "sha256:850464635450b49be6a2ec0638c5e0d9f6418539d202810cef8a83bd4adfe8b9",
+        "path": "packages/pi-company-core/policies/base-policy.json"
+      },
+      {
+        "byteSize": 52917,
+        "digest": "sha256:d6d939add67f9b27d0b79bdc9dd37be5b990138f669ce9d3decec2532fbe15d5",
         "path": "packages/pi-company-core/capabilities/capability-core.js"
       },
       {
@@ -140,8 +145,8 @@
         "path": "packages/pi-company-core/security/sensitive-data.js"
       },
       {
-        "byteSize": 154177,
-        "digest": "sha256:85f61b9a8d7bdae3c8b25c6d1d5fbd64e5ca8c46c8eeb632f2ac6592d9e86108",
+        "byteSize": 195609,
+        "digest": "sha256:c94cf8577a2ec3e77f7adb911e3c74f096bbad34229b6f5ff122d364f32c85da",
         "path": "packages/pi-company-core/extensions/company-guard.ts"
       },
       {
@@ -197,6 +202,7 @@
       ".pi/company-state/**",
       ".pi/settings.json"
     ],
+    "readOnlyPaths": [],
     "shellProtectedPaths": [
       "**/.env",
       "**/.env.*",
