@@ -43,7 +43,7 @@ The benchmark converted an imprecise security concern into explicit recall and f
 - Large output: sensitive content redacted from a 180,265-byte payload.
 - Current lock digest: `sha256:2490ee2edfd6d11c88f3ab2720456b24aa3b3a70ec9b16ba17947aeeb6781f84`.
 - Dependency audit: 0 findings across 94 packages.
-- Independent review, quality assurance, and documentation checks: passed.
+- Internal review, quality assurance, and documentation checks: passed.
 
 ## Residual boundary
 

@@ -14,12 +14,12 @@ Repo này phải chạy được cho nhiều project/domain khác nhau. Vì vậ
 
 | Use case | Package source |
 |---|---|
-| Global latest | `git:github.com/Vt-mmm/pi_agent` |
-| Team pinned release | `git:github.com/Vt-mmm/pi_agent@vX.Y.Z` |
+| Personal/sandbox latest | `git:github.com/Vt-mmm/pi_agent` |
+| Team pinned release | `git:github.com/Vt-mmm/pi_agent@v0.4.7` |
 | Enterprise npm | `npm:@company/pi-agent-platform@x.y.z` |
 | Local platform dev | `/path/to/pi_agent` |
 
-Latest tiện cho install/update global. Pin tag/commit cho `.pi/settings.json` trong project nghiêm túc để tránh workflow đổi bất ngờ.
+Latest tiện cho máy cá nhân muốn nhận cập nhật nhanh. Pin tag/commit cho `.pi/settings.json` trong project nghiêm túc để tránh workflow đổi bất ngờ giữa các developer.
 
 ## Repo root là Pi package
 
@@ -74,7 +74,7 @@ Nếu muốn commit sẵn `.pi/company-profile.json` vào repo hoặc bootstrap 
 ```bash
 bash scripts/setup.sh /path/to/project \
   --profile be-readonly-fe \
-  --package-source git:github.com/Vt-mmm/pi_agent@vX.Y.Z \
+  --package-source git:github.com/Vt-mmm/pi_agent@v0.4.7 \
   --mcp-preset core \
   --subagents-preset safe
 ```

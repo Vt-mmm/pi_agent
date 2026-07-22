@@ -2,6 +2,15 @@
 
 This file records release-facing changes for Pi Agent Platform. Copy the relevant version block into GitHub Releases when publishing a tag.
 
+## Unreleased
+
+### Changed
+
+- Clarified public docs comparison with Codex CLI and Claude Code: Pi Company Platform brings similar governance concepts into Pi and packages them for team workflows.
+- Reworded security docs to describe the guard as an application-level policy enforcement layer, not a complete security boundary or OS sandbox.
+- Split install guidance so production/team setup pins `v0.4.7`, while latest is reserved for personal/sandbox use.
+- Clarified that redaction benchmarks and internal review are not equivalent to an external security audit.
+
 ## v0.4.7 - 2026-07-22
 
 ### Added
@@ -21,10 +30,10 @@ This file records release-facing changes for Pi Agent Platform. Copy the relevan
 
 ### Changed
 
-- Install docs now default to latest:
-  - `pi install git:github.com/Vt-mmm/pi_agent`
-  - `pi update --extensions`
-- Pinned install examples use placeholders such as `vX.Y.Z` and `x.y.z` instead of hardcoding an old release.
+- Install docs distinguish personal latest from reproducible team setup:
+  - personal/sandbox latest: `pi install git:github.com/Vt-mmm/pi_agent`;
+  - team/production pin: `pi install git:github.com/Vt-mmm/pi_agent@v0.4.7`.
+- Pinned install examples use the current release tag where a reproducible setup is expected.
 - Runtime smoke verification now reads the current package version from `package.json` instead of hardcoding a tag.
 - Docs site, README, package metadata, and Vercel docs now point to `https://piagent.io.vn`.
 
@@ -161,4 +170,3 @@ This file records release-facing changes for Pi Agent Platform. Copy the relevan
 - Lock tampering fails closed.
 - Core protected paths include `.pi/settings.json` and `.pi/company-profile.lock.json`.
 - Capability scope can only narrow access; protected paths remain denied before allow-scope checks.
-

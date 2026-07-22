@@ -13,14 +13,23 @@ pi
 
 Phần còn lại — OAuth, package, context, harness, MCP, tool-call guard — nằm trong repo/package `pi-company-platform`.
 
-## Bước 1 — install global một lần
+## Bước 1 — install runtime và package
 
 ```bash
+node --version  # >= 20
 npm install -g @earendil-works/pi-coding-agent@0.80.10
-pi install git:github.com/Vt-mmm/pi_agent
+pi install git:github.com/Vt-mmm/pi_agent@v0.4.7
+pi update --extensions
 ```
 
-Lệnh trên là global latest cho máy cá nhân. Khi seed `.pi/settings.json` cho team/repo cần audit lặp lại, dùng pinned tag như `git:github.com/Vt-mmm/pi_agent@vX.Y.Z`.
+Lệnh trên là setup có pin cho team/repo cần tái lập. `v0.4.7` là release hiện tại của docs này; khi nâng version, đổi tag sau khi đã review changelog và chạy doctor/smoke test.
+
+Máy cá nhân hoặc sandbox có thể dùng latest nếu chấp nhận cập nhật nhanh:
+
+```bash
+pi install git:github.com/Vt-mmm/pi_agent
+pi update --extensions
+```
 
 Sau bước này, project mới không cần chạy bash init profile. Chỉ cần:
 
@@ -150,7 +159,7 @@ File này là snapshot context cho task sau. Nếu file còn `Generated: not yet
 bash /path/to/pi_agent/scripts/setup.sh /path/to/project \
   --project-only \
   --profile auto \
-  --package-source git:github.com/Vt-mmm/pi_agent@vX.Y.Z \
+  --package-source git:github.com/Vt-mmm/pi_agent@v0.4.7 \
   --mcp-preset core \
   --subagents-preset safe
 ```
@@ -171,7 +180,7 @@ Script bash chỉ dùng khi muốn preseed config vào repo:
 ```bash
 bash /path/to/pi_agent/scripts/setup.sh /path/to/project \
   --profile be-readonly-fe \
-  --package-source git:github.com/Vt-mmm/pi_agent@vX.Y.Z \
+  --package-source git:github.com/Vt-mmm/pi_agent@v0.4.7 \
   --mcp-preset core \
   --subagents-preset safe
 ```

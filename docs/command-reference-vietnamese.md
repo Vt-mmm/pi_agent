@@ -343,9 +343,9 @@ Các lệnh này chạy ngoài Pi.
 
 | Command | Dùng khi nào |
 |---|---|
-| `npm install -g @earendil-works/pi-coding-agent` | Cài Pi CLI lần đầu. |
-| `pi install git:github.com/Vt-mmm/pi_agent` | Cài global latest package platform từ GitHub. |
-| `pi install git:github.com/Vt-mmm/pi_agent@vX.Y.Z` | Cài pinned release khi cần reproducible setup. |
+| `npm install -g @earendil-works/pi-coding-agent@0.80.10` | Cài Pi CLI tương thích với release hiện tại. |
+| `pi install git:github.com/Vt-mmm/pi_agent@v0.4.7` | Cài pinned release khi cần reproducible team setup. |
+| `pi install git:github.com/Vt-mmm/pi_agent` | Cài latest package platform cho máy cá nhân/sandbox. |
 | `pi update --extensions` | Update packages đã cài, gồm package platform. |
 | `pi list --approve` | Xem package Pi đã install. |
 | `pi-company-auto` | Mở Pi với project trust `--approve` cho lần chạy hiện tại; guard vẫn bật. |

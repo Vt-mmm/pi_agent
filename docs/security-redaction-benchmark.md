@@ -1,6 +1,6 @@
 # Sensitive-data redaction benchmark
 
-The redaction benchmark measures the text and structured-data backstop used by the runtime guard. It uses deterministic synthetic values only; real credentials must never be added to the corpus.
+The redaction benchmark measures the text and structured-data backstop used by the runtime guard. It uses deterministic synthetic values only; real credentials must never be added to the corpus. This is an internal regression benchmark, not an independent security audit, and the detector model should be treated as still maturing.
 
 Run it from the repository root:
 
@@ -38,6 +38,16 @@ Unlabeled high-entropy values are not automatically treated as secrets. A generi
 ## Security boundary
 
 This benchmark measures pattern-based output containment. It does not authorize secret handling and does not turn the extension into an operating-system sandbox. Workloads that execute untrusted code or process untrusted prompts still require process, filesystem, network, and credential isolation.
+
+Before using redaction results as a strong security claim, complete and maintain:
+
+- a written threat model and attack-vector catalog;
+- Linux, macOS, Windows, and shell-behavior compatibility matrix;
+- parser fuzzing for shell/path extraction;
+- symlink and path-traversal adversarial tests;
+- third-party audit or independent review;
+- issue/CVE intake and disclosure process;
+- LTS support and backport policy for affected releases.
 
 When extending the detector:
 

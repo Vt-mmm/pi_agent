@@ -25,7 +25,7 @@ This update adds focused Git workflow commands for team usage without introducin
   - `git add :/`
   - `git -C <repo> add .`
 - Kept targeted staging such as `git add README.md` allowed.
-- Updated package/docs version references so install docs default to latest and pinned examples use `vX.Y.Z`.
+- Updated package/docs version references so personal installs may follow latest while team/project examples use pinned release tags.
 
 ## Security note
 

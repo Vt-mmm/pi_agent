@@ -658,6 +658,12 @@
         margin-top: 8px;
       }
 
+      .callout ul {
+        margin: 12px 0 0;
+        padding-left: 20px;
+        color: var(--muted);
+      }
+
       .ok-callout {
         border-color: rgba(139, 233, 200, 0.22);
         background: rgba(139, 233, 200, 0.065);
@@ -818,7 +824,7 @@
         <span>Pi Company Platform</span>
       </a>
       <div class="top-actions">
-        <span class="pill"><span class="pill-dot"></span>latest docs</span>
+        <span class="pill"><span class="pill-dot"></span>stable docs</span>
         <a class="button social" href="https://github.com/Vt-mmm/pi_agent" target="_blank" rel="noopener noreferrer" aria-label="Mở GitHub repository">
           <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
             <path d="M7 17 17 7M9 7h8v8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
@@ -892,9 +898,9 @@
 
           <section class="section" id="positioning">
             <p class="section-kicker">Positioning</p>
-            <h2>Khác gì Codex CLI và Claude CLI?</h2>
+            <h2>Khác gì Codex CLI và Claude Code?</h2>
             <p class="section-lead">
-              Codex CLI và Claude CLI là agent coding tổng quát. Pi Company Platform là lớp vận hành riêng cho team: gom profile, guard, capability lock, MCP, subagents, memory và verify gate thành một package cài được trên nhiều repo.
+              Codex CLI và Claude Code là agent coding tổng quát và đều có cơ chế governance native như permission, approval, sandbox/trust, hooks, subagents, MCP hoặc managed settings tuỳ bề mặt sử dụng. Pi Company Platform đưa các cơ chế governance tương tự vào Pi, rồi đóng gói thành workflow đội nhóm: profile, policy guard, capability lock, MCP, subagents, memory và verify gate dùng lại được trên nhiều repo.
             </p>
 
             <div class="table-wrap">
@@ -903,7 +909,7 @@
                   <tr>
                     <th>Hạng mục</th>
                     <th>Codex CLI</th>
-                    <th>Claude CLI</th>
+                    <th>Claude Code</th>
                     <th>Pi Company Platform</th>
                   </tr>
                 </thead>
@@ -912,7 +918,7 @@
                     <td>Vai trò chính</td>
                     <td>Coding agent chạy trong terminal, làm việc trực tiếp trên local repo.</td>
                     <td>Agent coding đa bề mặt: terminal, IDE, desktop, web và tích hợp dev tools.</td>
-                    <td>Governance layer cho Pi: chuẩn hoá cách team dùng agent theo policy và profile.</td>
+                    <td>Governance layer cho Pi: chuẩn hoá cách team dùng agent theo policy, profile và workflow vận hành.</td>
                   </tr>
                   <tr>
                     <td>Tuỳ biến team</td>
@@ -922,15 +928,15 @@
                   </tr>
                   <tr>
                     <td>Quyền chạy</td>
-                    <td>Có lựa chọn model, reasoning, permissions và command theo session.</td>
-                    <td>Mặc định đọc an toàn, hành động rủi ro cần approval hoặc policy phù hợp.</td>
-                    <td>Có <span class="inline-code">read-only</span>, <span class="inline-code">workspace-write</span>, <span class="inline-code">trusted-full-access</span> và guard riêng.</td>
+                    <td>Có sandbox, approval policy, permission profiles, network controls và workflow read-only/workspace-write tuỳ môi trường.</td>
+                    <td>Có permissions, working-directory boundary, sandboxed bash option, hooks và managed settings cho team.</td>
+                    <td>Có <span class="inline-code">read-only</span>, <span class="inline-code">workspace-write</span>, <span class="inline-code">trusted-full-access</span> ở lớp policy extension của Pi.</td>
                   </tr>
                   <tr>
                     <td>Bảo mật secret</td>
-                    <td>Dựa trên sandbox, approval, hướng dẫn và bề mặt Codex đang dùng.</td>
-                    <td>Có permission architecture, sandbox option, trust verification và best practices.</td>
-                    <td>Chặn protected path, shell glob, symlink alias, redaction output và integrity lock.</td>
+                    <td>Dựa trên OS-enforced sandbox, approval, network policy và bề mặt Codex đang dùng.</td>
+                    <td>Dựa trên permission architecture, sandbox option, trust verification, allowlist và security best practices.</td>
+                    <td>Application-level policy layer cho controlled tools: protected paths, shell checks, symlink alias, output redaction và integrity lock.</td>
                   </tr>
                   <tr>
                     <td>Điểm mạnh riêng</td>
@@ -941,35 +947,60 @@
                 </tbody>
               </table>
             </div>
+
+            <div class="callout ok-callout">
+              <strong>Thông điệp đúng</strong>
+              <p>Pi Company Platform không claim Codex hoặc Claude thiếu governance. Điểm khác là đưa một bộ governance tương tự vào Pi, rồi chuẩn hoá thành profile, command, policy, verification và release discipline để team áp dụng đồng nhất trên nhiều repo.</p>
+            </div>
+
+            <div class="source-links" aria-label="Nguồn chính thức cho phần so sánh">
+              <a href="https://developers.openai.com/codex/agent-approvals-security" target="_blank" rel="noopener noreferrer">Codex approvals and security</a>
+              <a href="https://developers.openai.com/codex/concepts/sandboxing" target="_blank" rel="noopener noreferrer">Codex sandboxing</a>
+              <a href="https://docs.anthropic.com/en/docs/claude-code/security" target="_blank" rel="noopener noreferrer">Claude Code security</a>
+              <a href="https://docs.anthropic.com/en/docs/claude-code/sub-agents" target="_blank" rel="noopener noreferrer">Claude Code subagents</a>
+            </div>
           </section>
 
           <section class="section" id="quickstart">
             <p class="section-kicker">Quickstart</p>
             <h2>Step by step cho thành viên mới</h2>
             <p class="section-lead">
-              Luồng dưới đây là đường đi chuẩn: cài package một lần, mở repo, chọn profile, bật quyền phù hợp, chạy task, rồi verify bằng command thật.
+              Luồng dưới đây là đường đi chuẩn cho team: chuẩn bị Node.js và Pi Coding Agent, cài Pi Company Platform bằng release tag đã pin, kiểm tra compatibility, mở repo, chọn profile, bật quyền phù hợp, chạy task, rồi verify bằng command thật. Bản latest chỉ nên dùng cho máy cá nhân hoặc sandbox chấp nhận cập nhật nhanh.
             </p>
 
             <div class="steps">
               <article class="step">
                 <div>
-                  <h3>Cài package Pi Company</h3>
-                  <p>Cài global latest từ repository đã phát hành. Khi cần reproducible setup cho team, pin tag trong project settings.</p>
+                  <h3>Chuẩn bị runtime</h3>
+                  <p>Dùng Node.js 20 trở lên và Pi Coding Agent <span class="inline-code">0.80.10</span>. Pi Company Platform <span class="inline-code">v0.4.7</span> đang pin compatibility với runtime này qua package metadata.</p>
                   <div class="command-card">
-                    <header><span>Install latest</span><button class="clip-btn" data-clip="pi install git:github.com/Vt-mmm/pi_agent">Lấy lệnh</button></header>
-                    <pre><code>pi install git:github.com/Vt-mmm/pi_agent
-# update later
-pi update --extensions</code></pre>
+                    <header><span>Runtime prerequisites</span><button class="clip-btn" data-clip="node --version">Lấy lệnh</button></header>
+                    <pre><code>node --version  # &gt;= 20
+npm install -g @earendil-works/pi-coding-agent@0.80.10
+pi --version</code></pre>
                   </div>
                 </div>
               </article>
               <article class="step">
                 <div>
-                  <h3>Pin version khi seed project</h3>
-                  <p>Không dùng latest cho file <span class="inline-code">.pi/settings.json</span> đã commit. Project cần audit lặp lại nên pin tag hoặc commit.</p>
+                  <h3>Cài Pi Company Platform có pin</h3>
+                  <p>Team, production và docs quickstart nên pin release tag hoặc commit cụ thể. Máy cá nhân có thể dùng source không pin nếu chấp nhận cập nhật theo nhánh hiện tại.</p>
                   <div class="command-card">
-                    <header><span>Pinned source</span><button class="clip-btn" data-clip="git:github.com/Vt-mmm/pi_agent@vX.Y.Z">Lấy source</button></header>
-                    <pre><code>git:github.com/Vt-mmm/pi_agent@vX.Y.Z</code></pre>
+                    <header><span>Pinned install</span><button class="clip-btn" data-clip="pi install git:github.com/Vt-mmm/pi_agent@v0.4.7">Lấy lệnh</button></header>
+                    <pre><code>pi install git:github.com/Vt-mmm/pi_agent@v0.4.7
+pi update --extensions</code></pre>
+                  </div>
+                </div>
+              </article>
+
+              <article class="step">
+                <div>
+                  <h3>Latest chỉ cho cá nhân/sandbox</h3>
+                  <p>Dùng latest khi muốn nhận thay đổi nhanh trên máy riêng. Khi đưa vào repo/team, đổi sang tag hoặc commit đã review để mọi developer nhận cùng một cấu hình.</p>
+                  <div class="command-card">
+                    <header><span>Personal latest</span><button class="clip-btn" data-clip="pi install git:github.com/Vt-mmm/pi_agent">Lấy lệnh</button></header>
+                    <pre><code>pi install git:github.com/Vt-mmm/pi_agent
+pi update --extensions</code></pre>
                   </div>
                 </div>
               </article>
@@ -1036,10 +1067,13 @@ pi</code></pre>
               <article class="step">
                 <div>
                   <h3>Verify trước khi handoff</h3>
-                  <p>Final gate chỉ tin kết quả command đã chạy thật, exit 0, và khớp verify plan.</p>
+                  <p>Final gate chỉ tin kết quả command đã chạy thật, exit 0, và khớp verify plan. Với setup team, chạy doctor và smoke test sau khi pin hoặc nâng version.</p>
                   <div class="command-card">
-                    <header><span>Verify</span><button class="clip-btn" data-clip="npm run verify">Lấy lệnh</button></header>
-                    <pre><code>npm run verify
+                    <header><span>Doctor + smoke</span><button class="clip-btn" data-clip="pi-company-doctor /path/to/project --strict-share">Lấy lệnh</button></header>
+                    <pre><code>pi-company-doctor /path/to/project --strict-share
+# in pi_agent source repo:
+npm run smoke
+npm run verify
 npm test
 npm run typecheck</code></pre>
                   </div>
@@ -1085,23 +1119,23 @@ npm run typecheck</code></pre>
 
           <section class="section" id="security">
             <p class="section-kicker">Security model</p>
-            <h2>Bảo mật là guard thật, không chỉ prompt</h2>
+            <h2>Policy enforcement layer, không phải OS sandbox</h2>
             <p class="section-lead">
-              Platform ưu tiên fail-closed: khi lock sai, profile sai hoặc command đụng vùng nhạy cảm, guard chặn trước khi tool chạy. Đây không phải OS sandbox; với code không tin cậy vẫn cần container hoặc VM.
+              Platform ưu tiên fail-closed trong bề mặt tool được kiểm soát: khi lock sai, profile sai hoặc command đụng vùng nhạy cảm, guard cố gắng chặn trước khi tool chạy. Đây là application-level policy enforcement layer, không phải lớp cách ly hoàn chỉnh; với code hoặc prompt không tin cậy vẫn cần container/VM và giới hạn credential, filesystem, process, network.
             </p>
 
             <div class="grid cols-2">
               <article class="card">
                 <h3>Protected paths</h3>
-                <p>Chặn đọc/ghi các file như <span class="inline-code">.env</span>, <span class="inline-code">auth.json</span>, local trust files, profile lock và settings nhạy cảm.</p>
+                <p>Chặn đọc/ghi qua controlled tools đối với file như <span class="inline-code">.env</span>, <span class="inline-code">auth.json</span>, local trust files, profile lock và settings nhạy cảm.</p>
               </article>
               <article class="card">
                 <h3>Shell hardening</h3>
-                <p>Guard bắt glob, brace, redirection, bare-word symlink và xargs composition trước khi shell mở rộng runtime.</p>
+                <p>Guard dựa vào shell parser và rule cho command được kiểm soát để bắt glob, brace, redirection, bare-word symlink và xargs composition trước khi shell mở rộng runtime.</p>
               </article>
               <article class="card">
                 <h3>Secret redaction</h3>
-                <p>Tool output đi qua redactor để che token, provider keys, secret keyword patterns và giá trị nhạy cảm phổ biến.</p>
+                <p>Tool output text đi qua redactor để che token, provider keys, secret keyword patterns và giá trị nhạy cảm phổ biến. Benchmark hiện là synthetic/internal và model vẫn đang hoàn thiện.</p>
               </article>
               <article class="card">
                 <h3>Capability lock</h3>
@@ -1119,7 +1153,17 @@ npm run typecheck</code></pre>
 
             <div class="callout">
               <strong>Ranh giới quan trọng</strong>
-              <p>Full-access ở đây là chế độ tin cậy trong phạm vi repo, không phải cơ chế cách ly hệ điều hành. Workload không tin cậy nên chạy trong container/VM với giới hạn filesystem, process, network và credential.</p>
+              <p>Guard phụ thuộc vào tool path, controlled tools và shell parser mà platform quan sát được. Nó không ngăn một process khác chạy cùng quyền OS đọc/ghi ngoài guard, và không thay thế sandbox của hệ điều hành.</p>
+              <ul>
+                <li>Có thể bị ảnh hưởng bởi symlink, encoding, nested payload, shell expansion hoặc tool mới chưa được policy hoá.</li>
+                <li>Redaction là backstop giảm rò rỉ, không phải giấy phép để đưa secret thật vào prompt/output.</li>
+                <li>Workload không tin cậy cần container/VM với giới hạn filesystem, process, network và credential.</li>
+              </ul>
+            </div>
+
+            <div class="callout">
+              <strong>Redaction cần kiểm toán độc lập</strong>
+              <p>Các benchmark hiện tại là kiểm thử synthetic/internal cho regression và release gate, chưa tương đương external security audit. Trước khi xem redaction như bảo đảm an toàn mạnh, cần threat model rõ, attack vectors, matrix Linux/macOS/Windows và shell, fuzz parser, kiểm tra symlink/path traversal, third-party audit, quy trình issue/CVE và chính sách LTS support.</p>
             </div>
           </section>
 
@@ -1438,7 +1482,7 @@ npm run typecheck</code></pre>
           </section>
 
           <footer class="footer">
-            <p>Pi Company Platform docs · static HTML · security-first agent workflow · latest</p>
+            <p>Pi Company Platform docs · static HTML · governed agent workflow</p>
             <div class="footer-links" aria-label="External links">
               <a href="https://piagent.io.vn" target="_blank" rel="noopener noreferrer">piagent.io.vn</a>
               <a href="https://github.com/Vt-mmm/pi_agent" target="_blank" rel="noopener noreferrer">GitHub repository</a>
