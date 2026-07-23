@@ -27,23 +27,26 @@ Mandatory flow:
    - `/chain` = run agents sequentially.
 5. Explain when to use `company-scout`, `company-planner`, `company-worker`, `company-reviewer`, and `company-oracle`.
 6. If a command might depend on package/provider availability, say so and tell the user to type `/` in Pi or run `pi list --approve`.
-7. Explain context overflow prevention when relevant:
+7. Explain orchestration status when relevant:
+   - `/company-orchestration` shows solo-first mode, review lenses, Field Guide, max subagents, and writer policy without a model follow-up.
+   - Workflow commands use bounded subagents only when independent scout/planning/review work is worth the extra token/tool cost.
+8. Explain context overflow prevention when relevant:
    - `/task-preflight` checks whether to proceed, compact, or fresh-session.
    - `/fresh-task`, `/fresh-scout`, and `/fresh-be-to-fe` open a new governed session and replay the compact workflow prompt.
    - `/scout` is the read-only audit/scout workflow.
-8. Explain runtime permission commands when relevant:
+9. Explain runtime permission commands when relevant:
    - `/permission-status` shows the current profile and boundaries.
    - `/read-only` switches the current session to read-only.
    - `/workspace-write` switches back to governed implementation mode.
    - `/full-access` switches the current session to trusted full-access.
    - `/full-access <task>` switches the current session and forwards `<task>` as the next user request.
-9. Explain Git workflow commands when relevant:
+10. Explain Git workflow commands when relevant:
    - Pi Company intentionally does not expose a `/git-*` namespace.
    - `/commit [message/scope]` starts a guarded local commit workflow.
    - `/pr [title/request]` starts a guarded pull request workflow.
    - Broad staging (`git add .`, `git add -A`, `git add --all`, `git add -- .`, `git add :/`), `git push`, and GitHub write actions still require explicit confirmation.
-10. If the user asks about screenshots/images, explain that local image paths pasted into chat are auto-attached as `[image1]` when supported and below size limits.
-11. Do not claim token/cost savings unless benchmark evidence exists. Point to `/company-usage`, `/task-preflight`, `/subagent-cost`, and `pi-company-usage <project>`.
+11. If the user asks about screenshots/images, explain that local image paths pasted into chat are auto-attached as `[image1]` when supported and below size limits.
+12. Do not claim token/cost savings unless benchmark evidence exists. Point to `/company-usage`, `/task-preflight`, `/subagent-cost`, and `pi-company-usage <project>`.
 
 Output format:
 

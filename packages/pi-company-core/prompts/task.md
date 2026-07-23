@@ -13,9 +13,10 @@ Mandatory flow:
 
 0. Call `company_context_preflight` with `workflow=task`. If it recommends `fresh-session`, stop loading context in this session and tell the user to use `/fresh-task <request>` unless this command already runs in a fresh session.
 1. Call `company_context` and read the project profile/runtime policy.
-2. Call `company_memory_status`. If memory is enabled and relevant to the task, search/read memory as advisory context, record citations with `company_memory_citation_record`, then verify against current repo files.
-3. Read `.pi/project-context.md`. If it is missing or still says `Generated: not yet`, stop and ask the user to run `/onboard-project` after login/model selection before implementation.
-4. Build a Task Implementation Contract with `company_task_start` before editing:
+2. Call `company_orchestration_policy` and keep the task solo-first unless the policy and task shape make bounded subagents clearly useful.
+3. Call `company_memory_status`. If memory or the Field Guide is enabled and relevant to the task, search/read it as advisory context, record citations with `company_memory_citation_record`, then verify against current repo files.
+4. Read `.pi/project-context.md`. If it is missing or still says `Generated: not yet`, stop and ask the user to run `/onboard-project` after login/model selection before implementation.
+5. Build a Task Implementation Contract with `company_task_start` before editing:
    - task id or short slug
    - risk lane
    - expected output
@@ -24,25 +25,28 @@ Mandatory flow:
    - protected paths
    - required context
    - verify command
-5. Read all required context files from the profile before planning, then call `company_context_budget` for large or unfamiliar files.
-6. Decide whether subagents are useful. If the bundled `pi-subagents` parent skill is available, use it for delegation patterns and safety boundaries. If `pi-subagents`/`subagent(...)` is available, use subagents automatically for independent read-heavy scout/planning/review work instead of requiring the user to type `/run`:
+   - review lenses
+   - a compact workPlan/task tree
+6. Read all required context files from the profile before planning, then call `company_context_budget` for large or unfamiliar files.
+7. Decide whether subagents are worth their extra token/tool cost. If the bundled `pi-subagents` parent skill is available, use it for delegation patterns and safety boundaries. If `pi-subagents`/`subagent(...)` is available, use bounded subagents only for independent read-heavy scout/planning/review work:
    - use `company-scout` for unfamiliar module/spec mapping;
    - use builtin `context-builder` when a large task needs a handoff context/meta-prompt before planning;
    - use `company-planner` for medium/high-risk implementation planning;
    - use `company-reviewer` for final diff/test/scope review;
+   - use explicit review lenses instead of spawning a broad swarm;
    - keep implementation single-writer unless the user explicitly asks for parallel writers or worktree isolation is clearly safe;
    - if subagents are unavailable or not useful, continue single-agent and record why.
-7. Record context manifest with `company_context_record`: file + reason.
-8. If the task requires shell commands beyond simple read/list/test, call `company_exec_policy_check` first.
-9. If the task requires non-company MCP/app tools, call `company_tool_policy_check` first.
-10. If the task requires source writes, make a short plan first.
-11. Do not touch protected paths.
-12. Use MCP/tools only when the profile capability allows it.
-13. Before final answer, run the exact verify command from `task.verifyCommands` through Pi bash, then record the observed result with `company_verify_record`. Do not use `true`, `echo ok`, or `|| true` as passing evidence unless that exact command is part of the task verify plan.
-14. Record handoff with `company_trace_record`.
-15. Call `company_task_gate_check`. If gate fails, final outcome is blocked/partial, not done.
-16. If the user asks about token/context/cost usage, call `company_usage_snapshot`; for exact token/cost totals, tell the user to run `/session` or `pi-company-usage <project-path>`.
-17. If verify cannot run, stop and report the exact blocker. Do not call it done.
+8. Record context manifest with `company_context_record`: file + reason.
+9. If the task requires shell commands beyond simple read/list/test, call `company_exec_policy_check` first.
+10. If the task requires non-company MCP/app tools, call `company_tool_policy_check` first.
+11. If the task requires source writes, make a short plan first.
+12. Do not touch protected paths.
+13. Use MCP/tools only when the profile capability allows it.
+14. Before final answer, run the exact verify command from `task.verifyCommands` through Pi bash, then record the observed result with `company_verify_record`. Do not use `true`, `echo ok`, or `|| true` as passing evidence unless that exact command is part of the task verify plan.
+15. Record handoff with `company_trace_record`.
+16. Call `company_task_gate_check`. If gate fails, final outcome is blocked/partial, not done.
+17. If the user asks about token/context/cost usage, call `company_usage_snapshot`; for exact token/cost totals, tell the user to run `/session` or `pi-company-usage <project-path>`.
+18. If verify cannot run, stop and report the exact blocker. Do not call it done.
 
 Do not ask the user to paste this mandatory flow. The platform prompt already contains it. If the user pasted the full flow, treat it as boilerplate and extract only the task request.
 
@@ -52,6 +56,7 @@ Output format:
 - Verify command/result.
 - Context manifest.
 - Subagents used/not used and why.
+- Review lenses applied.
 - Memory cited, if any.
 - Task gate result.
 - Residual risks.

@@ -66,6 +66,22 @@
     "maxInjectedChars": 4000,
     "externalPackages": []
   },
+  "orchestration": {
+    "defaultMode": "solo-first",
+    "maxConcurrentSubagents": 2,
+    "defaultReviewLenses": [
+      "correctness",
+      "tests",
+      "scope"
+    ],
+    "fieldGuide": {
+      "enabled": true,
+      "path": ".pi/memory/MEMORY.md",
+      "maxLines": 80,
+      "writePolicy": "explicit-only",
+      "readBeforeTask": true
+    }
+  },
   "runtimePolicy": {
     "execPolicy": "enforce",
     "contextBudget": "enforce",

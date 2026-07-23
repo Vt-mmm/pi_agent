@@ -1292,11 +1292,12 @@ npm run typecheck</code></pre>
                   <span class="tag">/login</span>
                   <span class="tag">/model</span>
                   <span class="tag">/company-commands</span>
-                  <span class="tag">/company-status</span>
-                  <span class="tag">/company-usage</span>
-                  <span class="tag">/task-preflight</span>
-                </div>
-                <p>Dùng để setup session, chọn model, xem profile/usage và quyết định có cần fresh session trước task lớn không.</p>
+	                  <span class="tag">/company-status</span>
+	                  <span class="tag">/company-orchestration</span>
+	                  <span class="tag">/company-usage</span>
+	                  <span class="tag">/task-preflight</span>
+	                </div>
+	                <p>Dùng để setup session, chọn model, xem profile/usage/orchestration và quyết định có cần fresh session trước task lớn không.</p>
               </article>
               <article class="card">
                 <h3>Project profile</h3>
@@ -1352,12 +1353,12 @@ npm run typecheck</code></pre>
                 <div class="tag-list">
                   <span class="tag">/subagents-doctor</span>
                   <span class="tag">/subagents-models</span>
-                  <span class="tag">/subagents-fleet</span>
-                  <span class="tag">/subagent-cost</span>
-                </div>
-                <p>Kiểm tra runtime, model routing, background runs và cost khi dùng multi-agent.</p>
-              </article>
-            </div>
+	                  <span class="tag">/subagents-fleet</span>
+	                  <span class="tag">/subagent-cost</span>
+	                </div>
+	                <p>Kiểm tra runtime, model routing, background runs và cost. Daily flow vẫn solo-first; subagents dùng cho scout/planning/review độc lập.</p>
+	              </article>
+	            </div>
           </section>
 
           <section class="section" id="workflow">
@@ -1367,10 +1368,15 @@ npm run typecheck</code></pre>
               Chọn workflow theo intent thay vì mô tả lại policy trong prompt. Cách này giảm context lặp và giữ output tập trung hơn.
             </p>
 
-            <div class="callout ok-callout">
-              <strong>Git trong Pi Company</strong>
-              <p>Không có namespace <span class="inline-code">/git</span> riêng. Dùng <span class="inline-code">/commit</span> để commit local đã review, dùng <span class="inline-code">/pr</span> để chuẩn bị PR. Các hành động như <span class="inline-code">git push</span> hoặc stage rộng <span class="inline-code">git add -A</span> vẫn cần operator xác nhận.</p>
-            </div>
+	            <div class="callout ok-callout">
+	              <strong>Git trong Pi Company</strong>
+	              <p>Không có namespace <span class="inline-code">/git</span> riêng. Dùng <span class="inline-code">/commit</span> để commit local đã review, dùng <span class="inline-code">/pr</span> để chuẩn bị PR. Các hành động như <span class="inline-code">git push</span> hoặc stage rộng <span class="inline-code">git add -A</span> vẫn cần operator xác nhận.</p>
+	            </div>
+
+	            <div class="callout">
+	              <strong>Solo-first orchestration</strong>
+	              <p>Dùng <span class="inline-code">/company-orchestration</span> để xem mode, max subagents, review lenses, Field Guide và writer policy. Mặc định parent agent tự làm chính; subagents chỉ dùng khi scout, planning hoặc review có lane độc lập đáng token.</p>
+	            </div>
 
             <div class="command-grid">
               <article class="command-card">

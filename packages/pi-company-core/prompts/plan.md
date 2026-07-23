@@ -12,13 +12,14 @@ $ARGUMENTS
 Rules:
 
 1. Call `company_context`.
-2. Call `company_memory_status`; search memory if it can reduce re-scouting, but treat it as advisory.
-3. Read `.pi/project-context.md`; if it is missing or still pending, recommend `/onboard-project` before implementation.
-4. Read required context.
-5. Identify protected paths and external/high-risk actions.
-6. Decide whether subagents are useful. If the bundled `pi-subagents` parent skill is available, use it for delegation patterns and safety boundaries. If `pi-subagents`/`subagent(...)` is available, use `company-scout` automatically for independent read-only repo/spec mapping before planning medium/large tasks. Use builtin `context-builder` when the task needs a handoff context/meta-prompt. Use `company-oracle` for architecture/risk challenge when the decision is non-obvious. Continue single-agent for tiny plans or unavailable subagent tooling.
-7. Produce phases with exact files, commands, and verify gates.
-8. Do not implement yet unless the user explicitly asks.
+2. Call `company_orchestration_policy`; default to solo-first and choose review lenses/model roles before considering subagents.
+3. Call `company_memory_status`; search memory or Field Guide if it can reduce re-scouting, but treat it as advisory.
+4. Read `.pi/project-context.md`; if it is missing or still pending, recommend `/onboard-project` before implementation.
+5. Read required context.
+6. Identify protected paths and external/high-risk actions.
+7. Decide whether subagents are useful enough to justify extra token/tool cost. If the bundled `pi-subagents` parent skill is available, use it for delegation patterns and safety boundaries. If `pi-subagents`/`subagent(...)` is available, use `company-scout` for independent read-only repo/spec mapping before medium/large plans. Use builtin `context-builder` when the task needs a handoff context/meta-prompt. Use `company-oracle` for architecture/risk challenge when the decision is non-obvious. Continue single-agent for tiny plans or unavailable subagent tooling.
+8. Produce a compact task tree/workPlan with exact files, commands, owner role, review lenses, and verify gates.
+9. Do not implement yet unless the user explicitly asks.
 
 Include:
 
@@ -27,6 +28,8 @@ Include:
 - Touchpoints.
 - Risks.
 - Verify commands.
+- WorkPlan/task tree.
+- Review lenses.
 - Subagents used/not used and why.
 - Memory cited, if any.
 - Open questions.

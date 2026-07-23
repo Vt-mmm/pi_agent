@@ -249,6 +249,77 @@
       },
       "additionalProperties": false
     },
+    "orchestration": {
+      "type": "object",
+      "description": "Solo-first orchestration policy for subagent usage, review lenses, model-role guidance, and Field Guide memory.",
+      "properties": {
+        "defaultMode": {
+          "enum": [
+            "solo-first",
+            "bounded-subagents",
+            "parallel-readonly"
+          ]
+        },
+        "maxConcurrentSubagents": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 6
+        },
+        "defaultReviewLenses": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "enum": [
+              "correctness",
+              "tests",
+              "scope",
+              "security",
+              "docs",
+              "release",
+              "package"
+            ]
+          }
+        },
+        "roleModelGuidance": {
+          "type": "object",
+          "properties": {
+            "planner": { "type": "string", "minLength": 1 },
+            "worker": { "type": "string", "minLength": 1 },
+            "reviewer": { "type": "string", "minLength": 1 },
+            "watchdog": { "type": "string", "minLength": 1 }
+          },
+          "additionalProperties": false
+        },
+        "fieldGuide": {
+          "type": "object",
+          "properties": {
+            "enabled": {
+              "type": "boolean"
+            },
+            "path": {
+              "type": "string",
+              "minLength": 1
+            },
+            "maxLines": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 200
+            },
+            "writePolicy": {
+              "enum": [
+                "explicit-only",
+                "approved-workflow"
+              ]
+            },
+            "readBeforeTask": {
+              "type": "boolean"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
     "runtimePolicy": {
       "type": "object",
       "properties": {

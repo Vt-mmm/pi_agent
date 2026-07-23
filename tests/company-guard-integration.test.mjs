@@ -234,8 +234,8 @@ describe("company guard integration", () => {
     companyGuard(harness.pi);
     await harness.handlers.get("session_start")({}, ctx);
 
-    assert.equal(harness.tools.size, 20);
-    assert.equal(harness.commands.size, 14);
+    assert.equal(harness.tools.size, 21);
+    assert.equal(harness.commands.size, 15);
     assert.deepEqual([...harness.handlers.keys()].sort(), ["input", "session_start", "tool_call", "tool_result"]);
     assert.equal(harness.getSessionName(), "pi:Integration Project");
     assert.match(ctx.ui.notices[0].message, /Company Pi guard loaded: Integration Project/);
@@ -383,11 +383,104 @@ describe("company guard integration", () => {
     await harness.commands.get("profiles").handler("", ctx);
     await harness.commands.get("company-status").handler("", ctx);
     await harness.commands.get("company-memory").handler("", ctx);
+    await harness.commands.get("company-orchestration").handler("", ctx);
 
     assert.equal(harness.entries.some((entry) => entry.type === "user-message"), false);
     assert.equal(harness.entries.some((entry) => entry.payload?.customType === "company-profile-status"), true);
     assert.equal(harness.entries.some((entry) => entry.payload?.customType === "company-status"), true);
     assert.equal(harness.entries.some((entry) => entry.payload?.customType === "company-memory-status"), true);
+    assert.equal(harness.entries.some((entry) => entry.payload?.customType === "company-orchestration-policy"), true);
+  });
+
+  it("reports solo-first orchestration policy and records task work plans", async () => {
+    const { root, companyGuard } = await loadGuardFixture();
+    const cwd = createProject(root);
+    const profilePath = path.join(cwd, ".pi", "company-profile.json");
+    const profile = JSON.parse(fs.readFileSync(profilePath, "utf8"));
+    profile.orchestration = {
+      defaultMode: "parallel-readonly",
+      maxConcurrentSubagents: "bad",
+      defaultReviewLenses: ["security", "tests", "invalid"],
+      fieldGuide: {
+        path: "../unsafe-memory.md",
+        maxLines: "bad"
+      }
+    };
+    fs.writeFileSync(profilePath, `${JSON.stringify(profile, null, 2)}\n`);
+    const ctx = createContext(cwd);
+    const harness = createPiHarness();
+    companyGuard(harness.pi);
+
+    const policy = await harness.tools.get("company_orchestration_policy").execute(
+      "orchestration-policy-test",
+      { detail: "full" },
+      undefined,
+      () => {},
+      ctx
+    );
+
+    assert.equal(policy.details.defaultMode, "parallel-readonly");
+    assert.equal(policy.details.maxConcurrentSubagents, 2);
+    assert.deepEqual(policy.details.defaultReviewLenses, ["security", "tests"]);
+    assert.equal(policy.details.fieldGuide.path, ".pi/memory/MEMORY.md");
+    assert.equal(policy.details.fieldGuide.maxLines, 80);
+
+    const task = await harness.tools.get("company_task_start").execute(
+      "orchestration-task-test",
+      {
+        taskId: "orchestration-task",
+        summary: "Implement a bounded orchestration policy regression task",
+        riskLane: "normal",
+        expectedOutput: "Task contract records lenses and work plan.",
+        acceptanceCriteria: ["Task contract includes orchestration metadata"],
+        scope: ["packages/pi-company-core/**"],
+        outOfScope: ["parallel writer execution"],
+        reviewLenses: ["security", "tests"],
+        workPlan: [
+          {
+            id: "scout",
+            title: "Scout target files read-only.",
+            role: "company-scout"
+          },
+          {
+            id: "implement",
+            title: "Apply bounded implementation after scout.",
+            role: "company-worker",
+            dependsOn: ["scout"]
+          }
+        ]
+      },
+      undefined,
+      () => {},
+      ctx
+    );
+
+    assert.equal(task.isError, undefined);
+    assert.deepEqual(task.details.reviewLenses, ["security", "tests"]);
+    assert.equal(task.details.orchestration.mode, "parallel-readonly");
+    assert.equal(task.details.workPlan[0].role, "company-scout");
+    assert.equal(task.details.workPlan[0].mode, "read-only");
+    assert.equal(task.details.workPlan[1].role, "company-worker");
+    assert.equal(task.details.workPlan[1].mode, "single-writer");
+    assert.deepEqual(task.details.workPlan[1].dependsOn, ["scout"]);
+
+    const highRiskTask = await harness.tools.get("company_task_start").execute(
+      "orchestration-high-risk-task-test",
+      {
+        taskId: "orchestration-high-risk-task",
+        summary: "Implement a high risk orchestration change with challenge gate",
+        riskLane: "high-risk",
+        expectedOutput: "High-risk task contract includes challenge before implementation.",
+        acceptanceCriteria: ["High-risk work plan depends on challenge gate"],
+        scope: ["packages/pi-company-core/**"],
+        outOfScope: ["parallel writer execution"]
+      },
+      undefined,
+      () => {},
+      ctx
+    );
+    const implementStep = highRiskTask.details.workPlan.find((step) => step.id === "implement");
+    assert.deepEqual(implementStep.dependsOn, ["plan", "challenge"]);
   });
 
   it("switches the current session permission profile with slash commands", async () => {

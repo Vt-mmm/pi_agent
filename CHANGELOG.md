@@ -4,7 +4,20 @@ This file records release-facing changes for Pi Agent Platform. Copy the relevan
 
 ## Unreleased
 
-No release-facing changes yet.
+### Added
+
+- Added solo-first orchestration policy for bounded subagent usage, review lenses, Field Guide status, and model-role guidance.
+- Added `company_orchestration_policy` and `/company-orchestration` for compact local orchestration status without a model follow-up.
+- Added task-contract fields for `workPlan`, `reviewLenses`, and `orchestration` snapshots.
+
+### Changed
+
+- Updated `/task`, `/plan`, `/review`, subagent prompts, and team docs to prefer one parent agent plus bounded scout/planner/reviewer usage instead of broad swarm-style delegation.
+
+### Fixed
+
+- Hardened orchestration config normalization so malformed numeric settings fall back safely instead of producing invalid policy state.
+- Fixed tag CI verification by fetching the annotated release tag ref before checking tag object type and peeled commit identity.
 
 ## v0.4.8 - 2026-07-22
 

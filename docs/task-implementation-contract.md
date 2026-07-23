@@ -21,6 +21,9 @@
 | `memoryCitations` | no | Memory file dùng làm advisory context, nếu có. |
 | `mcpCapabilities` | no | Tool/MCP được phép. |
 | `verifyCommands` | yes | Command phải chạy trước DONE. |
+| `workPlan` | no | Task tree compact: step, role, mode, trạng thái, dependency. |
+| `reviewLenses` | no | Góc review rõ ràng, mặc định `correctness`, `tests`, `scope`. |
+| `orchestration` | no | Snapshot solo-first policy khi task bắt đầu: mode, subagent stance, Field Guide, model-role guidance. |
 | `verifyEvidence` | yes before done | Observed command result. Passing gate requires exact match with `verifyCommands`. |
 | `changedFiles` | yes before done | File đã sửa. |
 | `trace` | yes before done | Handoff/audit record. |
@@ -67,6 +70,42 @@
   "verifyCommands": [
     "npm run test"
   ],
+  "workPlan": [
+    {
+      "id": "plan",
+      "title": "Confirm scope and verify gate before editing.",
+      "role": "parent",
+      "mode": "read-only",
+      "status": "done"
+    },
+    {
+      "id": "implement",
+      "title": "Apply the bounded source change.",
+      "role": "company-worker",
+      "mode": "single-writer",
+      "status": "pending",
+      "dependsOn": [
+        "plan"
+      ]
+    }
+  ],
+  "reviewLenses": [
+    "correctness",
+    "tests",
+    "scope"
+  ],
+  "orchestration": {
+    "mode": "solo-first",
+    "subagents": "not-used",
+    "reason": "Task starts in solo-first mode; use bounded subagents only for independent scout, planning, or review work.",
+    "fieldGuidePath": ".pi/memory/MEMORY.md",
+    "modelRoles": {
+      "planner": "Use the strongest available model for decomposition, architecture, risk, and acceptance criteria.",
+      "worker": "Use the fastest reliable model for a bounded, already-planned single write set.",
+      "reviewer": "Use a model or thinking setting decorrelated from the worker when review quality matters.",
+      "watchdog": "Use a strong model only for final risk review, security, release, or high-impact changes."
+    }
+  },
   "verifyEvidence": [
     {
       "command": "npm run test",
@@ -89,6 +128,7 @@ Pi task prompt phải bắt buộc:
 
 ```text
 Use company_context first.
+Use company_orchestration_policy; default to solo-first, create a compact task tree, and choose review lenses before spawning subagents.
 Use company_memory_status and search memory when relevant; memory is advisory only.
 Read .pi/project-context.md; if it is pending, stop and request /onboard-project.
 Create a Task Implementation Contract with company_task_start.

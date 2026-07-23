@@ -56,6 +56,7 @@ type ProjectProfile = {
   };
   memory?: MemorySettings;
   runtimePolicy?: RuntimePolicySettings;
+  orchestration?: OrchestrationPolicySettings;
 };
 
 type MemorySettings = {
@@ -76,6 +77,50 @@ type RuntimePolicySettings = {
   contextBudget?: "off" | "advisory" | "enforce";
   toolRegistry?: "off" | "advisory" | "enforce";
   finalGate?: "off" | "advisory" | "enforce";
+};
+
+type OrchestrationMode = "solo-first" | "bounded-subagents" | "parallel-readonly";
+
+type ReviewLens = "correctness" | "tests" | "scope" | "security" | "docs" | "release" | "package";
+
+type OrchestrationRole = "parent" | "company-scout" | "company-planner" | "company-worker" | "company-reviewer" | "company-oracle";
+
+type WorkPlanStep = {
+  id: string;
+  title: string;
+  role: OrchestrationRole;
+  mode: "read-only" | "single-writer" | "review";
+  status: "pending" | "in-progress" | "done" | "skipped";
+  dependsOn?: string[];
+};
+
+type OrchestrationPolicySettings = {
+  defaultMode?: OrchestrationMode;
+  maxConcurrentSubagents?: number;
+  defaultReviewLenses?: ReviewLens[];
+  roleModelGuidance?: Partial<Record<"planner" | "worker" | "reviewer" | "watchdog", string>>;
+  fieldGuide?: {
+    enabled?: boolean;
+    path?: string;
+    maxLines?: number;
+    writePolicy?: "explicit-only" | "approved-workflow";
+    readBeforeTask?: boolean;
+  };
+};
+
+type ResolvedOrchestrationPolicy = {
+  defaultMode: OrchestrationMode;
+  maxConcurrentSubagents: number;
+  defaultReviewLenses: ReviewLens[];
+  roleModelGuidance: Record<"planner" | "worker" | "reviewer" | "watchdog", string>;
+  fieldGuide: {
+    enabled: boolean;
+    path: string;
+    maxLines: number;
+    writePolicy: "explicit-only" | "approved-workflow";
+    readBeforeTask: boolean;
+  };
+  rules: string[];
 };
 
 type PermissionProfileMode = "read-only" | "workspace-write" | "trusted-full-access";
@@ -129,6 +174,15 @@ type TaskContract = {
   memoryCitations: Array<{ path: string; reason: string }>;
   mcpCapabilities: string[];
   verifyCommands: string[];
+  workPlan?: WorkPlanStep[];
+  reviewLenses?: ReviewLens[];
+  orchestration?: {
+    mode: OrchestrationMode;
+    subagents: "not-used" | "optional" | "used";
+    reason: string;
+    fieldGuidePath?: string;
+    modelRoles?: Record<"planner" | "worker" | "reviewer" | "watchdog", string>;
+  };
   changedFiles: string[];
   verifyEvidence: Array<{
     command: string;
@@ -162,6 +216,7 @@ type BasePolicy = {
   toolRegistry?: ToolRegistryConfig;
   finalGate?: FinalGateConfig;
   externalActionPolicy?: ExternalActionPolicyConfig;
+  orchestrationPolicy?: OrchestrationPolicySettings;
 };
 
 type CommandRule = {
@@ -272,6 +327,9 @@ const MAX_INLINE_COLLAPSED_TASK_CHARS = 2200;
 const MAX_CHAT_IMAGE_ATTACHMENTS = 4;
 const MAX_CHAT_IMAGE_BYTES = 8 * 1024 * 1024;
 const IMAGE_EXTENSIONS = ["png", "jpg", "jpeg", "gif", "webp", "bmp"] as const;
+const ORCHESTRATION_MODES = ["solo-first", "bounded-subagents", "parallel-readonly"] as const;
+const REVIEW_LENSES = ["correctness", "tests", "scope", "security", "docs", "release", "package"] as const;
+const ORCHESTRATION_ROLES = ["parent", "company-scout", "company-planner", "company-worker", "company-reviewer", "company-oracle"] as const;
 
 type ChatImageAttachmentResult = {
   text: string;
@@ -298,6 +356,32 @@ const DEFAULT_RUNTIME_POLICY: Required<RuntimePolicySettings> = {
   contextBudget: "enforce",
   toolRegistry: "advisory",
   finalGate: "enforce"
+};
+
+const DEFAULT_ORCHESTRATION_POLICY: ResolvedOrchestrationPolicy = {
+  defaultMode: "solo-first",
+  maxConcurrentSubagents: 2,
+  defaultReviewLenses: ["correctness", "tests", "scope"],
+  roleModelGuidance: {
+    planner: "Use the strongest available model for decomposition, architecture, risk, and acceptance criteria.",
+    worker: "Use the fastest reliable model for a bounded, already-planned single write set.",
+    reviewer: "Use a model or thinking setting decorrelated from the worker when review quality matters.",
+    watchdog: "Use a strong model only for final risk review, security, release, or high-impact changes."
+  },
+  fieldGuide: {
+    enabled: true,
+    path: ".pi/memory/MEMORY.md",
+    maxLines: 80,
+    writePolicy: "explicit-only",
+    readBeforeTask: true
+  },
+  rules: [
+    "Default to one parent agent; do not start a swarm for ordinary implementation.",
+    "Use subagents only for bounded read-only scout, planning, review, or a single approved worker.",
+    "Parallel read-only review is allowed when the diff is non-trivial; parallel writers require explicit user approval and isolation.",
+    "Treat Field Guide memory as advisory; verify every durable fact against current repository files.",
+    "Keep review lenses explicit so cheap review work catches drift before release."
+  ]
 };
 
 const PERMISSION_PROFILE_MODES = ["read-only", "workspace-write", "trusted-full-access"] as const;
@@ -378,6 +462,7 @@ const DEFAULT_POLICY: BasePolicy = {
       "company_tool_policy_check",
       "company_task_gate_check",
       "company_usage_snapshot",
+      "company_orchestration_policy",
       "company_memory_status",
       "company_memory_note",
       "company_memory_search",
@@ -473,7 +558,8 @@ const DEFAULT_POLICY: BasePolicy = {
     requireVerifyEvidence: true,
     requireTrace: true,
     requirePassingVerify: true
-  }
+  },
+  orchestrationPolicy: DEFAULT_ORCHESTRATION_POLICY
 };
 
 function readJsonFile<T>(filePath: string): T | undefined {
@@ -1636,6 +1722,148 @@ function finalGateConfig(policy: BasePolicy): Required<FinalGateConfig> {
     requireTrace: policy.finalGate?.requireTrace ?? true,
     requirePassingVerify: policy.finalGate?.requirePassingVerify ?? true
   };
+}
+
+function boundedInteger(value: unknown, fallback: number, minimum: number, maximum: number): number {
+  const numberValue = typeof value === "number" ? value : Number(value);
+  if (!Number.isFinite(numberValue)) return fallback;
+  return Math.max(minimum, Math.min(maximum, Math.trunc(numberValue)));
+}
+
+function normalizeFieldGuidePath(value: unknown, fallback: string): string {
+  if (typeof value !== "string") return fallback;
+  const normalized = normalizePathCandidate(value.trim());
+  if (
+    normalized.length === 0
+    || normalized === "."
+    || normalized === ".."
+    || normalized.startsWith("../")
+    || path.posix.isAbsolute(normalized)
+    || /[*?[\]{}]/.test(normalized)
+  ) return fallback;
+  return normalized;
+}
+
+function normalizeOrchestrationMode(value: unknown, fallback: OrchestrationMode): OrchestrationMode {
+  return typeof value === "string" && (ORCHESTRATION_MODES as readonly string[]).includes(value)
+    ? value as OrchestrationMode
+    : fallback;
+}
+
+function normalizeReviewLenses(values: unknown, fallback: ReviewLens[]): ReviewLens[] {
+  if (!Array.isArray(values)) return fallback;
+  const result = values.filter((value): value is ReviewLens => (
+    typeof value === "string" && (REVIEW_LENSES as readonly string[]).includes(value)
+  ));
+  return result.length ? [...new Set(result)] : fallback;
+}
+
+function normalizeRole(value: unknown): OrchestrationRole {
+  return typeof value === "string" && (ORCHESTRATION_ROLES as readonly string[]).includes(value)
+    ? value as OrchestrationRole
+    : "parent";
+}
+
+function normalizeStepMode(value: unknown, role: OrchestrationRole): WorkPlanStep["mode"] {
+  if (value === "read-only" || value === "single-writer" || value === "review") return value;
+  if (role === "company-worker") return "single-writer";
+  if (role === "company-reviewer" || role === "company-oracle") return "review";
+  return "read-only";
+}
+
+function resolveOrchestrationPolicy(profile: ProjectProfile, policy: BasePolicy): ResolvedOrchestrationPolicy {
+  const configured = {
+    ...(policy.orchestrationPolicy ?? {}),
+    ...(profile.orchestration ?? {})
+  };
+  const defaultPolicy = DEFAULT_ORCHESTRATION_POLICY;
+  const fieldGuide = {
+    ...defaultPolicy.fieldGuide,
+    ...(policy.orchestrationPolicy?.fieldGuide ?? {}),
+    ...(profile.orchestration?.fieldGuide ?? {})
+  };
+  const roleModelGuidance = {
+    ...defaultPolicy.roleModelGuidance,
+    ...(policy.orchestrationPolicy?.roleModelGuidance ?? {}),
+    ...(profile.orchestration?.roleModelGuidance ?? {})
+  };
+  return {
+    defaultMode: normalizeOrchestrationMode(configured.defaultMode, defaultPolicy.defaultMode),
+    maxConcurrentSubagents: boundedInteger(configured.maxConcurrentSubagents, defaultPolicy.maxConcurrentSubagents, 0, 6),
+    defaultReviewLenses: normalizeReviewLenses(configured.defaultReviewLenses, defaultPolicy.defaultReviewLenses),
+    roleModelGuidance,
+    fieldGuide: {
+      enabled: fieldGuide.enabled !== false,
+      path: normalizeFieldGuidePath(fieldGuide.path, defaultPolicy.fieldGuide.path),
+      maxLines: boundedInteger(fieldGuide.maxLines, defaultPolicy.fieldGuide.maxLines, 0, 200),
+      writePolicy: fieldGuide.writePolicy === "approved-workflow" ? "approved-workflow" : "explicit-only",
+      readBeforeTask: fieldGuide.readBeforeTask !== false
+    },
+    rules: defaultPolicy.rules
+  };
+}
+
+function normalizeWorkPlanSteps(values: unknown): WorkPlanStep[] {
+  if (!Array.isArray(values)) return [];
+  const steps: WorkPlanStep[] = [];
+  for (const value of values.slice(0, 12)) {
+    if (!value || typeof value !== "object" || Array.isArray(value)) continue;
+    const item = value as Record<string, unknown>;
+    const id = typeof item.id === "string" ? safeTaskId(item.id).slice(0, 40) : "";
+    const title = typeof item.title === "string" ? redactText(item.title).trim().slice(0, 160) : "";
+    if (!id || !title) continue;
+    const role = normalizeRole(item.role);
+    steps.push({
+      id,
+      title,
+      role,
+      mode: normalizeStepMode(item.mode, role),
+      status: item.status === "in-progress" || item.status === "done" || item.status === "skipped" ? item.status : "pending",
+      dependsOn: Array.isArray(item.dependsOn) ? uniqueStrings(item.dependsOn.filter((entry): entry is string => typeof entry === "string").map((entry) => safeTaskId(entry).slice(0, 40))) : undefined
+    });
+  }
+  return steps;
+}
+
+function defaultWorkPlan(summary: string, riskLane: TaskContract["riskLane"]): WorkPlanStep[] {
+  const steps: WorkPlanStep[] = [
+    {
+      id: "plan",
+      title: "Confirm scope, context, acceptance criteria, and verify gate before editing.",
+      role: "parent",
+      mode: "read-only",
+      status: "pending"
+    },
+    {
+      id: "implement",
+      title: summary.slice(0, 160) || "Implement the approved bounded change.",
+      role: "parent",
+      mode: "single-writer",
+      status: "pending",
+      dependsOn: ["plan"]
+    },
+    {
+      id: "review",
+      title: riskLane === "tiny" ? "Review changed files and verify evidence." : "Run explicit review lenses against the diff and verify evidence.",
+      role: "company-reviewer",
+      mode: "review",
+      status: "pending",
+      dependsOn: ["implement"]
+    }
+  ];
+  if (riskLane === "high-risk") {
+    steps.splice(1, 0, {
+      id: "challenge",
+      title: "Challenge architecture, security, release, or data risk before implementation.",
+      role: "company-oracle",
+      mode: "review",
+      status: "pending",
+      dependsOn: ["plan"]
+    });
+    const implementStep = steps.find((step) => step.id === "implement");
+    if (implementStep) implementStep.dependsOn = ["plan", "challenge"];
+  }
+  return steps;
 }
 
 function uniqueStrings(values: string[]): string[] {
@@ -3634,6 +3862,7 @@ export default function companyGuard(pi: ExtensionAPI) {
       const profile = loadProfileFromContext(ctx);
       const permissionProfile = resolvePermissionProfile(profile, policy, permissionOverrideFromContext(ctx));
       const pathPolicy = effectiveProtectedPaths(policy, profile);
+      const orchestrationPolicy = resolveOrchestrationPolicy(profile, policy);
       const requiredContext = [
         ...policy.defaultRequiredContext,
         ...(profile.requiredContext ?? [])
@@ -3665,6 +3894,7 @@ export default function companyGuard(pi: ExtensionAPI) {
         mcpCapabilities: profile.mcpCapabilities ?? [],
         permissionProfile,
         memory: resolveMemorySettings(profile),
+        orchestrationPolicy,
         runtimePolicy: resolveRuntimePolicy(profile),
         policy: {
           permissionProfiles: permissionProfilesConfig(policy),
@@ -3672,7 +3902,8 @@ export default function companyGuard(pi: ExtensionAPI) {
           contextBudget: contextBudgetConfig(policy),
           toolRegistry: toolRegistryConfig(policy),
           externalActionPolicy: externalActionPolicyConfig(policy),
-          finalGate: finalGateConfig(policy)
+          finalGate: finalGateConfig(policy),
+          orchestrationPolicy
         }
       };
 
@@ -3688,6 +3919,7 @@ export default function companyGuard(pi: ExtensionAPI) {
         `mcpCapabilities: ${payload.mcpCapabilities.join(", ") || "none"}`,
         `permissionProfile: ${payload.permissionProfile.mode} (${payload.permissionProfile.runtimeEquivalent})`,
         `memory: ${payload.memory.enabled ? payload.memory.mode : "off"} (${payload.memory.summaryFile})`,
+        `orchestration: ${payload.orchestrationPolicy.defaultMode}, lenses=${payload.orchestrationPolicy.defaultReviewLenses.join("/")}, fieldGuide=${payload.orchestrationPolicy.fieldGuide.enabled ? payload.orchestrationPolicy.fieldGuide.path : "off"}`,
         `runtimePolicy: exec=${payload.runtimePolicy.execPolicy}, context=${payload.runtimePolicy.contextBudget}, tools=${payload.runtimePolicy.toolRegistry}, final=${payload.runtimePolicy.finalGate}`
       ].join("\n");
 
@@ -3869,6 +4101,60 @@ export default function companyGuard(pi: ExtensionAPI) {
         content: [{ type: "text", text: formatContextPreflight(preflight, snapshot) }],
         details: preflight
       };
+    }
+  });
+
+  pi.registerTool({
+    name: "company_orchestration_policy",
+    label: "Company Orchestration Policy",
+    description: "Return solo-first subagent, review lens, model-role, and Field Guide policy for the current project.",
+    promptSnippet: "Use this before planning medium/large tasks so orchestration stays single-agent-first and token-aware.",
+    promptGuidelines: [
+      "Default to the parent agent plus bounded subagents only when they reduce context risk or improve review quality.",
+      "Use review lenses instead of spawning a broad swarm.",
+      "Treat Field Guide memory as advisory and verify it against current repository files."
+    ],
+    parameters: Type.Object({
+      detail: Type.Optional(StringEnum(["concise", "full"] as const))
+    }),
+    async execute(_toolCallId, params, _signal, _onUpdate, ctx) {
+      const profile = loadProfileFromContext(ctx);
+      const settings = resolveMemorySettings(profile);
+      const orchestration = resolveOrchestrationPolicy(profile, policy);
+      let fieldGuidePath = orchestration.fieldGuide.path || settings.handbookFile;
+      let fieldGuideExists = false;
+      try {
+        fieldGuideExists = fs.existsSync(projectFilePath(ctx.cwd, fieldGuidePath));
+      } catch {
+        fieldGuidePath = settings.handbookFile;
+        fieldGuideExists = fs.existsSync(memoryHandbookPath(ctx.cwd, settings));
+      }
+      const payload = {
+        ...orchestration,
+        fieldGuide: {
+          ...orchestration.fieldGuide,
+          path: fieldGuidePath,
+          exists: fieldGuideExists
+        },
+        stance: "single-agent-first; subagents are opt-in tools for bounded scout, planning, and review"
+      };
+      const text = params.detail === "full"
+        ? JSON.stringify(payload, null, 2)
+        : [
+          `mode: ${payload.defaultMode}`,
+          `maxConcurrentSubagents: ${payload.maxConcurrentSubagents}`,
+          `reviewLenses: ${payload.defaultReviewLenses.join(", ")}`,
+          `fieldGuide: ${payload.fieldGuide.enabled ? `${payload.fieldGuide.path} (${payload.fieldGuide.exists ? "exists" : "missing"})` : "off"}`,
+          `fieldGuidePolicy: ${payload.fieldGuide.writePolicy}, maxLines=${payload.fieldGuide.maxLines}`,
+          "modelRoles:",
+          `- planner: ${payload.roleModelGuidance.planner}`,
+          `- worker: ${payload.roleModelGuidance.worker}`,
+          `- reviewer: ${payload.roleModelGuidance.reviewer}`,
+          `- watchdog: ${payload.roleModelGuidance.watchdog}`,
+          "rules:",
+          ...payload.rules.map((rule) => `- ${rule}`)
+        ].join("\n");
+      return { content: [{ type: "text", text }], details: payload };
     }
   });
 
@@ -4114,13 +4400,26 @@ export default function companyGuard(pi: ExtensionAPI) {
       expectedOutput: Type.String({ minLength: 10 }),
       acceptanceCriteria: Type.Array(Type.String({ minLength: 1 }), { minItems: 1 }),
       scope: Type.Array(Type.String({ minLength: 1 }), { minItems: 1 }),
-      outOfScope: Type.Optional(Type.Array(Type.String({ minLength: 1 })))
+      outOfScope: Type.Optional(Type.Array(Type.String({ minLength: 1 }))),
+      reviewLenses: Type.Optional(Type.Array(StringEnum(REVIEW_LENSES))),
+      workPlan: Type.Optional(Type.Array(Type.Object({
+        id: Type.String({ minLength: 1 }),
+        title: Type.String({ minLength: 1 }),
+        role: Type.Optional(StringEnum(ORCHESTRATION_ROLES)),
+        mode: Type.Optional(StringEnum(["read-only", "single-writer", "review"] as const)),
+        status: Type.Optional(StringEnum(["pending", "in-progress", "done", "skipped"] as const)),
+        dependsOn: Type.Optional(Type.Array(Type.String({ minLength: 1 })))
+      })))
     }),
     async execute(_toolCallId, params, _signal, _onUpdate, ctx) {
       const profile = loadProfileFromContext(ctx);
       const createdAt = nowIso();
       const safeSummary = redactText(params.summary);
       const taskId = safeTaskId(redactText(params.taskId ?? params.summary));
+      const orchestration = resolveOrchestrationPolicy(profile, policy);
+      const reviewLenses = normalizeReviewLenses(params.reviewLenses, orchestration.defaultReviewLenses);
+      const providedWorkPlan = normalizeWorkPlanSteps(params.workPlan);
+      const workPlan = providedWorkPlan.length ? providedWorkPlan : defaultWorkPlan(safeSummary, params.riskLane);
       const task: TaskContract = {
         taskId,
         summary: safeSummary,
@@ -4135,6 +4434,15 @@ export default function companyGuard(pi: ExtensionAPI) {
         memoryCitations: [],
         mcpCapabilities: profile.mcpCapabilities ?? [],
         verifyCommands: flattenVerifyCommands(profile),
+        workPlan,
+        reviewLenses,
+        orchestration: {
+          mode: orchestration.defaultMode,
+          subagents: "not-used",
+          reason: "Task starts in solo-first mode; use bounded subagents only for independent scout, planning, or review work.",
+          fieldGuidePath: orchestration.fieldGuide.enabled ? orchestration.fieldGuide.path : undefined,
+          modelRoles: orchestration.roleModelGuidance
+        },
         changedFiles: [],
         verifyEvidence: [],
         trace: { outcome: "pending" },
@@ -4666,6 +4974,46 @@ export default function companyGuard(pi: ExtensionAPI) {
           ].join("\n"),
           display: true,
           details: settings
+        },
+        { triggerTurn: false }
+      );
+    }
+  });
+
+  pi.registerCommand("company-orchestration", {
+    description: "Show solo-first subagent, review lens, model-role, and Field Guide policy",
+    handler: async (_args, ctx) => {
+      const profile = loadProfileFromContext(ctx);
+      const settings = resolveMemorySettings(profile);
+      const orchestration = resolveOrchestrationPolicy(profile, policy);
+      let fieldGuidePath = orchestration.fieldGuide.path || settings.handbookFile;
+      let fieldGuideExists = false;
+      try {
+        fieldGuideExists = fs.existsSync(projectFilePath(ctx.cwd, fieldGuidePath));
+      } catch {
+        fieldGuidePath = settings.handbookFile;
+        fieldGuideExists = fs.existsSync(memoryHandbookPath(ctx.cwd, settings));
+      }
+      ctx.ui.notify(`Company orchestration: ${orchestration.defaultMode}`, "info");
+      pi.sendMessage(
+        {
+          customType: "company-orchestration-policy",
+          content: [
+            `mode: ${orchestration.defaultMode}`,
+            `subagents: bounded read-only scout/planning/review; max ${orchestration.maxConcurrentSubagents}`,
+            `lenses: ${orchestration.defaultReviewLenses.join(", ")}`,
+            `fieldGuide: ${orchestration.fieldGuide.enabled ? `${fieldGuidePath} (${fieldGuideExists ? "exists" : "missing"})` : "off"}`,
+            "writer: single writer by default; parallel writers need explicit approval + isolation"
+          ].join("\n"),
+          display: true,
+          details: {
+            ...orchestration,
+            fieldGuide: {
+              ...orchestration.fieldGuide,
+              path: fieldGuidePath,
+              exists: fieldGuideExists
+            }
+          }
         },
         { triggerTurn: false }
       );

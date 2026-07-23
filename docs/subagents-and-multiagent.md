@@ -18,7 +18,13 @@ Pi core không có subagents built-in. Theo design của Pi, subagents là exten
 
 Từ `v0.3.7`, `scripts/setup.sh` mặc định cài `pi-subagents` và chạy config preset `safe`.
 
-Từ `v0.3.21`, workflow prompts của platform có **auto-delegation policy**: khi anh chạy `/task`, `/be-to-fe`, `/platform-improve`, `/plan`, hoặc `/review`, parent agent phải tự cân nhắc spawn subagent cho phần việc độc lập. Anh không bắt buộc phải gọi `/run` nếu chỉ muốn task hoàn chỉnh.
+Workflow prompts của platform dùng **solo-first orchestration policy**: khi anh chạy `/task`, `/be-to-fe`, `/platform-improve`, `/plan`, hoặc `/review`, parent agent đọc `company_orchestration_policy`, lập task tree/review lenses, rồi mới cân nhắc subagent cho phần việc độc lập. Anh không bắt buộc phải gọi `/run` nếu chỉ muốn task hoàn chỉnh, và platform cũng không spawn swarm khi task nhỏ.
+
+Kiểm tra nhanh policy trong Pi:
+
+```text
+/company-orchestration
+```
 
 Guard extension vẫn load trong subagent process. Bash verify results do not stay in process-local memory only; they are appended to `.pi/company-state/observed-bash.jsonl`. Because parent and child share the same project cwd, parent can validate an exact verify command that a guarded worker subagent ran.
 
@@ -149,11 +155,12 @@ Với workflow platform, còn có thể chỉ gọi:
 Parent agent sẽ tự quyết định:
 
 - không spawn nếu task nhỏ;
-- spawn `company-scout` nếu cần map source/spec;
-- spawn `company-planner` nếu cần plan medium/high-risk;
-- spawn `company-reviewer` trước final nếu diff không nhỏ;
+- spawn bounded `company-scout` nếu cần map source/spec;
+- spawn bounded `company-planner` nếu cần plan medium/high-risk;
+- spawn bounded `company-reviewer` trước final nếu diff không nhỏ;
 - dùng builtin `researcher` nếu task cần external evidence và web tools available;
 - dùng builtin `context-builder` nếu task lớn cần handoff context;
+- dùng review lenses (`correctness`, `tests`, `scope`, optional `security/docs/release/package`) thay vì gọi review swarm chung chung;
 - ghi trong final `Subagents: used/not used and why`.
 
 ## Package prompt shortcuts nên biết
@@ -325,6 +332,7 @@ Recommended token policy:
 
 - default `safe` preset;
 - do not set `asyncByDefault` unless anh intentionally wants background-heavy workflow;
+- keep `/company-orchestration` at `solo-first` unless team has a measured reason to change it;
 - one writer at a time;
 - parallel reviewers/scouts are OK;
 - use `company-scout`/`company-planner` to compress context before handing off to `company-worker`;

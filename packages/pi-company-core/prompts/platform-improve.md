@@ -21,26 +21,27 @@ Use this workflow for platform-level work such as:
 Mandatory flow:
 
 1. Call `company_context` with `detail=full` and inspect the active project profile.
-2. Call `company_memory_status`; if prior decisions are relevant, search memory and record citations with `company_memory_citation_record`.
-3. Read `.pi/project-context.md`. If pending, stop and ask the user to run `/onboard-project`.
-4. Read the required context declared by the active profile. Before loading large files, call `company_context_budget`.
-5. Classify the task risk lane and create a task contract with `company_task_start` before source edits.
-6. Decide whether subagents are useful:
+2. Call `company_orchestration_policy`; keep the platform change solo-first unless bounded scout/planning/review lanes are useful.
+3. Call `company_memory_status`; if prior decisions or Field Guide notes are relevant, search memory and record citations with `company_memory_citation_record`.
+4. Read `.pi/project-context.md`. If pending, stop and ask the user to run `/onboard-project`.
+5. Read the required context declared by the active profile. Before loading large files, call `company_context_budget`.
+6. Classify the task risk lane and create a task contract with `company_task_start`, including review lenses and a compact workPlan, before source edits.
+7. Decide whether bounded subagents are useful enough to justify extra token/tool cost:
    - use `company-scout` for read-only code/package mapping;
    - use `company-planner` for a plan when multiple modules are affected;
    - use `company-reviewer` for diff, docs, and verification review;
    - continue single-agent for small, localized edits.
-7. If the task needs external repository context provided by the user, use `company_source_checkout` when available and read only targeted files.
-8. Before shell commands that fetch, build, publish, or mutate package state, call `company_exec_policy_check`.
-9. Before non-company MCP/app tools, call `company_tool_policy_check`.
-10. Produce an implementation matrix:
+8. If the task needs external repository context provided by the user, use `company_source_checkout` when available and read only targeted files.
+9. Before shell commands that fetch, build, publish, or mutate package state, call `company_exec_policy_check`.
+10. Before non-company MCP/app tools, call `company_tool_policy_check`.
+11. Produce an implementation matrix:
 
     | Area | Current behavior | Target behavior | Files/config | Verification |
     |---|---|---|---|---|
 
-11. Implement only the bounded target behavior.
-12. If runtime behavior changes, update README/docs and add/adjust a decision note when appropriate.
-13. For source-changing tasks, run the exact verify command from `task.verifyCommands` through Pi bash, record observed verify evidence, trace, then call `company_task_gate_check` before final.
+12. Implement only the bounded target behavior.
+13. If runtime behavior changes, update README/docs and add/adjust a decision note when appropriate.
+14. For source-changing tasks, run the exact verify command from `task.verifyCommands` through Pi bash, record observed verify evidence, trace, then call `company_task_gate_check` before final.
 
 Default verification:
 
@@ -62,6 +63,7 @@ Final output:
 - Changed files.
 - Verification command/result.
 - Subagents used/not used and why.
+- Review lenses applied.
 - Memory cited, if any.
 - Task gate result.
 - Remaining risks or follow-up.

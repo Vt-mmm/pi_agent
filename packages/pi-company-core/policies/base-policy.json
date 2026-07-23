@@ -119,6 +119,7 @@
       "company_tool_policy_check",
       "company_task_gate_check",
       "company_usage_snapshot",
+      "company_orchestration_policy",
       "company_memory_status",
       "company_memory_note",
       "company_memory_search",
@@ -214,5 +215,27 @@
     "requireVerifyEvidence": true,
     "requireTrace": true,
     "requirePassingVerify": true
+  },
+  "orchestrationPolicy": {
+    "defaultMode": "solo-first",
+    "maxConcurrentSubagents": 2,
+    "defaultReviewLenses": [
+      "correctness",
+      "tests",
+      "scope"
+    ],
+    "roleModelGuidance": {
+      "planner": "Use the strongest available model for decomposition, architecture, risk, and acceptance criteria.",
+      "worker": "Use the fastest reliable model for a bounded, already-planned single write set.",
+      "reviewer": "Use a model or thinking setting decorrelated from the worker when review quality matters.",
+      "watchdog": "Use a strong model only for final risk review, security, release, or high-impact changes."
+    },
+    "fieldGuide": {
+      "enabled": true,
+      "path": ".pi/memory/MEMORY.md",
+      "maxLines": 80,
+      "writePolicy": "explicit-only",
+      "readBeforeTask": true
+    }
   }
 }

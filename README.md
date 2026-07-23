@@ -52,6 +52,7 @@ pi-company-auto --full-access -p "Run the trusted local benchmark suite."
   - `company_task_gate_check`
   - `company_usage_snapshot`
   - `company_context_preflight`
+  - `company_orchestration_policy`
 - Accident-brake guardrails for protected paths, destructive shell commands, task contracts, context manifests, observed verification evidence, and trace records.
 - Quality benchmark recorder for comparing approved agent surfaces, models, and workflow presets on the same task scenarios.
 - Built-in profiles for frontend, backend, fullstack, BE-readonly/FE-write, data, DevOps, mobile, docs, Python, and Node TypeScript.
@@ -80,6 +81,18 @@ Inside an active Pi session, use slash commands for a session-local switch:
 ```
 
 `/full-access` also accepts a task after the command. The guard switches the current session to `trusted-full-access`, then forwards the remaining text as the next user request.
+
+## Solo-first orchestration
+
+Pi Company Platform supports subagents, but the default operating model is solo-first: one parent agent owns the task contract, uses explicit review lenses, and only calls bounded subagents when scout/planning/review work is independent enough to justify the extra token/tool cost.
+
+Inside Pi:
+
+```text
+/company-orchestration
+```
+
+This shows the active mode, max subagents, review lenses, Field Guide path, and writer policy without triggering a model follow-up.
 
 ## Install
 
@@ -373,7 +386,7 @@ Common Pi commands:
 /run company-reviewer "Review current diff."
 ```
 
-Daily task prompts can auto-delegate when useful. The final handoff should state whether subagents were used and why.
+Daily task prompts are solo-first: they can delegate bounded scout/planning/review work when useful, and the final handoff should state whether subagents were used and why.
 
 Optional web/docs research support:
 

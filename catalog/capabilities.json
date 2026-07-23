@@ -26,8 +26,8 @@
           "path": "evals/scenarios/capability-resolution.json"
         },
         {
-          "byteSize": 4983,
-          "digest": "sha256:850464635450b49be6a2ec0638c5e0d9f6418539d202810cef8a83bd4adfe8b9",
+          "byteSize": 5853,
+          "digest": "sha256:854d7d4a99e9c742d1447e270dfd6e6d24633be1f1d21fdac1555eed1b9d040d",
           "id": "base-policy",
           "kind": "policies",
           "path": "packages/pi-company-core/policies/base-policy.json"
@@ -40,8 +40,8 @@
           "path": "packages/pi-company-core/prompts/commit.md"
         },
         {
-          "byteSize": 1352,
-          "digest": "sha256:203cd3f61d080566f425e57fb665d7704913fca9d33bfb6f03a0d17d49f81194",
+          "byteSize": 1601,
+          "digest": "sha256:1caadcefc17070a646d5000c2c9ddd23d87955fe1c08eb5d2deb7403e3c379ac",
           "id": "plan",
           "kind": "prompts",
           "path": "packages/pi-company-core/prompts/plan.md"
@@ -54,15 +54,15 @@
           "path": "packages/pi-company-core/prompts/pr.md"
         },
         {
-          "byteSize": 1399,
-          "digest": "sha256:ecf19295c83bdc413b9a75abbba3cd6b0d20983b9c91c21d65b09b80b203e8d9",
+          "byteSize": 1528,
+          "digest": "sha256:48e7c6968d8c8d801aea25e9f27bfe93c447bd51936fb7a8d0182929bbdd09bd",
           "id": "review",
           "kind": "prompts",
           "path": "packages/pi-company-core/prompts/review.md"
         },
         {
-          "byteSize": 3635,
-          "digest": "sha256:a569c5c6e4a3dd3c4443bbfded2f9b32172d361ebf96a942ada8589635b09f18",
+          "byteSize": 3917,
+          "digest": "sha256:d2cfdf903c1432763cedca98950343eb960d97094f4aaf4c250b89efdba4b81a",
           "id": "task",
           "kind": "prompts",
           "path": "packages/pi-company-core/prompts/task.md"
@@ -82,15 +82,15 @@
           "path": "packages/pi-company-core/skills/company-ops/SKILL.md"
         },
         {
-          "byteSize": 1209,
-          "digest": "sha256:275e6e74a2328796d7574a30635d88f4e7c3808d0ecaf7df2563e5293d76033c",
+          "byteSize": 1692,
+          "digest": "sha256:27a9d0901b66f124c378ee8269e48ad8f22ae6b47808a9052828613f7adb8cf5",
           "id": "company-planner",
           "kind": "subagents",
           "path": "packages/pi-company-core/subagents/company-planner.md"
         },
         {
-          "byteSize": 1316,
-          "digest": "sha256:7b11bbf359270aad76dfdf0d0311c194832b7928936e3132e2af6a19f33645e5",
+          "byteSize": 1603,
+          "digest": "sha256:1dc6ba1b2477e368f27c0753c52087cac4ef2908ea9b351739f775dfd3ab78fc",
           "id": "company-reviewer",
           "kind": "subagents",
           "path": "packages/pi-company-core/subagents/company-reviewer.md"
@@ -103,8 +103,8 @@
           "path": "packages/pi-company-core/subagents/company-scout.md"
         },
         {
-          "byteSize": 1393,
-          "digest": "sha256:676e40f70b069421a707d83d0596a264fee2d85ddbfa89ad150dfa51f22f26af",
+          "byteSize": 1733,
+          "digest": "sha256:11e0602bef7babf0176b75827a5e03e16b8f0ba4c2c8264a2578b9ec2924bb50",
           "id": "company-worker",
           "kind": "subagents",
           "path": "packages/pi-company-core/subagents/company-worker.md"

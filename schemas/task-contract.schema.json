@@ -130,6 +130,122 @@
         "minLength": 1
       }
     },
+    "workPlan": {
+      "type": "array",
+      "description": "Optional solo-first task tree for parent/subagent coordination.",
+      "maxItems": 12,
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "title",
+          "role",
+          "mode",
+          "status"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 40
+          },
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 160
+          },
+          "role": {
+            "enum": [
+              "parent",
+              "company-scout",
+              "company-planner",
+              "company-worker",
+              "company-reviewer",
+              "company-oracle"
+            ]
+          },
+          "mode": {
+            "enum": [
+              "read-only",
+              "single-writer",
+              "review"
+            ]
+          },
+          "status": {
+            "enum": [
+              "pending",
+              "in-progress",
+              "done",
+              "skipped"
+            ]
+          },
+          "dependsOn": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 40
+            }
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "reviewLenses": {
+      "type": "array",
+      "description": "Explicit review lenses for the task, used instead of blanket swarm review.",
+      "uniqueItems": true,
+      "items": {
+        "enum": [
+          "correctness",
+          "tests",
+          "scope",
+          "security",
+          "docs",
+          "release",
+          "package"
+        ]
+      }
+    },
+    "orchestration": {
+      "type": "object",
+      "description": "Resolved solo-first orchestration policy captured when the task starts.",
+      "properties": {
+        "mode": {
+          "enum": [
+            "solo-first",
+            "bounded-subagents",
+            "parallel-readonly"
+          ]
+        },
+        "subagents": {
+          "enum": [
+            "not-used",
+            "optional",
+            "used"
+          ]
+        },
+        "reason": {
+          "type": "string",
+          "minLength": 1
+        },
+        "fieldGuidePath": {
+          "type": "string",
+          "minLength": 1
+        },
+        "modelRoles": {
+          "type": "object",
+          "properties": {
+            "planner": { "type": "string" },
+            "worker": { "type": "string" },
+            "reviewer": { "type": "string" },
+            "watchdog": { "type": "string" }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
     "changedFiles": {
       "type": "array",
       "items": {

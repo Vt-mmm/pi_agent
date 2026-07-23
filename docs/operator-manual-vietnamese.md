@@ -727,7 +727,13 @@ Default safe config:
 
 ### Auto-delegation
 
-Với `/task`, `/be-to-fe`, `/platform-improve`, `/plan`, `/review`, parent agent phải tự cân nhắc spawn subagent khi có phần việc độc lập.
+Với `/task`, `/be-to-fe`, `/platform-improve`, `/plan`, `/review`, parent agent dùng solo-first orchestration: lập task tree/review lenses trước, rồi chỉ spawn subagent khi có phần việc độc lập và đáng token.
+
+Kiểm tra nhanh policy:
+
+```text
+/company-orchestration
+```
 
 Không cần tự gọi `/run` cho task bình thường. Chỉ dùng `/run` khi muốn ép rõ role hoặc debug.
 
