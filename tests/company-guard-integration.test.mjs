@@ -154,6 +154,8 @@ function createPiHarness() {
 function createContext(cwd, options = {}) {
   const notices = [];
   const confirmations = [];
+  const selections = Array.isArray(options.select) ? [...options.select] : [];
+  const selectCalls = [];
   return {
     cwd,
     mode: "test",
@@ -166,6 +168,11 @@ function createContext(cwd, options = {}) {
       confirm: async (message, title) => {
         confirmations.push({ message, title });
         return options.confirm ?? false;
+      },
+      select: async (...args) => {
+        selectCalls.push(args);
+        if (typeof options.select === "function") return options.select(...args);
+        return selections.shift();
       }
     },
     isProjectTrusted: () => options.projectTrusted ?? true,
@@ -180,7 +187,8 @@ function createContext(cwd, options = {}) {
       getEntries: () => [],
       getBranch: () => []
     },
-    confirmations
+    confirmations,
+    selectCalls
   };
 }
 
@@ -234,8 +242,11 @@ describe("company guard integration", () => {
     companyGuard(harness.pi);
     await harness.handlers.get("session_start")({}, ctx);
 
-    assert.equal(harness.tools.size, 21);
-    assert.equal(harness.commands.size, 15);
+    assert.equal(harness.tools.size, 24);
+    assert.equal(harness.commands.size, 14);
+    assert.equal(harness.commands.has("profile"), true);
+    assert.equal(harness.commands.has("profiles"), false);
+    assert.equal(harness.commands.has("profile-tech"), false);
     assert.deepEqual([...harness.handlers.keys()].sort(), ["input", "session_start", "tool_call", "tool_result"]);
     assert.equal(harness.getSessionName(), "pi:Integration Project");
     assert.match(ctx.ui.notices[0].message, /Company Pi guard loaded: Integration Project/);
@@ -367,10 +378,141 @@ describe("company guard integration", () => {
     assert.equal(harness.entries.some((entry) => entry.type === "user-message"), false);
     assert.equal(harness.entries.some((entry) => entry.payload?.customType === "company-profile-applied"), true);
 
-    await harness.commands.get("profiles").handler("be-fe", ctx);
+    await harness.commands.get("profile").handler("be-fe", ctx);
     const aliasedProfile = JSON.parse(fs.readFileSync(path.join(cwd, ".pi", "company-profile.json"), "utf8"));
     assert.equal(aliasedProfile.mode, "be-readonly-fe");
     assert.equal(aliasedProfile.projectId, "integration-project");
+  });
+
+  it("selects fullstack profile tech with option-style UI and records Context7 placeholders", async () => {
+    const { root, companyGuard } = await loadGuardFixture();
+    const cwd = createProject(root);
+    const ctx = createContext(cwd, { select: ["nextjs", "nestjs", "prisma"] });
+    const harness = createPiHarness();
+    companyGuard(harness.pi);
+
+    await harness.commands.get("profile").handler("setup fullstack", ctx);
+
+    assert.equal(ctx.selectCalls.length, 3);
+    for (const call of ctx.selectCalls) {
+      const choiceList = call.find((value) => Array.isArray(value));
+      assert.ok(choiceList, "select UI should receive an options array");
+      assert.equal(choiceList.every((choice) => typeof choice === "string"), true);
+      assert.equal(choiceList.some((choice) => choice.includes("[object Object]")), false);
+    }
+
+    const profile = JSON.parse(fs.readFileSync(path.join(cwd, ".pi", "company-profile.json"), "utf8"));
+    const manifest = JSON.parse(fs.readFileSync(path.join(cwd, ".pi", "tech-stack.json"), "utf8"));
+    assert.equal(profile.mode, "fullstack");
+    assert.deepEqual(profile.techStack.roles, {
+      frontend: ["nextjs"],
+      backend: ["nestjs"],
+      database: ["prisma"]
+    });
+    assert.deepEqual(manifest.selected.map((entry) => `${entry.role}:${entry.id}`), [
+      "frontend:nextjs",
+      "backend:nestjs",
+      "database:prisma"
+    ]);
+    assert.equal(manifest.selected.every((entry) => entry.context7.status === "pending"), true);
+    assert.equal(fs.existsSync(path.join(cwd, ".pi", "tech-context", "nextjs.json")), true);
+    assert.equal(fs.existsSync(path.join(cwd, ".pi", "company-profile.lock.json")), true);
+    assert.equal(harness.entries.some((entry) => entry.type === "user-message"), false);
+    assert.equal(harness.entries.some((entry) => entry.payload?.customType === "company-profile-tech-applied"), true);
+
+    const context = await harness.tools.get("company_context").execute(
+      "profile-tech-context-test",
+      { detail: "full" },
+      undefined,
+      () => {},
+      ctx
+    );
+    assert.deepEqual(context.details.techStack.selected.map((entry) => entry.id), ["nextjs", "nestjs", "prisma"]);
+  });
+
+  it("maps displayed select labels back to internal tech ids", async () => {
+    const { root, companyGuard } = await loadGuardFixture();
+    const cwd = createProject(root);
+    const ctx = createContext(cwd, {
+      select: (...args) => {
+        const title = String(args.find((value) => typeof value === "string") ?? "");
+        const choices = args.find((value) => Array.isArray(value)) ?? [];
+        if (/frontend/.test(title)) return choices.find((choice) => /\[nextjs\]$/.test(choice));
+        if (/backend/.test(title)) return choices.find((choice) => /\[nestjs\]$/.test(choice));
+        if (/database/.test(title)) return choices.find((choice) => /\[prisma\]$/.test(choice));
+        return undefined;
+      }
+    });
+    const harness = createPiHarness();
+    companyGuard(harness.pi);
+
+    await harness.commands.get("profile").handler("tech setup fullstack", ctx);
+
+    const manifest = JSON.parse(fs.readFileSync(path.join(cwd, ".pi", "tech-stack.json"), "utf8"));
+    assert.deepEqual(manifest.selected.map((entry) => `${entry.role}:${entry.id}`), [
+      "frontend:nextjs",
+      "backend:nestjs",
+      "database:prisma"
+    ]);
+  });
+
+  it("falls back to a compact tech options card when select UI is unavailable", async () => {
+    const { root, companyGuard } = await loadGuardFixture();
+    const cwd = createProject(root);
+    const ctx = createContext(cwd);
+    const harness = createPiHarness();
+    companyGuard(harness.pi);
+
+    await harness.commands.get("profile").handler("tech setup fullstack", ctx);
+
+    assert.equal(harness.entries.some((entry) => entry.type === "user-message"), false);
+    assert.equal(harness.entries.some((entry) => entry.payload?.customType === "company-profile-tech-options"), true);
+    assert.equal(fs.existsSync(path.join(cwd, ".pi", "tech-stack.json")), false);
+  });
+
+  it("records concise Context7 evidence for a selected profile tech entry", async () => {
+    const { root, companyGuard } = await loadGuardFixture();
+    const cwd = createProject(root);
+    const ctx = createContext(cwd, { confirm: true });
+    const harness = createPiHarness();
+    companyGuard(harness.pi);
+
+    const applied = await harness.tools.get("company_profile_tech_apply").execute(
+      "profile-tech-apply-test",
+      { profile: "fullstack", frontend: "nextjs", backend: "nestjs", database: "prisma" },
+      undefined,
+      () => {},
+      ctx
+    );
+    assert.equal(applied.isError, undefined);
+
+    const recorded = await harness.tools.get("company_profile_tech_context_record").execute(
+      "profile-tech-context-record-test",
+      {
+        techId: "nextjs",
+        resolvedLibraryId: "/vercel/next.js",
+        summary: `Use App Router docs as the baseline for project routing and data-loading conventions. ${"x".repeat(2500)}`,
+        keyRules: Array.from({ length: 25 }, (_unused, index) => `Rule ${index}: ${"y".repeat(700)}`),
+        citations: [{ title: "Next.js Docs", url: "https://nextjs.org/docs?access_token=synthetic-docs-token-123", source: "Context7" }]
+      },
+      undefined,
+      () => {},
+      ctx
+    );
+
+    assert.equal(recorded.isError, undefined);
+    const snapshot = JSON.parse(fs.readFileSync(path.join(cwd, ".pi", "tech-context", "nextjs.json"), "utf8"));
+    const manifest = JSON.parse(fs.readFileSync(path.join(cwd, ".pi", "tech-stack.json"), "utf8"));
+    const nextjs = manifest.selected.find((entry) => entry.id === "nextjs");
+    assert.equal(snapshot.status, "recorded");
+    assert.equal(snapshot.resolvedLibraryId, "/vercel/next.js");
+    assert.equal(snapshot.summary.length, 2000);
+    assert.equal(snapshot.keyRules.length, 20);
+    assert.equal(snapshot.keyRules.every((rule) => rule.length === 500), true);
+    assert.doesNotMatch(snapshot.citations[0].url, /synthetic-docs-token/);
+    assert.match(snapshot.digest, /^sha256:[a-f0-9]{64}$/);
+    assert.equal(nextjs.context7.status, "recorded");
+    assert.equal(nextjs.context7.digest, snapshot.digest);
   });
 
   it("keeps status commands concise and local without model follow-up", async () => {
@@ -380,7 +522,7 @@ describe("company guard integration", () => {
     const harness = createPiHarness();
     companyGuard(harness.pi);
 
-    await harness.commands.get("profiles").handler("", ctx);
+    await harness.commands.get("profile").handler("", ctx);
     await harness.commands.get("company-status").handler("", ctx);
     await harness.commands.get("company-memory").handler("", ctx);
     await harness.commands.get("company-orchestration").handler("", ctx);
@@ -1237,7 +1379,7 @@ describe("company guard integration", () => {
     const harness = createPiHarness();
     companyGuard(harness.pi);
 
-    await harness.commands.get("profiles").handler("be-fe", ctx);
+    await harness.commands.get("profile").handler("be-fe", ctx);
 
     const toolCall = harness.handlers.get("tool_call");
     const readBackend = await callToolCall(toolCall, ctx, "read", { path: "backend/contract.ts" });

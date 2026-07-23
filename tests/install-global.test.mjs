@@ -96,6 +96,7 @@ describe("install-global release channels", () => {
     assert.equal(result.status, 0, result.stderr);
     assert.match(result.stdout, /channel: stable/);
     assert.match(result.stdout, /currentRelease: v0\.4\.8 \(helper package version\)/);
+    assert.match(result.stdout, /runtime: .+/);
     assert.match(result.stdout, /tag: v0\.4\.8/);
     assert.match(result.stdout, new RegExp(`resolvedCommit: ${resolvedCommit}`));
     assert.match(result.stdout, new RegExp(`source: git:github.com/Vt-mmm/pi_agent@${resolvedCommit}`));

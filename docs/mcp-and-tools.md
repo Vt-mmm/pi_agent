@@ -281,6 +281,11 @@ Search/list channels cũng được kiểm:
 | `company_memory_search` | Keyword search `.pi/memory` markdown. |
 | `company_memory_note` | Append explicit durable memory note. |
 | `company_memory_citation_record` | Record memory evidence in task contract. |
+| `company_profile_options` | Return reusable project profile choices. |
+| `company_profile_apply` | Apply a selected profile and deterministic capability lock. |
+| `company_profile_tech_options` | Return select-style tech options for a profile family. |
+| `company_profile_tech_apply` | Apply profile + selected role tech stack and Context7 placeholders. |
+| `company_profile_tech_context_record` | Record a concise Context7 evidence snapshot for a selected tech. |
 | `company_task_start` | Create Task Implementation Contract. |
 | `company_context_record` | Record context manifest for task. |
 | `company_verify_record` | Record verify evidence only when it matches an observed Pi bash result after task start. Passing gate also requires exact match with `task.verifyCommands`. |

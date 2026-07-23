@@ -71,7 +71,7 @@ pi-company-install --stable
 
 `pi install git:github.com/Vt-mmm/pi_agent@v0.4.8` vẫn hợp lệ nếu chỉ cần cài Pi package. Lệnh đó không tự tạo các binary terminal `pi-company-*`; muốn có helper global thì dùng `npm install -g --ignore-scripts github:Vt-mmm/pi_agent#v0.4.8`.
 
-Support matrix hiện tại: macOS/Linux với Bash đã được verify; native Windows và WSL chưa được verify cho release này. Chi tiết và version runtime nằm trong [release/install policy](release-install-policy.md).
+Support matrix hiện tại: macOS Apple Silicon + Bash và Linux x64 + Bash đã được verify; macOS Intel + Bash và Linux ARM64 + Bash là supported target cần chạy smoke trước rollout; native Windows chưa phải target rollout team; WSL2 experimental. Chi tiết và version runtime nằm trong [release/install policy](release-install-policy.md).
 
 Sau đó project nào cũng:
 

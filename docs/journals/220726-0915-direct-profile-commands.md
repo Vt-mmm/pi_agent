@@ -10,14 +10,14 @@ date: 2026-07-22
 
 Profile switching and lightweight status commands now avoid model follow-up by default:
 
-- `/profile` and `/profiles` show concise profile status locally.
+- `/profile` shows concise profile status locally.
 - `/profile list` shows a compact profile list.
 - `/profile <profile>` applies the profile immediately and updates `.pi/company-profile.json` plus `.pi/company-profile.lock.json`.
 - `/profile auto` applies the detected recommended profile.
 - Short aliases map common intent to built-in profiles: `fe`, `be`, `full`, `be-fe`, and TypeScript aliases.
 - `/company-status` and `/company-memory` emit concise local summaries instead of asking the model to call verbose tools.
 
-The fallback `/profiles` prompt is also action-first and no longer calls `company_context detail=full` unless the user explicitly asks for full/debug output.
+The older plural fallback prompt has been retired so command autocomplete stays focused on the direct `/profile` runtime command.
 
 ## Security notes
 

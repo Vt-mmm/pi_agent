@@ -71,11 +71,83 @@ function commandExists(command) {
   return result.status === 0;
 }
 
+function isWslRuntime() {
+  if (process.platform !== "linux") return false;
+  try {
+    return /microsoft|wsl/i.test(fs.readFileSync("/proc/version", "utf8"));
+  } catch {
+    return false;
+  }
+}
+
+function runtimeMatrixStatus() {
+  const platform = process.platform;
+  const arch = process.arch;
+  if (platform === "darwin" && arch === "arm64") {
+    return {
+      surface: "macos-apple-silicon/darwin-arm64",
+      status: "verified",
+      teamRolloutReady: true,
+      note: "Apple Silicon macOS with Bash is in the current supported matrix."
+    };
+  }
+  if (platform === "darwin" && arch === "x64") {
+    return {
+      surface: "macos-intel/darwin-x64",
+      status: "supported-target",
+      teamRolloutReady: false,
+      note: "Node.js is available for this target, but this release has not been gated on an Intel Mac runner."
+    };
+  }
+  if (platform === "linux" && isWslRuntime()) {
+    return {
+      surface: `wsl2/${arch}`,
+      status: "experimental",
+      teamRolloutReady: false,
+      note: "WSL2 has Linux-like Node/Bash behavior, but it is not part of the release gate."
+    };
+  }
+  if (platform === "linux" && arch === "x64") {
+    return {
+      surface: "linux-x64",
+      status: "verified-ci",
+      teamRolloutReady: true,
+      note: "Ubuntu x64 with Bash is covered by CI release gates."
+    };
+  }
+  if (platform === "linux" && arch === "arm64") {
+    return {
+      surface: "linux-arm64",
+      status: "supported-target",
+      teamRolloutReady: false,
+      note: "Node.js is available for this target, but this release has not been gated on Linux ARM64."
+    };
+  }
+  if (platform === "win32") {
+    return {
+      surface: `native-windows/${arch}`,
+      status: "not-supported-for-team-rollout",
+      teamRolloutReady: false,
+      note: "The Node runtime is available, but platform helper scripts and shell policy rely on Bash/POSIX semantics."
+    };
+  }
+  return {
+    surface: `${platform}/${arch}`,
+    status: "outside-release-matrix",
+    teamRolloutReady: false,
+    note: "This runtime is outside the documented v0.4.8 support matrix."
+  };
+}
+
+const runtime = runtimeMatrixStatus();
+if (!runtime.teamRolloutReady) {
+  warnings.push(`runtime surface ${runtime.surface} is ${runtime.status}: ${runtime.note}`);
+}
+
 for (const rel of [
   "package.json",
   "packages/pi-company-core/extensions/company-guard.ts",
   "packages/pi-company-core/prompts/onboard-project.md",
-  "packages/pi-company-core/prompts/profiles.md",
   "packages/pi-company-core/prompts/memory-policy.md",
   "packages/pi-company-core/prompts/platform-improve.md",
   "packages/pi-company-core/prompts/be-to-fe.md",
@@ -261,6 +333,15 @@ const report = {
   platformRoot,
   projectPath,
   strictShare,
+  runtime: {
+    node: process.version,
+    platform: process.platform,
+    arch: process.arch,
+    surface: runtime.surface,
+    status: runtime.status,
+    teamRolloutReady: runtime.teamRolloutReady,
+    note: runtime.note
+  },
   piOnPath: commandExists("pi"),
   herdrOnPath: commandExists("herdr"),
   piHasMcpAdapter,

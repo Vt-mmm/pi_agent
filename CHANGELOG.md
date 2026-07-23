@@ -9,10 +9,15 @@ This file records release-facing changes for Pi Agent Platform. Copy the relevan
 - Added solo-first orchestration policy for bounded subagent usage, review lenses, Field Guide status, and model-role guidance.
 - Added `company_orchestration_policy` and `/company-orchestration` for compact local orchestration status without a model follow-up.
 - Added task-contract fields for `workPlan`, `reviewLenses`, and `orchestration` snapshots.
+- Added select-style profile tech setup via `/profile setup` and `/profile tech setup`, including fullstack FE/BE/database selections.
+- Added `company_profile_tech_options`, `company_profile_tech_apply`, and `company_profile_tech_context_record` for Context7-ready tech stack manifests and concise per-tech snapshots.
 
 ### Changed
 
 - Updated `/task`, `/plan`, `/review`, subagent prompts, and team docs to prefer one parent agent plus bounded scout/planner/reviewer usage instead of broad swarm-style delegation.
+- Updated onboarding/docs to treat profile family and project tech stack as explicit operator selections instead of long model explanations.
+- Tightened `/profile` status/list output around the single namespace and next exact command so the default path stays compact.
+- Clarified runtime support across macOS Apple Silicon, macOS Intel, Linux x64/ARM64, native Windows, and WSL2, and made installer/doctor output report the current runtime surface.
 
 ### Fixed
 
@@ -158,7 +163,7 @@ This file records release-facing changes for Pi Agent Platform. Copy the relevan
 
 - Added direct profile commands that apply immediately without model follow-up:
   - `/profile`
-  - `/profiles`
+  - `/profile`
   - `/profile list`
   - `/profile <profile>`
   - `/profile auto`

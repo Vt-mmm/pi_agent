@@ -82,6 +82,12 @@
       "readBeforeTask": true
     }
   },
+  "techStack": {
+    "provider": "context7",
+    "manifest": ".pi/tech-stack.json",
+    "contextDir": ".pi/tech-context",
+    "roles": {}
+  },
   "runtimePolicy": {
     "execPolicy": "enforce",
     "contextBudget": "enforce",

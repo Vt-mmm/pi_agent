@@ -323,6 +323,14 @@ if [[ ! -f "$PROJECT_PATH/.pi/project-context.md" ]]; then
   cp "$PLATFORM_ROOT/templates/project/.pi/project-context.md" "$PROJECT_PATH/.pi/project-context.md"
 fi
 
+if [[ ! -f "$PROJECT_PATH/.pi/tech-stack.json" ]]; then
+  cp "$PLATFORM_ROOT/templates/project/.pi/tech-stack.json" "$PROJECT_PATH/.pi/tech-stack.json"
+fi
+mkdir -p "$PROJECT_PATH/.pi/tech-context"
+if [[ ! -f "$PROJECT_PATH/.pi/tech-context/README.md" ]]; then
+  cp "$PLATFORM_ROOT/templates/project/.pi/tech-context/README.md" "$PROJECT_PATH/.pi/tech-context/README.md"
+fi
+
 mkdir -p "$PROJECT_PATH/.pi/memory"
 if [[ ! -f "$PROJECT_PATH/.pi/memory/memory_summary.md" ]]; then
   cp "$PLATFORM_ROOT/templates/project/.pi/memory/memory_summary.md" "$PROJECT_PATH/.pi/memory/memory_summary.md"

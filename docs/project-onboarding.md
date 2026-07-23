@@ -18,12 +18,22 @@ Sau khi `/onboard-project` chạy xong, project có file:
 
 ```text
 .pi/company-profile.json
+.pi/company-profile.lock.json
+.pi/tech-stack.json
+.pi/tech-context/*.json
 .pi/project-context.md
 .pi/memory/memory_summary.md
 .pi/memory/MEMORY.md
 ```
 
-`/onboard-project` là nơi profile được chọn. Nếu project chưa có `.pi/company-profile.json`, model phải gợi ý profile, show option, giải thích tradeoff, rồi chỉ apply khi user approve.
+`/onboard-project` là nơi profile và tech stack được chọn. Ưu tiên select-style flow:
+
+```text
+/profile setup
+/profile tech setup fullstack
+```
+
+Nếu Pi host chưa có native select, command trả card compact và lệnh deterministic, ví dụ `/profile tech apply fullstack frontend=nextjs backend=nestjs database=prisma`. Không dùng model để giải thích dài từng lựa chọn trong daily UX.
 
 `.pi/project-context.md` là context snapshot để task sau không phải scout lại toàn bộ repo từ đầu.
 
@@ -43,6 +53,8 @@ Xem hoặc đổi profile trong Pi:
 
 ```text
 /profile list
+/profile setup
+/profile tech setup
 /profile fullstack
 /profile be-readonly-fe
 ```

@@ -8,14 +8,16 @@ This file is the canonical install, update, rollback, and release checklist. Oth
 
 ## Supported runtime matrix
 
-| Surface | Status for v0.4.8 |
-|---|---|
-| macOS + Bash | Tested and supported. |
-| Linux + Bash | Tested and supported. |
-| Native Windows | Not verified; the terminal helpers require Bash. |
-| WSL | Not verified in the current release. |
+All supported environments require Node.js `>=22.19.0` and Pi Coding Agent `0.81.1`. The Pi host is installed as a Node CLI; Pi Company Platform still defines its own release matrix because the terminal helpers and shell policy rely on Bash/POSIX behavior.
 
-All supported environments require Node.js `>=22.19.0` and Pi Coding Agent `0.81.1`.
+| Surface | Status for v0.4.8 | Rollout guidance |
+|---|---|---|
+| macOS Apple Silicon (`darwin/arm64`) + Bash | Verified for this release. | Safe default for team rollout after normal project smoke tests. |
+| Linux x64 + Bash | Verified in GitHub Actions. | Safe default for CI/server usage after normal project smoke tests. |
+| macOS Intel (`darwin/x64`) + Bash | Supported target; not currently a dedicated release-gate runner. | Run `pi-company-doctor` plus the target project's smoke/verify suite before broad rollout. |
+| Linux ARM64 + Bash | Supported target; not currently a dedicated release-gate runner. | Run `pi-company-doctor` plus the target project's smoke/verify suite before broad rollout. |
+| Native Windows x64/ARM64 | Not supported for team rollout in this release. | Node is available on Windows, but platform helper scripts and shell parsing assume Bash/POSIX semantics. Use a verified macOS/Linux surface for release-critical work. |
+| WSL2 | Experimental and not release-gated. | Treat as local/personal until a WSL lane and smoke suite are added. |
 
 ## Runtime and two installation planes
 

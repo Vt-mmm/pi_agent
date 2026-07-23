@@ -934,7 +934,35 @@
               <article class="step">
                 <div>
                   <h3>Chuẩn bị runtime</h3>
-                  <p>Dùng Node.js 22.19.0 trở lên và Pi Coding Agent <span class="inline-code">0.81.1</span>. macOS/Linux với Bash đã được verify; native Windows và WSL chưa được verify. Pi Company Platform <span class="inline-code">v0.4.8</span> đang pin compatibility với runtime này.</p>
+                  <p>Dùng Node.js 22.19.0 trở lên và Pi Coding Agent <span class="inline-code">0.81.1</span>. Pi Company Platform <span class="inline-code">v0.4.8</span> đang pin compatibility với runtime này và công bố support matrix theo OS/CPU riêng cho platform helper.</p>
+                  <div class="table-wrap compact-table">
+                    <table>
+                      <thead>
+                        <tr>
+                          <th>Runtime</th>
+                          <th>Trạng thái rollout</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr>
+                          <td>macOS Apple Silicon + Bash</td>
+                          <td>Đã verify cho release này.</td>
+                        </tr>
+                        <tr>
+                          <td>Linux x64 + Bash</td>
+                          <td>Đã verify trong CI.</td>
+                        </tr>
+                        <tr>
+                          <td>macOS Intel / Linux ARM64 + Bash</td>
+                          <td>Supported target; chạy doctor + smoke test trước khi rollout rộng.</td>
+                        </tr>
+                        <tr>
+                          <td>Native Windows / WSL2</td>
+                          <td>Chưa là target rollout team; WSL2 chỉ experimental.</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
                   <div class="command-card">
                     <header><span>Runtime prerequisites</span><button class="clip-btn" data-clip="node --version&#10;npm install -g --ignore-scripts @earendil-works/pi-coding-agent@0.81.1&#10;pi --version">Lấy lệnh</button></header>
                     <pre><code>node --version  # &gt;= 22.19.0
@@ -1016,11 +1044,12 @@ pi</code></pre>
 
               <article class="step">
                 <div>
-                  <h3>Chọn profile</h3>
-                  <p>Dùng <span class="inline-code">/profile auto</span> để áp profile được detect, hoặc chọn profile rõ theo loại repo.</p>
+                  <h3>Chọn profile + tech</h3>
+                  <p>Dùng <span class="inline-code">/profile setup</span> để mở select option: chọn profile trước, rồi chọn tech theo role. Fullstack sẽ chọn frontend, backend và database.</p>
                   <div class="command-card">
-                    <header><span>Profile</span><button class="clip-btn" data-clip="/profile auto">Lấy lệnh</button></header>
-                    <pre><code>/profile auto</code></pre>
+                    <header><span>Profile tech setup</span><button class="clip-btn" data-clip="/profile setup&#10;/profile tech setup fullstack">Lấy lệnh</button></header>
+                    <pre><code>/profile setup
+/profile tech setup fullstack</code></pre>
                   </div>
                 </div>
               </article>
@@ -1154,7 +1183,7 @@ npm run typecheck</code></pre>
 
             <div class="callout">
               <strong>Dependency gate tách hai lớp</strong>
-              <p>Release kiểm toán riêng dependency tree nhỏ của terminal helper và cây exact Pi host + pinned add-on. Gate hiện có 0 high/critical; npm vẫn báo 11 moderate dependency paths thuộc hai advisory upstream: encoded-backslash path traversal trên Windows trong Hono adapter và protobuf parser DoS. Native Windows chưa nằm trong matrix hỗ trợ, nhưng dự án vẫn theo dõi cả hai thay vì gọi runtime là “0 vulnerability”.</p>
+              <p>Release kiểm toán riêng dependency tree nhỏ của terminal helper và cây exact Pi host + pinned add-on. Gate hiện có 0 high/critical; npm vẫn báo 11 moderate dependency paths thuộc hai advisory upstream: encoded-backslash path traversal trên Windows trong Hono adapter và protobuf parser DoS. Native Windows/WSL2 chưa nằm trong matrix rollout team, nhưng dự án vẫn theo dõi cả hai thay vì gọi runtime là “0 vulnerability”.</p>
             </div>
           </section>
 
@@ -1162,7 +1191,7 @@ npm run typecheck</code></pre>
             <p class="section-kicker">Profiles</p>
             <h2>Project profile: chọn đúng đường ray cho repo</h2>
             <p class="section-lead">
-              Profile ghi vào <span class="inline-code">.pi/company-profile.json</span> và lock tương ứng. Command profile hiện đã chạy trực tiếp, không kích thêm câu trả lời dài từ model.
+              Profile ghi vào <span class="inline-code">.pi/company-profile.json</span> và lock tương ứng. Command profile hiện chạy trực tiếp, ưu tiên UI select cho profile/tech stack, không kích thêm câu trả lời dài từ model.
             </p>
 
             <div class="command-grid">
@@ -1177,6 +1206,15 @@ npm run typecheck</code></pre>
               <article class="command-card">
                 <header><span>Áp profile detect</span><button class="clip-btn" data-clip="/profile auto">Lấy lệnh</button></header>
                 <pre><code>/profile auto</code></pre>
+              </article>
+              <article class="command-card">
+                <header><span>Setup bằng select</span><button class="clip-btn" data-clip="/profile setup&#10;/profile tech setup fullstack">Lấy lệnh</button></header>
+                <pre><code>/profile setup
+/profile tech setup fullstack</code></pre>
+              </article>
+              <article class="command-card">
+                <header><span>Apply tech deterministic</span><button class="clip-btn" data-clip="/profile tech apply fullstack frontend=nextjs backend=nestjs database=prisma">Lấy lệnh</button></header>
+                <pre><code>/profile tech apply fullstack frontend=nextjs backend=nestjs database=prisma</code></pre>
               </article>
               <article class="command-card">
                 <header><span>Frontend</span><button class="clip-btn" data-clip="/profile web-frontend">Lấy lệnh</button></header>
@@ -1215,6 +1253,11 @@ npm run typecheck</code></pre>
               <span class="tag">devops</span>
               <span class="tag">mobile</span>
               <span class="tag">docs</span>
+            </div>
+
+            <div class="callout">
+              <strong>Tech stack theo role</strong>
+              <p>Frontend profile chọn FE + database optional; backend profile chọn BE + database optional; fullstack chọn đủ FE, BE và database. Sau đó platform tạo <span class="inline-code">.pi/tech-stack.json</span> và snapshot Context7 ngắn trong <span class="inline-code">.pi/tech-context/*</span>.</p>
             </div>
           </section>
 
@@ -1305,10 +1348,13 @@ npm run typecheck</code></pre>
                   <span class="tag">/profile</span>
                   <span class="tag">/profile list</span>
                   <span class="tag">/profile auto</span>
+                  <span class="tag">/profile setup</span>
+                  <span class="tag">/profile tech</span>
+                  <span class="tag">/profile tech setup</span>
                   <span class="tag">/profile fullstack</span>
                   <span class="tag">/profile be-fe</span>
                 </div>
-                <p>Áp profile trực tiếp, output ngắn, không yêu cầu model giải thích dài.</p>
+                <p>Áp profile trực tiếp hoặc mở select option để chọn profile/tech stack. Output ngắn, không yêu cầu model giải thích dài.</p>
               </article>
               <article class="card">
                 <h3>Implementation workflow</h3>

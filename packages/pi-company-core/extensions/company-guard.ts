@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
+import crypto from "node:crypto";
 import { execFileSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
@@ -57,6 +58,7 @@ type ProjectProfile = {
   memory?: MemorySettings;
   runtimePolicy?: RuntimePolicySettings;
   orchestration?: OrchestrationPolicySettings;
+  techStack?: ProjectTechStackReference;
 };
 
 type MemorySettings = {
@@ -77,6 +79,70 @@ type RuntimePolicySettings = {
   contextBudget?: "off" | "advisory" | "enforce";
   toolRegistry?: "off" | "advisory" | "enforce";
   finalGate?: "off" | "advisory" | "enforce";
+};
+
+type TechRole = "frontend" | "backend" | "database" | "mobile" | "devops" | "data" | "docs" | "runtime";
+
+type ProjectTechStackReference = {
+  provider?: "context7";
+  manifest?: string;
+  contextDir?: string;
+  roles?: Partial<Record<TechRole, string[]>>;
+  updatedAt?: string;
+};
+
+type TechOption = {
+  id: string;
+  label: string;
+  role: TechRole;
+  description: string;
+  context7Query?: string;
+  topics: string[];
+};
+
+type TechStackEntry = {
+  id: string;
+  label: string;
+  role: TechRole;
+  description: string;
+  context7: {
+    provider: "context7";
+    query: string;
+    status: "pending" | "recorded";
+    contextFile: string;
+    resolvedLibraryId?: string;
+    retrievedAt?: string;
+    digest?: string;
+  };
+  topics: string[];
+};
+
+type TechStackManifest = {
+  schemaVersion: 1;
+  provider: "context7";
+  profile: string;
+  roles: Partial<Record<TechRole, string[]>>;
+  selected: TechStackEntry[];
+  skippedRoles?: TechRole[];
+  contextDir: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
+type TechContextSnapshot = {
+  schemaVersion: 1;
+  provider: "context7";
+  status: "pending" | "recorded";
+  techId: string;
+  role: TechRole;
+  query: string;
+  resolvedLibraryId?: string;
+  topics?: string[];
+  retrievedAt?: string;
+  summary?: string;
+  keyRules: string[];
+  citations: Array<{ title?: string; url?: string; source?: string }>;
+  digest?: string;
 };
 
 type OrchestrationMode = "solo-first" | "bounded-subagents" | "parallel-readonly";
@@ -330,6 +396,58 @@ const IMAGE_EXTENSIONS = ["png", "jpg", "jpeg", "gif", "webp", "bmp"] as const;
 const ORCHESTRATION_MODES = ["solo-first", "bounded-subagents", "parallel-readonly"] as const;
 const REVIEW_LENSES = ["correctness", "tests", "scope", "security", "docs", "release", "package"] as const;
 const ORCHESTRATION_ROLES = ["parent", "company-scout", "company-planner", "company-worker", "company-reviewer", "company-oracle"] as const;
+const TECH_STACK_MANIFEST_FILE = ".pi/tech-stack.json";
+const TECH_CONTEXT_DIR = ".pi/tech-context";
+
+const TECH_OPTIONS: TechOption[] = [
+  { id: "nextjs", label: "Next.js", role: "frontend", description: "React framework with App Router/SSR/static rendering patterns.", context7Query: "next.js", topics: ["app-router", "routing", "data-fetching", "server-components"] },
+  { id: "react-vite", label: "React + Vite", role: "frontend", description: "Client-side React app built with Vite.", context7Query: "react vite", topics: ["components", "hooks", "vite", "testing"] },
+  { id: "vue", label: "Vue", role: "frontend", description: "Vue application or component frontend.", context7Query: "vue", topics: ["composition-api", "routing", "state"] },
+  { id: "sveltekit", label: "SvelteKit", role: "frontend", description: "SvelteKit app with routing and load functions.", context7Query: "sveltekit", topics: ["routing", "load", "forms"] },
+  { id: "astro", label: "Astro", role: "frontend", description: "Content-oriented Astro frontend/site.", context7Query: "astro", topics: ["islands", "content", "routing"] },
+  { id: "angular", label: "Angular", role: "frontend", description: "Angular app with components/services/routing.", context7Query: "angular", topics: ["components", "services", "routing"] },
+  { id: "nestjs", label: "NestJS", role: "backend", description: "Structured Node.js backend/API framework.", context7Query: "nestjs", topics: ["modules", "controllers", "providers", "testing"] },
+  { id: "express", label: "Express", role: "backend", description: "Minimal Node.js HTTP/API backend.", context7Query: "express", topics: ["routing", "middleware", "errors"] },
+  { id: "fastify", label: "Fastify", role: "backend", description: "Fast Node.js backend with schema-driven routes.", context7Query: "fastify", topics: ["routes", "schemas", "plugins"] },
+  { id: "hono", label: "Hono", role: "backend", description: "Lightweight API framework for edge/server runtimes.", context7Query: "hono", topics: ["routing", "middleware", "validation"] },
+  { id: "fastapi", label: "FastAPI", role: "backend", description: "Python API framework with typed request/response contracts.", context7Query: "fastapi", topics: ["routing", "pydantic", "testing"] },
+  { id: "django", label: "Django", role: "backend", description: "Python web/backend framework.", context7Query: "django", topics: ["models", "views", "admin", "testing"] },
+  { id: "spring-boot", label: "Spring Boot", role: "backend", description: "Java/Kotlin backend framework.", context7Query: "spring boot", topics: ["controllers", "services", "configuration"] },
+  { id: "none", label: "None / not selected", role: "database", description: "No database/ORM tech selected for this profile.", topics: [] },
+  { id: "prisma", label: "Prisma", role: "database", description: "TypeScript ORM and migration workflow.", context7Query: "prisma", topics: ["schema", "client", "migrations"] },
+  { id: "drizzle", label: "Drizzle", role: "database", description: "TypeScript SQL ORM/query builder.", context7Query: "drizzle orm", topics: ["schema", "queries", "migrations"] },
+  { id: "typeorm", label: "TypeORM", role: "database", description: "TypeScript ORM with entities/repositories.", context7Query: "typeorm", topics: ["entities", "repositories", "migrations"] },
+  { id: "supabase", label: "Supabase", role: "database", description: "Postgres/Auth/storage platform used from app code.", context7Query: "supabase", topics: ["auth", "database", "storage"] },
+  { id: "postgres", label: "PostgreSQL", role: "database", description: "Raw PostgreSQL/schema/query workflow.", context7Query: "postgresql", topics: ["sql", "schema", "indexes"] },
+  { id: "mongodb", label: "MongoDB", role: "database", description: "Document database workflow.", context7Query: "mongodb", topics: ["schema", "queries", "indexes"] },
+  { id: "react-native", label: "React Native", role: "mobile", description: "React Native mobile app.", context7Query: "react native", topics: ["components", "navigation", "native-modules"] },
+  { id: "flutter", label: "Flutter", role: "mobile", description: "Flutter/Dart mobile app.", context7Query: "flutter", topics: ["widgets", "state", "routing"] },
+  { id: "docker", label: "Docker", role: "devops", description: "Container build/runtime workflow.", context7Query: "docker", topics: ["dockerfile", "compose", "images"] },
+  { id: "github-actions", label: "GitHub Actions", role: "devops", description: "CI/CD workflow automation.", context7Query: "github actions", topics: ["workflow", "jobs", "permissions"] },
+  { id: "terraform", label: "Terraform", role: "devops", description: "Infrastructure as code.", context7Query: "terraform", topics: ["modules", "state", "providers"] },
+  { id: "kubernetes", label: "Kubernetes", role: "devops", description: "Kubernetes manifests/deployments.", context7Query: "kubernetes", topics: ["deployments", "services", "config"] },
+  { id: "dbt", label: "dbt", role: "data", description: "Analytics engineering/dbt project.", context7Query: "dbt", topics: ["models", "tests", "docs"] },
+  { id: "pandas", label: "Pandas", role: "data", description: "Python data analysis/ETL workflow.", context7Query: "pandas", topics: ["dataframes", "io", "transforms"] },
+  { id: "docusaurus", label: "Docusaurus", role: "docs", description: "Docusaurus documentation site.", context7Query: "docusaurus", topics: ["docs", "sidebar", "deployment"] },
+  { id: "mintlify", label: "Mintlify", role: "docs", description: "Mintlify documentation site.", context7Query: "mintlify", topics: ["navigation", "mdx", "deployment"] },
+  { id: "mkdocs", label: "MkDocs", role: "docs", description: "MkDocs documentation site.", context7Query: "mkdocs", topics: ["navigation", "markdown", "deployment"] },
+  { id: "node-typescript", label: "Node TypeScript", role: "runtime", description: "Node.js TypeScript library/tooling project.", context7Query: "typescript node.js", topics: ["typescript", "node", "testing"] },
+  { id: "python", label: "Python", role: "runtime", description: "Python app/library runtime.", context7Query: "python", topics: ["packaging", "typing", "testing"] }
+];
+
+const PROFILE_TECH_ROLES: Record<string, TechRole[]> = {
+  "web-frontend": ["frontend", "database"],
+  "backend-api": ["backend", "database"],
+  "be-readonly-fe": ["frontend", "backend", "database"],
+  fullstack: ["frontend", "backend", "database"],
+  "node-typescript": ["runtime", "database"],
+  python: ["runtime", "database"],
+  data: ["data", "database"],
+  devops: ["devops"],
+  mobile: ["mobile"],
+  docs: ["docs"],
+  generic: ["runtime"]
+};
 
 type ChatImageAttachmentResult = {
   text: string;
@@ -469,6 +587,9 @@ const DEFAULT_POLICY: BasePolicy = {
       "company_memory_citation_record",
       "company_profile_options",
       "company_profile_apply",
+      "company_profile_tech_options",
+      "company_profile_tech_apply",
+      "company_profile_tech_context_record",
       "company_project_onboarding_record",
       "company_task_start",
       "company_source_checkout",
@@ -2700,6 +2821,18 @@ function redactTextArray(input: string[] | undefined): string[] {
   return (input ?? []).map((item) => redactText(item));
 }
 
+function redactBoundedText(input: string | undefined, maxChars: number): string | undefined {
+  if (typeof input !== "string") return undefined;
+  return redactText(input).slice(0, maxChars);
+}
+
+function redactBoundedTextArray(input: unknown, maxItems: number, maxChars: number): string[] {
+  return (Array.isArray(input) ? input : [])
+    .filter((item): item is string => typeof item === "string")
+    .slice(0, maxItems)
+    .map((item) => redactText(item).slice(0, maxChars));
+}
+
 function ensureProjectMemoryFiles(cwd: string, settings: Required<MemorySettings>): void {
   ensurePiGitignore(cwd);
   const summaryPath = memorySummaryPath(cwd, settings);
@@ -2959,25 +3092,363 @@ function buildProfileOptions(extensionDir: string, cwd: string, intent?: string)
   return { recommended: recommendation.name, reason: recommendation.reason, options };
 }
 
-function writeProfileFromAdapter(extensionDir: string, cwd: string, profileName: string, overwrite = false, projectId?: string, displayName?: string): ProjectProfile {
-  const source = adapterProfilePath(extensionDir, profileName);
-  if (!source) throw new Error(`Unknown profile: ${profileName}`);
-  const target = projectProfilePath(cwd);
-  if (fs.existsSync(target) && !overwrite) throw new Error(".pi/company-profile.json already exists. Pass overwrite=true to replace it.");
-  const profile = readJsonFile<ProjectProfile>(source);
-  if (!profile) throw new Error(`Profile unreadable: ${profileName}`);
-  const projectName = path.basename(cwd);
-  const personalized: ProjectProfile = {
-    ...profile,
-    projectId: projectId ? slugify(projectId) : slugify(projectName),
-    displayName: displayName?.trim() || titleize(projectName)
+function techStackPath(cwd: string): string {
+  return projectFilePath(cwd, TECH_STACK_MANIFEST_FILE);
+}
+
+function techContextDirPath(cwd: string): string {
+  return projectFilePath(cwd, TECH_CONTEXT_DIR);
+}
+
+function techContextFilePath(cwd: string, techId: string): string {
+  return projectFilePath(cwd, `${TECH_CONTEXT_DIR}/${safeTaskId(techId)}.json`);
+}
+
+function techContextRelativePath(techId: string): string {
+  return `${TECH_CONTEXT_DIR}/${safeTaskId(techId)}.json`;
+}
+
+function profileTechRoles(profileName: string): TechRole[] {
+  const normalized = normalizeProjectProfileName(profileName || "generic");
+  return PROFILE_TECH_ROLES[normalized] ?? PROFILE_TECH_ROLES.generic;
+}
+
+function techOptionsForRole(role: TechRole): TechOption[] {
+  return TECH_OPTIONS.filter((option) => option.role === role);
+}
+
+function techOptionById(id: string, role?: TechRole): TechOption | undefined {
+  const normalized = id.trim().toLowerCase();
+  return TECH_OPTIONS.find((option) => option.id === normalized && (!role || option.role === role));
+}
+
+function selectedTechIdsByRole(values: TechOption[]): Partial<Record<TechRole, string[]>> {
+  const roles: Partial<Record<TechRole, string[]>> = {};
+  for (const option of values) {
+    if (option.id === "none") {
+      roles[option.role] = [];
+      continue;
+    }
+    roles[option.role] = [...(roles[option.role] ?? []), option.id];
+  }
+  return roles;
+}
+
+function digestJson(value: unknown): string {
+  return `sha256:${crypto.createHash("sha256").update(JSON.stringify(value)).digest("hex")}`;
+}
+
+function packageJsonText(cwd: string): string {
+  try {
+    return fs.readFileSync(path.join(cwd, "package.json"), "utf8");
+  } catch {
+    return "";
+  }
+}
+
+function detectRecommendedTechId(cwd: string, role: TechRole): string {
+  const packageText = packageJsonText(cwd);
+  if (role === "frontend") {
+    if (/\"next\"/i.test(packageText) || fs.existsSync(path.join(cwd, "next.config.js")) || fs.existsSync(path.join(cwd, "next.config.mjs")) || fs.existsSync(path.join(cwd, "src", "app"))) return "nextjs";
+    if (/\"vue\"/i.test(packageText)) return "vue";
+    if (/\"@sveltejs\/kit\"|\"svelte\"/i.test(packageText)) return "sveltekit";
+    if (/\"astro\"/i.test(packageText)) return "astro";
+    if (/\"@angular\/core\"/i.test(packageText)) return "angular";
+    if (/\"react\"|\"vite\"/i.test(packageText)) return "react-vite";
+    return "nextjs";
+  }
+  if (role === "backend") {
+    if (/\"@nestjs\//i.test(packageText) || fs.existsSync(path.join(cwd, "nest-cli.json"))) return "nestjs";
+    if (/\"fastify\"/i.test(packageText)) return "fastify";
+    if (/\"hono\"/i.test(packageText)) return "hono";
+    if (/\"express\"/i.test(packageText)) return "express";
+    try {
+      const pyproject = fs.readFileSync(path.join(cwd, "pyproject.toml"), "utf8");
+      if (/fastapi/i.test(pyproject)) return "fastapi";
+      if (/django/i.test(pyproject)) return "django";
+    } catch {
+      // ignore absent Python project file
+    }
+    if (fs.existsSync(path.join(cwd, "pom.xml")) || fs.existsSync(path.join(cwd, "build.gradle")) || fs.existsSync(path.join(cwd, "build.gradle.kts"))) return "spring-boot";
+    return "nestjs";
+  }
+  if (role === "database") {
+    if (/\"prisma\"|\"@prisma\/client\"/i.test(packageText) || fs.existsSync(path.join(cwd, "prisma"))) return "prisma";
+    if (/\"drizzle-orm\"/i.test(packageText)) return "drizzle";
+    if (/\"typeorm\"/i.test(packageText)) return "typeorm";
+    if (/\"@supabase\/supabase-js\"/i.test(packageText)) return "supabase";
+    if (/\"mongodb\"|\"mongoose\"/i.test(packageText)) return "mongodb";
+    if (/\"pg\"|\"postgres\"/i.test(packageText)) return "postgres";
+    return "none";
+  }
+  if (role === "mobile") {
+    if (fs.existsSync(path.join(cwd, "pubspec.yaml"))) return "flutter";
+    return "react-native";
+  }
+  if (role === "devops") {
+    if (fs.existsSync(path.join(cwd, "terraform"))) return "terraform";
+    if (fs.existsSync(path.join(cwd, "k8s")) || fs.existsSync(path.join(cwd, "helm"))) return "kubernetes";
+    if (fs.existsSync(path.join(cwd, ".github", "workflows"))) return "github-actions";
+    return "docker";
+  }
+  if (role === "data") {
+    if (fs.existsSync(path.join(cwd, "dbt_project.yml"))) return "dbt";
+    return "pandas";
+  }
+  if (role === "docs") {
+    if (fs.existsSync(path.join(cwd, "docusaurus.config.js")) || fs.existsSync(path.join(cwd, "docusaurus.config.ts"))) return "docusaurus";
+    if (fs.existsSync(path.join(cwd, "mint.json"))) return "mintlify";
+    return "mkdocs";
+  }
+  if (role === "runtime") {
+    if (fs.existsSync(path.join(cwd, "pyproject.toml"))) return "python";
+    return "node-typescript";
+  }
+  return techOptionsForRole(role)[0]?.id ?? "none";
+}
+
+function buildProfileTechOptions(extensionDir: string, cwd: string, requestedProfile?: string): {
+  profile: string;
+  recommendedProfile: string;
+  roles: TechRole[];
+  roleOptions: Array<{ role: TechRole; recommended: string; options: TechOption[] }>;
+} {
+  const profileOptions = buildProfileOptions(extensionDir, cwd);
+  const profile = normalizeProjectProfileName(requestedProfile || profileOptions.recommended);
+  const roles = profileTechRoles(profile);
+  return {
+    profile,
+    recommendedProfile: profileOptions.recommended,
+    roles,
+    roleOptions: roles.map((role) => ({
+      role,
+      recommended: detectRecommendedTechId(cwd, role),
+      options: techOptionsForRole(role)
+    }))
   };
-  const capabilityLock = resolveCapabilityProfileDocument(findPlatformRoot(extensionDir), personalized, {
+}
+
+function buildTechStackManifest(profileName: string, selectedOptions: TechOption[], existing?: TechStackManifest): TechStackManifest {
+  const now = nowIso();
+  const selected = selectedOptions
+    .filter((option) => option.id !== "none")
+    .map((option): TechStackEntry => ({
+      id: option.id,
+      label: option.label,
+      role: option.role,
+      description: option.description,
+      context7: {
+        provider: "context7",
+        query: option.context7Query ?? option.label,
+        status: "pending",
+        contextFile: techContextRelativePath(option.id)
+      },
+      topics: option.topics
+    }));
+  const roles = selectedTechIdsByRole(selectedOptions);
+  return {
+    schemaVersion: 1,
+    provider: "context7",
+    profile: normalizeProjectProfileName(profileName),
+    roles,
+    selected,
+    skippedRoles: selectedOptions.filter((option) => option.id === "none").map((option) => option.role),
+    contextDir: TECH_CONTEXT_DIR,
+    createdAt: existing?.createdAt ?? now,
+    updatedAt: now
+  };
+}
+
+function writeProfileDocumentWithLock(extensionDir: string, cwd: string, profile: ProjectProfile): ProjectProfile {
+  const target = projectProfilePath(cwd);
+  const capabilityLock = resolveCapabilityProfileDocument(findPlatformRoot(extensionDir), profile, {
     profileFile: "company-profile.json",
     packageSource: projectPackageSource(cwd)
   });
   fs.mkdirSync(path.dirname(target), { recursive: true });
-  writeProfileLockAtomic(target, personalized, path.join(cwd, ".pi", "company-profile.lock.json"), capabilityLock);
+  writeProfileLockAtomic(target, profile, path.join(cwd, ".pi", "company-profile.lock.json"), capabilityLock);
+  return profile;
+}
+
+function ensurePendingTechContextFiles(cwd: string, manifest: TechStackManifest): void {
+  fs.mkdirSync(techContextDirPath(cwd), { recursive: true });
+  for (const entry of manifest.selected) {
+    const target = techContextFilePath(cwd, entry.id);
+    if (fs.existsSync(target)) continue;
+    const snapshot: TechContextSnapshot = {
+      schemaVersion: 1,
+      provider: "context7",
+      status: "pending",
+      techId: entry.id,
+      role: entry.role,
+      query: entry.context7.query,
+      topics: entry.topics,
+      summary: "Pending Context7 refresh. Use /profile tech refresh or record Context7 evidence with company_profile_tech_context_record.",
+      keyRules: [],
+      citations: []
+    };
+    fs.writeFileSync(target, `${JSON.stringify(snapshot, null, 2)}\n`);
+  }
+}
+
+function writeTechStackSelection(
+  extensionDir: string,
+  cwd: string,
+  profileName: string,
+  selectedOptions: TechOption[],
+  projectId?: string,
+  displayName?: string
+): { profile: ProjectProfile; manifest: TechStackManifest } {
+  const currentManifest = readJsonFile<TechStackManifest>(techStackPath(cwd));
+  const profile = buildProfileFromAdapter(extensionDir, cwd, profileName, projectId, displayName);
+  const manifest = buildTechStackManifest(profileName, selectedOptions, currentManifest);
+  ensurePendingTechContextFiles(cwd, manifest);
+  fs.writeFileSync(techStackPath(cwd), `${JSON.stringify(manifest, null, 2)}\n`);
+  profile.techStack = {
+    provider: "context7",
+    manifest: TECH_STACK_MANIFEST_FILE,
+    contextDir: TECH_CONTEXT_DIR,
+    roles: manifest.roles,
+    updatedAt: manifest.updatedAt
+  };
+  writeProfileDocumentWithLock(extensionDir, cwd, profile);
+  ensureProjectContextPlaceholder(cwd);
+  return { profile, manifest };
+}
+
+function normalizeTechSelections(cwd: string, profileName: string, selections: Record<string, unknown> = {}, fillRecommended = true): {
+  options: TechOption[];
+  invalid: string[];
+  missing: TechRole[];
+} {
+  const options: TechOption[] = [];
+  const invalid: string[] = [];
+  const missing: TechRole[] = [];
+  for (const role of profileTechRoles(profileName)) {
+    const raw = selections[role];
+    const requested = typeof raw === "string" && raw.trim()
+      ? raw.trim().toLowerCase()
+      : fillRecommended
+        ? detectRecommendedTechId(cwd, role)
+        : "";
+    if (!requested) {
+      missing.push(role);
+      continue;
+    }
+    const option = techOptionById(requested, role);
+    if (!option) {
+      invalid.push(`${role}=${requested}`);
+      continue;
+    }
+    options.push(option);
+  }
+  return { options, invalid, missing };
+}
+
+function formatTechSelectionSummary(manifest: TechStackManifest): string {
+  const selected = manifest.selected.length
+    ? manifest.selected.map((entry) => `${entry.role}:${entry.id}`).join(", ")
+    : "none";
+  const skipped = manifest.skippedRoles?.length ? `\nskipped: ${manifest.skippedRoles.join(", ")}` : "";
+  return [
+    `profile: ${manifest.profile}`,
+    `tech: ${selected}${skipped}`,
+    `manifest: ${TECH_STACK_MANIFEST_FILE}`,
+    `contextDir: ${TECH_CONTEXT_DIR}`,
+    "context7: pending refresh/record for selected tech"
+  ].join("\n");
+}
+
+function formatTechOptionsText(result: ReturnType<typeof buildProfileTechOptions>): string {
+  return [
+    `profile: ${result.profile}`,
+    `recommendedProfile: ${result.recommendedProfile}`,
+    "",
+    ...result.roleOptions.flatMap((group) => [
+      `${group.role}: recommended=${group.recommended}`,
+      ...group.options.map((option) => `- ${option.id}: ${option.label} — ${option.description}`)
+    ]),
+    "",
+    `apply: /profile tech apply ${result.profile} ${result.roles.map((role) => `${role}=${result.roleOptions.find((group) => group.role === role)?.recommended ?? ""}`).join(" ")}`
+  ].join("\n");
+}
+
+function selectOptionDisplay(option: { value: string; label: string; description?: string; recommended?: boolean }): string {
+  const recommended = option.recommended ? " (recommended)" : "";
+  const description = option.description ? ` — ${option.description}` : "";
+  return `${option.label}${recommended}${description} [${option.value}]`;
+}
+
+function parseSelectionValue(
+  result: unknown,
+  options: Array<{ value: string; label: string; description?: string; recommended?: boolean }>
+): string | undefined {
+  if (typeof result !== "string") return undefined;
+  const trimmed = result.trim();
+  const byValue = options.find((option) => option.value === trimmed);
+  if (byValue) return byValue.value;
+  const byDisplay = options.find((option) => selectOptionDisplay(option) === trimmed);
+  if (byDisplay) return byDisplay.value;
+  const byLabel = options.find((option) => option.label === trimmed || `${option.label} (recommended)` === trimmed);
+  if (byLabel) return byLabel.value;
+  const bracketValue = trimmed.match(/\[([a-z0-9-]+)\]\s*$/i)?.[1]?.toLowerCase();
+  if (bracketValue && options.some((option) => option.value === bracketValue)) {
+    return bracketValue;
+  }
+  return undefined;
+}
+
+async function selectValueFromUi(
+  ctx: ExtensionContext,
+  title: string,
+  options: Array<{ value: string; label: string; description?: string; recommended?: boolean }>,
+  defaultValue?: string
+): Promise<string | undefined> {
+  const ui = ctx.ui as {
+    select?: (...args: unknown[]) => Promise<unknown> | unknown;
+    pick?: (...args: unknown[]) => Promise<unknown> | unknown;
+    choose?: (...args: unknown[]) => Promise<unknown> | unknown;
+  };
+  const select = ui?.select ?? ui?.pick ?? ui?.choose;
+  if (typeof select !== "function") return undefined;
+  const displayOptions = options.map((option) => selectOptionDisplay(option));
+  const defaultDisplay = options.find((option) => option.value === defaultValue);
+  const attempts = [
+    [title, displayOptions, { defaultValue: defaultDisplay ? selectOptionDisplay(defaultDisplay) : undefined }],
+    [{ title, options: displayOptions, defaultValue: defaultDisplay ? selectOptionDisplay(defaultDisplay) : undefined }],
+    [displayOptions, title],
+    [displayOptions]
+  ];
+  for (const args of attempts) {
+    try {
+      const result = await select.apply(ui, args);
+      const value = parseSelectionValue(result, options);
+      if (value) return value;
+    } catch {
+      // Try the next known UI shape.
+    }
+  }
+  return undefined;
+}
+
+function buildProfileFromAdapter(extensionDir: string, cwd: string, profileName: string, projectId?: string, displayName?: string): ProjectProfile {
+  const source = adapterProfilePath(extensionDir, profileName);
+  if (!source) throw new Error(`Unknown profile: ${profileName}`);
+  const profile = readJsonFile<ProjectProfile>(source);
+  if (!profile) throw new Error(`Profile unreadable: ${profileName}`);
+  const projectName = path.basename(cwd);
+  return {
+    ...profile,
+    projectId: projectId ? slugify(projectId) : slugify(projectName),
+    displayName: displayName?.trim() || titleize(projectName)
+  };
+}
+
+function writeProfileFromAdapter(extensionDir: string, cwd: string, profileName: string, overwrite = false, projectId?: string, displayName?: string): ProjectProfile {
+  const target = projectProfilePath(cwd);
+  if (fs.existsSync(target) && !overwrite) throw new Error(".pi/company-profile.json already exists. Pass overwrite=true to replace it.");
+  const personalized = buildProfileFromAdapter(extensionDir, cwd, profileName, projectId, displayName);
+  writeProfileDocumentWithLock(extensionDir, cwd, personalized);
   ensureProjectContextPlaceholder(cwd);
   return personalized;
 }
@@ -3894,6 +4365,11 @@ export default function companyGuard(pi: ExtensionAPI) {
         mcpCapabilities: profile.mcpCapabilities ?? [],
         permissionProfile,
         memory: resolveMemorySettings(profile),
+        techStack: {
+          ...(profile.techStack ?? {}),
+          manifestExists: fs.existsSync(techStackPath(ctx.cwd)),
+          selected: readJsonFile<TechStackManifest>(techStackPath(ctx.cwd))?.selected ?? []
+        },
         orchestrationPolicy,
         runtimePolicy: resolveRuntimePolicy(profile),
         policy: {
@@ -3919,6 +4395,7 @@ export default function companyGuard(pi: ExtensionAPI) {
         `mcpCapabilities: ${payload.mcpCapabilities.join(", ") || "none"}`,
         `permissionProfile: ${payload.permissionProfile.mode} (${payload.permissionProfile.runtimeEquivalent})`,
         `memory: ${payload.memory.enabled ? payload.memory.mode : "off"} (${payload.memory.summaryFile})`,
+        `techStack: ${payload.techStack.selected.length ? payload.techStack.selected.map((item) => `${item.role}:${item.id}`).join(", ") : "not configured"}`,
         `orchestration: ${payload.orchestrationPolicy.defaultMode}, lenses=${payload.orchestrationPolicy.defaultReviewLenses.join("/")}, fieldGuide=${payload.orchestrationPolicy.fieldGuide.enabled ? payload.orchestrationPolicy.fieldGuide.path : "off"}`,
         `runtimePolicy: exec=${payload.runtimePolicy.execPolicy}, context=${payload.runtimePolicy.contextBudget}, tools=${payload.runtimePolicy.toolRegistry}, final=${payload.runtimePolicy.finalGate}`
       ].join("\n");
@@ -4295,7 +4772,7 @@ export default function companyGuard(pi: ExtensionAPI) {
     promptSnippet: "Apply a selected profile during project onboarding or profile switching.",
     promptGuidelines: [
       "Only call after the user has explicitly selected a profile, or when the user explicitly asked to apply the recommended profile.",
-      "Use overwrite=true for direct profile-switch commands such as `/profile <profile>`, `/profiles apply <profile>`, or explicit replace/overwrite requests.",
+      "Use overwrite=true for direct profile-switch commands such as `/profile <profile>`, `/profile apply <profile>`, or explicit replace/overwrite requests.",
       "Do not use overwrite=true for exploratory show/list/status requests."
     ],
     parameters: Type.Object({
@@ -4330,6 +4807,141 @@ export default function companyGuard(pi: ExtensionAPI) {
           isError: true
         };
       }
+    }
+  });
+
+  pi.registerTool({
+    name: "company_profile_tech_options",
+    label: "Company Profile Tech Options",
+    description: "Return selectable tech-stack options for a company profile family.",
+    promptSnippet: "Use this when the operator wants to configure profile tech stack with select-style choices.",
+    parameters: Type.Object({
+      profile: Type.Optional(Type.String({ minLength: 1 }))
+    }),
+    async execute(_toolCallId, params, _signal, _onUpdate, ctx) {
+      const current = loadProfileFromContext(ctx);
+      const profileName = params.profile ?? current.mode ?? buildProfileOptions(extensionDir, ctx.cwd).recommended;
+      const result = buildProfileTechOptions(extensionDir, ctx.cwd, profileName);
+      return {
+        content: [{ type: "text", text: formatTechOptionsText(result) }],
+        details: result
+      };
+    }
+  });
+
+  pi.registerTool({
+    name: "company_profile_tech_apply",
+    label: "Company Profile Tech Apply",
+    description: "Apply a profile plus selected tech stack and persist .pi/tech-stack.json with Context7 placeholders.",
+    promptSnippet: "Use only after the operator selected profile/tech options.",
+    parameters: Type.Object({
+      profile: Type.String({ minLength: 1 }),
+      frontend: Type.Optional(Type.String()),
+      backend: Type.Optional(Type.String()),
+      database: Type.Optional(Type.String()),
+      mobile: Type.Optional(Type.String()),
+      devops: Type.Optional(Type.String()),
+      data: Type.Optional(Type.String()),
+      docs: Type.Optional(Type.String()),
+      runtime: Type.Optional(Type.String())
+    }),
+    async execute(_toolCallId, params, _signal, _onUpdate, ctx) {
+      const profileName = normalizeProjectProfileName(params.profile);
+      const selected = normalizeTechSelections(ctx.cwd, profileName, params as Record<string, unknown>, false);
+      if (selected.invalid.length || selected.missing.length) {
+        return {
+          content: [{ type: "text", text: `Tech selection incomplete: missing=${selected.missing.join(", ") || "none"} invalid=${selected.invalid.join(", ") || "none"}` }],
+          details: buildProfileTechOptions(extensionDir, ctx.cwd, profileName),
+          isError: true
+        };
+      }
+      const ok = await ctx.ui.confirm(
+        `Apply profile "${profileName}" with selected tech stack?\n\nThis writes .pi/company-profile.json, .pi/company-profile.lock.json, .pi/tech-stack.json, and .pi/tech-context/*.json placeholders.`,
+        "Company profile tech apply confirmation"
+      );
+      if (!ok) {
+        return { content: [{ type: "text", text: `Profile tech apply denied by operator: ${profileName}` }], isError: true };
+      }
+      const current = loadProfileFromContext(ctx);
+      const applied = writeTechStackSelection(extensionDir, ctx.cwd, profileName, selected.options, current.projectId, current.displayName);
+      appendTrace(ctx.cwd, { event: "profile_tech_apply", profile: profileName, roles: applied.manifest.roles });
+      appendSessionTrace(pi, { event: "profile_tech_apply", profile: profileName, roles: applied.manifest.roles });
+      return {
+        content: [{ type: "text", text: formatTechSelectionSummary(applied.manifest) }],
+        details: applied
+      };
+    }
+  });
+
+  pi.registerTool({
+    name: "company_profile_tech_context_record",
+    label: "Company Profile Tech Context Record",
+    description: "Record a concise Context7 evidence snapshot for a selected tech stack entry.",
+    promptSnippet: "After reading Context7 docs, record only concise rules/citations; do not store full docs.",
+    promptGuidelines: [
+      "Use after Context7 MCP returns library docs for a selected tech.",
+      "Keep summary short and cite source/title/url when available.",
+      "Never record secrets or large copied documentation blocks."
+    ],
+    parameters: Type.Object({
+      techId: Type.String({ minLength: 1 }),
+      resolvedLibraryId: Type.Optional(Type.String()),
+      summary: Type.String({ minLength: 10 }),
+      keyRules: Type.Optional(Type.Array(Type.String())),
+      citations: Type.Optional(Type.Array(Type.Object({
+        title: Type.Optional(Type.String()),
+        url: Type.Optional(Type.String()),
+        source: Type.Optional(Type.String())
+      })))
+    }),
+    async execute(_toolCallId, params, _signal, _onUpdate, ctx) {
+      const manifest = readJsonFile<TechStackManifest>(techStackPath(ctx.cwd));
+      if (!manifest) {
+        return { content: [{ type: "text", text: "Tech stack manifest missing. Run /profile tech setup first." }], isError: true };
+      }
+      const techId = safeTaskId(params.techId);
+      const entry = manifest.selected.find((item) => item.id === techId);
+      if (!entry) {
+        return { content: [{ type: "text", text: `Tech not selected in manifest: ${techId}` }], isError: true };
+      }
+      const snapshot: TechContextSnapshot = {
+        schemaVersion: 1,
+        provider: "context7",
+        status: "recorded",
+        techId,
+        role: entry.role,
+        query: entry.context7.query,
+        resolvedLibraryId: params.resolvedLibraryId,
+        topics: entry.topics,
+        retrievedAt: nowIso(),
+        summary: redactBoundedText(params.summary, 2000),
+        keyRules: redactBoundedTextArray(params.keyRules, 20, 500),
+        citations: (params.citations ?? []).slice(0, 12).map((citation) => ({
+          title: redactBoundedText(citation.title, 160),
+          url: redactBoundedText(citation.url, 300),
+          source: redactBoundedText(citation.source, 160)
+        }))
+      };
+      snapshot.digest = digestJson(snapshot);
+      fs.mkdirSync(techContextDirPath(ctx.cwd), { recursive: true });
+      fs.writeFileSync(techContextFilePath(ctx.cwd, techId), `${JSON.stringify(snapshot, null, 2)}\n`);
+      entry.context7.status = "recorded";
+      entry.context7.retrievedAt = snapshot.retrievedAt;
+      entry.context7.resolvedLibraryId = snapshot.resolvedLibraryId;
+      entry.context7.digest = snapshot.digest;
+      manifest.updatedAt = nowIso();
+      fs.writeFileSync(techStackPath(ctx.cwd), `${JSON.stringify(manifest, null, 2)}\n`);
+      const profile = loadProfileFromContext(ctx);
+      if (profile.techStack) {
+        profile.techStack.updatedAt = manifest.updatedAt;
+        writeProfileDocumentWithLock(extensionDir, ctx.cwd, profile);
+      }
+      appendTrace(ctx.cwd, { event: "profile_tech_context_record", techId, role: entry.role, libraryId: snapshot.resolvedLibraryId });
+      appendSessionTrace(pi, { event: "profile_tech_context_record", techId, role: entry.role, libraryId: snapshot.resolvedLibraryId });
+      return {
+        content: [{ type: "text", text: `Tech context recorded: ${techContextRelativePath(techId)}` }],
+        details: { manifest, snapshot }
+      };
     }
   });
 
@@ -4804,18 +5416,20 @@ export default function companyGuard(pi: ExtensionAPI) {
     const profileNames = options.options.map((option) => option.name);
     const content = detail === "list"
       ? [
+          "namespace: /profile",
           `current: ${profile.mode ?? profile.projectId ?? "unprofiled"}`,
           `recommended: ${options.recommended}`,
           `profiles: ${profileNames.join(", ")}`,
-          "apply: /profile <profile> or /profiles apply <profile>",
-          "auto: /profile auto"
+          "choose: /profile setup",
+          "apply: /profile <profile>",
+          "tech: /profile tech setup <profile>"
         ].join("\n")
       : [
           `profile: ${profile.mode ?? profile.projectId ?? "unprofiled"}`,
           `recommended: ${options.recommended}`,
           `profileFile: ${profileExists ? "exists" : "missing"}`,
           `projectContext: ${projectContextExists ? "exists" : "missing"}`,
-          "usage: /profile <profile> | /profile auto | /profile list"
+          "next: /profile setup | /profile <profile> | /profile tech"
         ].join("\n");
     pi.sendMessage(
       {
@@ -4840,6 +5454,154 @@ export default function companyGuard(pi: ExtensionAPI) {
     );
   }
 
+  function emitProfileTechStatus(ctx: ExtensionContext): void {
+    const profile = loadProfileFromContext(ctx);
+    const manifest = readJsonFile<TechStackManifest>(techStackPath(ctx.cwd));
+    const selected = manifest?.selected ?? [];
+    const pending = selected.filter((entry) => entry.context7.status !== "recorded").map((entry) => entry.id);
+    pi.sendMessage(
+      {
+        customType: "company-profile-tech-status",
+        content: [
+          `profile: ${profile.mode ?? "unknown"}`,
+          `tech: ${selected.length ? selected.map((entry) => `${entry.role}:${entry.id}`).join(", ") : "not configured"}`,
+          `manifest: ${fs.existsSync(techStackPath(ctx.cwd)) ? TECH_STACK_MANIFEST_FILE : "missing"}`,
+          `context7Pending: ${pending.join(", ") || "none"}`,
+          "setup: /profile tech setup"
+        ].join("\n"),
+        display: true,
+        details: {
+          profile: profile.mode,
+          techStack: profile.techStack,
+          manifest
+        }
+      },
+      { triggerTurn: false }
+    );
+  }
+
+  function emitProfileTechOptions(ctx: ExtensionContext, profileName?: string): void {
+    const result = buildProfileTechOptions(extensionDir, ctx.cwd, profileName);
+    pi.sendMessage(
+      {
+        customType: "company-profile-tech-options",
+        content: formatTechOptionsText(result),
+        display: true,
+        details: result
+      },
+      { triggerTurn: false }
+    );
+  }
+
+  function emitProfileTechRefresh(ctx: ExtensionContext): void {
+    const manifest = readJsonFile<TechStackManifest>(techStackPath(ctx.cwd));
+    pi.sendMessage(
+      {
+        customType: "company-profile-tech-refresh",
+        content: manifest
+          ? [
+              "context7Refresh: pending",
+              ...manifest.selected.map((entry) => `- ${entry.id}: query="${entry.context7.query}" → record with company_profile_tech_context_record`)
+            ].join("\n")
+          : "Tech stack manifest missing. Run /profile tech setup first.",
+        display: true,
+        details: manifest
+      },
+      { triggerTurn: false }
+    );
+  }
+
+  function parseProfileTechApplyArgs(raw: string): { profileName?: string; selections: Record<string, string> } {
+    const tokens = raw.split(/\s+/).filter(Boolean);
+    const selections: Record<string, string> = {};
+    let profileName: string | undefined;
+    for (const token of tokens) {
+      if (/^(tech|apply|use|set|to|setup|wizard)$/i.test(token)) continue;
+      const pair = token.match(/^([a-z-]+)=([a-z0-9-]+)$/i);
+      if (pair) {
+        selections[pair[1].toLowerCase()] = pair[2].toLowerCase();
+        continue;
+      }
+      if (!profileName) profileName = normalizeProjectProfileName(token);
+    }
+    return { profileName, selections };
+  }
+
+  function emitProfileTechApplied(ctx: ExtensionContext, applied: { profile: ProjectProfile; manifest: TechStackManifest }): void {
+    ctx.ui.notify(`Profile tech applied: ${applied.manifest.profile}`, "info");
+    pi.sendMessage(
+      {
+        customType: "company-profile-tech-applied",
+        content: formatTechSelectionSummary(applied.manifest),
+        display: true,
+        details: applied
+      },
+      { triggerTurn: false }
+    );
+  }
+
+  async function applyProfileTechFromCommand(ctx: ExtensionContext, raw: string): Promise<void> {
+    const current = loadProfileFromContext(ctx);
+    const parsed = parseProfileTechApplyArgs(raw);
+    const profileName = parsed.profileName ?? current.mode ?? buildProfileOptions(extensionDir, ctx.cwd).recommended;
+    const selected = normalizeTechSelections(ctx.cwd, profileName, parsed.selections, false);
+    if (selected.invalid.length || selected.missing.length) {
+      ctx.ui.notify("Profile tech apply needs explicit role selections.", "warning");
+      emitProfileTechOptions(ctx, profileName);
+      return;
+    }
+    const applied = writeTechStackSelection(extensionDir, ctx.cwd, profileName, selected.options, current.projectId, current.displayName);
+    appendTrace(ctx.cwd, { event: "profile_tech_apply_command", profile: profileName, roles: applied.manifest.roles });
+    appendSessionTrace(pi, { event: "profile_tech_apply_command", profile: profileName, roles: applied.manifest.roles });
+    emitProfileTechApplied(ctx, applied);
+  }
+
+  async function runProfileTechWizard(ctx: ExtensionContext, requestedProfile?: string): Promise<void> {
+    const current = loadProfileFromContext(ctx);
+    const profileOptions = buildProfileOptions(extensionDir, ctx.cwd);
+    const profileChoices = profileOptions.options.map((option) => ({
+      value: option.name,
+      label: `${option.name}${option.recommended ? " (recommended)" : ""}`,
+      description: option.description,
+      recommended: option.recommended
+    }));
+    const profileName = requestedProfile
+      ? normalizeProjectProfileName(requestedProfile)
+      : await selectValueFromUi(ctx, "Select Pi Company profile", profileChoices, current.mode ?? profileOptions.recommended);
+    if (!profileName) {
+      ctx.ui.notify("Select UI unavailable; showing profile/tech options.", "warning");
+      emitProfileTechOptions(ctx, current.mode ?? profileOptions.recommended);
+      return;
+    }
+    const techPlan = buildProfileTechOptions(extensionDir, ctx.cwd, profileName);
+    const selections: TechOption[] = [];
+    for (const group of techPlan.roleOptions) {
+      const choices = group.options.map((option) => ({
+        value: option.id,
+        label: `${option.label}${option.id === group.recommended ? " (recommended)" : ""}`,
+        description: option.description,
+        recommended: option.id === group.recommended
+      }));
+      const selectedId = await selectValueFromUi(ctx, `Select ${group.role} tech`, choices, group.recommended);
+      if (!selectedId) {
+        ctx.ui.notify(`Select UI unavailable for ${group.role}; showing exact apply command.`, "warning");
+        emitProfileTechOptions(ctx, profileName);
+        return;
+      }
+      const option = techOptionById(selectedId, group.role);
+      if (!option) {
+        ctx.ui.notify(`Unknown ${group.role} tech: ${selectedId}`, "warning");
+        emitProfileTechOptions(ctx, profileName);
+        return;
+      }
+      selections.push(option);
+    }
+    const applied = writeTechStackSelection(extensionDir, ctx.cwd, profileName, selections, current.projectId, current.displayName);
+    appendTrace(ctx.cwd, { event: "profile_tech_wizard_apply", profile: profileName, roles: applied.manifest.roles });
+    appendSessionTrace(pi, { event: "profile_tech_wizard_apply", profile: profileName, roles: applied.manifest.roles });
+    emitProfileTechApplied(ctx, applied);
+  }
+
   function registerProfileCommand(name: string): void {
     pi.registerCommand(name, {
       description: "Show or apply the current project profile without a model follow-up",
@@ -4847,6 +5609,35 @@ export default function companyGuard(pi: ExtensionAPI) {
         const raw = String(args ?? "").trim();
         const tokens = raw.split(/\s+/).filter(Boolean);
         const normalized = tokens.map((token) => token.toLowerCase());
+        if (normalized[0] === "tech") {
+          const action = normalized[1] ?? "status";
+          if (["show", "status", "current"].includes(action)) {
+            emitProfileTechStatus(ctx);
+            return;
+          }
+          if (["setup", "wizard", "select"].includes(action)) {
+            await runProfileTechWizard(ctx, tokens[2]);
+            return;
+          }
+          if (["list", "options", "help"].includes(action)) {
+            emitProfileTechOptions(ctx, tokens[2]);
+            return;
+          }
+          if (action === "apply") {
+            await applyProfileTechFromCommand(ctx, raw);
+            return;
+          }
+          if (action === "refresh") {
+            emitProfileTechRefresh(ctx);
+            return;
+          }
+          emitProfileTechOptions(ctx, tokens.slice(1).join(" "));
+          return;
+        }
+        if (["setup", "wizard", "select"].includes(normalized[0] ?? "")) {
+          await runProfileTechWizard(ctx, tokens[1]);
+          return;
+        }
         if (!tokens.length || ["show", "status", "current"].includes(normalized[0])) {
           emitProfileStatus(ctx);
           return;
@@ -4918,7 +5709,6 @@ export default function companyGuard(pi: ExtensionAPI) {
   }
 
   registerProfileCommand("profile");
-  registerProfileCommand("profiles");
 
   pi.registerCommand("company-status", {
     description: "Show company Pi profile and guard state",

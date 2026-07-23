@@ -96,6 +96,48 @@ require_node_version() {
   fi
 }
 
+detect_runtime_surface() {
+  local os_name arch_name
+  os_name="$(uname -s 2>/dev/null || echo unknown)"
+  arch_name="$(uname -m 2>/dev/null || echo unknown)"
+
+  if [[ "$os_name" == "Linux" && -r /proc/version ]] && grep -qiE "microsoft|wsl" /proc/version 2>/dev/null; then
+    printf 'wsl2/%s (experimental; not release-gated)' "$arch_name"
+    return
+  fi
+
+  case "${os_name}:${arch_name}" in
+    Darwin:arm64)
+      printf 'macos-apple-silicon/darwin-arm64 (verified)'
+      ;;
+    Darwin:x86_64)
+      printf 'macos-intel/darwin-x64 (supported target; run smoke before team rollout)'
+      ;;
+    Linux:x86_64|Linux:amd64)
+      printf 'linux-x64 (verified in CI)'
+      ;;
+    Linux:aarch64|Linux:arm64)
+      printf 'linux-arm64 (supported target; run smoke before team rollout)'
+      ;;
+    MINGW*|MSYS*|CYGWIN*)
+      printf 'native-windows/%s (not release-gated; terminal helpers require Bash semantics)' "$arch_name"
+      ;;
+    *)
+      printf '%s/%s (outside v0.4.8 release matrix)' "$os_name" "$arch_name"
+      ;;
+  esac
+}
+
+warn_runtime_surface_if_needed() {
+  local surface="$1"
+  case "$surface" in
+    *"supported target"*|*"experimental"*|*"not release-gated"*|*"outside v0.4.8 release matrix"*)
+      echo "WARN: runtime surface is $surface." >&2
+      echo "WARN: For team rollout, run pi-company-doctor plus the project smoke/verify suite on this machine before relying on it." >&2
+      ;;
+  esac
+}
+
 claim_cli_package_selector() {
   local option="$1"
   if [[ -n "$CLI_PACKAGE_SELECTOR" ]]; then
@@ -287,6 +329,8 @@ while [[ $# -gt 0 ]]; do
 done
 
 require_node_version
+CURRENT_RUNTIME_SURFACE="$(detect_runtime_surface)"
+warn_runtime_surface_if_needed "$CURRENT_RUNTIME_SURFACE"
 CURRENT_RELEASE_TAG="$(node -e 'const fs = require("node:fs"); const p = JSON.parse(fs.readFileSync(process.argv[1], "utf8")); process.stdout.write(`v${p.version}`);' "$PLATFORM_ROOT/package.json")"
 EXPECTED_PI_VERSION="$(node -e 'const fs = require("node:fs"); const p = JSON.parse(fs.readFileSync(process.argv[1], "utf8")); process.stdout.write(p.peerDependencies?.["@earendil-works/pi-coding-agent"] ?? "");' "$PLATFORM_ROOT/package.json")"
 if [[ ! "$EXPECTED_PI_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+([+-][0-9A-Za-z.-]+)?$ ]]; then
@@ -413,6 +457,7 @@ fi
 echo "Installing Pi Company Platform package:"
 echo "  channel: $RESOLVED_CHANNEL_LABEL"
 echo "  currentRelease: $CURRENT_RELEASE_TAG (helper package version)"
+echo "  runtime: $CURRENT_RUNTIME_SURFACE"
 if [[ -n "$RESOLVED_PACKAGE_TAG" ]]; then
   echo "  tag: $RESOLVED_PACKAGE_TAG"
 fi

@@ -28,6 +28,9 @@ Mandatory flow:
    - review lenses
    - a compact workPlan/task tree
 6. Read all required context files from the profile before planning, then call `company_context_budget` for large or unfamiliar files.
+   - If `company_context` reports a configured tech stack, read only the concise `.pi/tech-context/*.json` snapshots relevant to the task.
+   - If a selected tech has pending Context7 status and the task depends on that tech, read current docs through Context7 and record a compact snapshot with `company_profile_tech_context_record`.
+   - Do not paste or store large vendor documentation blocks in project files.
 7. Decide whether subagents are worth their extra token/tool cost. If the bundled `pi-subagents` parent skill is available, use it for delegation patterns and safety boundaries. If `pi-subagents`/`subagent(...)` is available, use bounded subagents only for independent read-heavy scout/planning/review work:
    - use `company-scout` for unfamiliar module/spec mapping;
    - use builtin `context-builder` when a large task needs a handoff context/meta-prompt before planning;

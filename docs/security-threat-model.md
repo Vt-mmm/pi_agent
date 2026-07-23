@@ -21,7 +21,7 @@ This document covers the packaged guard, project profiles, capability locks, ins
 - The operator, operating-system account, Pi host, and explicitly trusted project repository are trusted to execute code.
 - Project-local Pi resources are loaded only after Pi project trust or an explicit operator override.
 - A human remains available to approve destructive and external-provider actions.
-- Supported release verification covers macOS and Linux with Bash, Node.js `>=22.19.0`, and the exact Pi host version declared by the release. Native Windows and WSL are not verified for v0.4.8.
+- Supported release verification covers macOS Apple Silicon + Bash, Linux x64 + Bash, Node.js `>=22.19.0`, and the exact Pi host version declared by the release. macOS Intel + Bash and Linux ARM64 + Bash are supported targets that need local smoke verification before broad rollout. Native Windows is not a team-rollout target for v0.4.8, and WSL2 is experimental/unverified.
 - Registry, GitHub, model-provider, MCP-provider, and Vercel controls are external dependencies. Their account security and platform guarantees are not replaced by this repository.
 
 ## Threat actors and failure modes
@@ -57,7 +57,7 @@ The final category is outside the containment capability of the Company guard. I
 
 ## Security verification
 
-Release gates include policy regression tests, TypeScript checking, runtime smoke tests, redaction benchmarks, package-content inspection, release-identity checks, installer tests, exact Pi host/add-on dependency audit, and CI on macOS/Linux. CodeQL covers JavaScript/TypeScript and GitHub Actions.
+Release gates include policy regression tests, TypeScript checking, runtime smoke tests, redaction benchmarks, package-content inspection, release-identity checks, installer tests, exact Pi host/add-on dependency audit, and CI on Linux x64 plus the current macOS runner. CodeQL covers JavaScript/TypeScript and GitHub Actions.
 
 These are internal engineering controls, not an independent third-party audit. The project currently has no LTS promise. Stronger assurance still benefits from broader parser fuzzing, a larger OS/shell matrix, independent review, signed provenance, and continued adversarial testing.
 

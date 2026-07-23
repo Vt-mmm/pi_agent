@@ -33,6 +33,16 @@ Adapter mô tả project cho Pi core. Core không biết domain/project cụ th�
     "github",
     "memory"
   ],
+  "techStack": {
+    "provider": "context7",
+    "manifest": ".pi/tech-stack.json",
+    "contextDir": ".pi/tech-context",
+    "roles": {
+      "frontend": ["nextjs"],
+      "backend": ["nestjs"],
+      "database": ["prisma"]
+    }
+  },
   "runtimePolicy": {
     "execPolicy": "enforce",
     "contextBudget": "enforce",
@@ -66,13 +76,34 @@ Default UX không bắt buộc chạy bash để set profile. Sau global install
 /onboard-project
 ```
 
-Nếu chưa có `.pi/company-profile.json`, model sẽ gọi `company_profile_options`, show option, giải thích profile, rồi apply bằng `company_profile_apply` sau khi user approve.
+Nếu chưa có `.pi/company-profile.json`, onboarding nên dùng select-style setup: chọn profile trước, rồi chọn tech theo role. Native command là:
+
+```text
+/profile setup
+/profile tech setup fullstack
+```
+
+Nếu Pi host chưa expose select UI, command trả về card compact và lệnh deterministic, ví dụ:
+
+```text
+/profile tech apply fullstack frontend=nextjs backend=nestjs database=prisma
+```
+
+Kết quả ghi:
+
+- `.pi/company-profile.json`;
+- `.pi/company-profile.lock.json`;
+- `.pi/tech-stack.json`;
+- `.pi/tech-context/<tech>.json` placeholder.
+
+Sau khi agent đọc Context7 cho tech tương ứng, chỉ record snapshot ngắn bằng `company_profile_tech_context_record`; không lưu nguyên văn docs dài.
 
 Đổi profile sau này:
 
 ```text
 /profile list
 /profile be-readonly-fe
+/profile tech setup
 ```
 
 ## Auto detect trong shell script

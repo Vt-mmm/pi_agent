@@ -55,6 +55,9 @@ Inside Pi, slash commands can switch the current session without writing the pro
 - `company_memory_citation_record`
 - `company_profile_options`
 - `company_profile_apply`
+- `company_profile_tech_options`
+- `company_profile_tech_apply`
+- `company_profile_tech_context_record`
 - `company_project_onboarding_record`
 - `company_task_start`
 - `company_source_checkout`
@@ -67,7 +70,8 @@ Inside Pi, slash commands can switch the current session without writing the pro
 - `/company-commands`: explain terminal, Pi, MCP, model, memory, and subagent commands in Vietnamese.
 - `/permission-status`, `/read-only`, `/workspace-write`, `/full-access`: inspect or switch the current session permission profile.
 - `/onboard-project`: first-run project context snapshot after login/model selection.
-- `/profile`, `/profiles`: show a short profile status, list options, or apply a profile directly without a model follow-up. Short aliases include `fe`, `be`, `full`, and `be-fe`.
+- `/profile`: show a short profile status, list options, apply a profile directly, or run select-style profile/tech setup without a model follow-up. Short aliases include `fe`, `be`, `full`, and `be-fe`.
+- `/profile tech`: show/select/apply the project tech stack for the active profile; fullstack setup selects frontend, backend, and database tech.
 - `/memory-policy`: inspect project memory policy and explicit remember workflow.
 - `/model-options`: explain model selector, scoped models, thinking levels, and benchmark discipline.
 - `/platform-improve`: improve package setup, runtime policy, docs, MCP, model, memory, or subagent workflows.
@@ -100,6 +104,8 @@ pi install git:github.com/Vt-mmm/pi_agent
 
 Use `git:github.com/Vt-mmm/pi_agent@vX.Y.Z` when pinning a reproducible project package source.
 
+Runtime support follows the root release matrix: Node.js `>=22.19.0`, Pi Coding Agent `0.81.1`, verified rollout on macOS Apple Silicon + Bash and Linux x64 + Bash, supported-target smoke verification for macOS Intel/Linux ARM64, no native Windows team rollout target yet, and WSL2 experimental.
+
 ## Project profile
 
 The extension reads profile data in this order:
@@ -117,6 +123,8 @@ Runtime task tools write local state to:
 
 - `.pi/company-state/tasks/*.json`
 - `.pi/project-context.md`
+- `.pi/tech-stack.json`
+- `.pi/tech-context/*.json`
 - `.pi/company-state/project-onboarding.json`
 - `.pi/memory/MEMORY.md` when the user explicitly asks Pi to remember durable information; generated projects ignore this file by default
 - `.pi/company-state/observed-bash.jsonl`

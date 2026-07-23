@@ -24,7 +24,11 @@ pi
 ## Prerequisites
 
 - Node.js >=22.19.0.
-- macOS hoặc Linux với Bash; native Windows và WSL chưa được verify cho release hiện tại.
+- Pi Coding Agent `0.81.1`.
+- Runtime rollout:
+  - verified: macOS Apple Silicon + Bash, Linux x64 + Bash;
+  - supported target cần smoke trước khi rollout rộng: macOS Intel + Bash, Linux ARM64 + Bash;
+  - chưa dùng làm target rollout team: native Windows; WSL2 chỉ experimental.
 - `pi` có trên `PATH`.
 - `herdr` optional nhưng nên có nếu team chạy nhiều agent pane.
 - Git access tới repo platform nếu dùng `git:` package source.
@@ -116,6 +120,10 @@ Rồi chạy:
 Output chính:
 
 - `.pi/project-context.md`
+- `.pi/company-profile.json`
+- `.pi/company-profile.lock.json`
+- `.pi/tech-stack.json`
+- `.pi/tech-context/*.json`
 - `.pi/company-state/project-onboarding.json`
 
 Memory files are created locally but ignored by default:
@@ -125,7 +133,14 @@ Memory files are created locally but ignored by default:
 
 Đây là bước model đọc qua project lần đầu theo cách bounded: đọc profile, AGENTS, README, docs/config/source map/test command; không load toàn bộ source.
 
-Nếu project chưa có `.pi/company-profile.json`, `/onboard-project` sẽ gọi profile options, gợi ý profile, giải thích option, rồi hỏi user chọn. Sau khi user approve, nó mới ghi profile.
+Nếu project chưa có profile/tech stack, dùng select-style flow để tránh agent trả lời dài:
+
+```text
+/profile setup
+/profile tech setup fullstack
+```
+
+`fullstack` bắt chọn frontend, backend và database. Nếu native select chưa có trong Pi host, command trả card compact kèm lệnh deterministic `/profile tech apply ...`.
 
 Nếu `.pi/project-context.md` còn `Generated: not yet`, không nên chạy `/task` implementation.
 
@@ -135,6 +150,8 @@ Memory mặc định là project-scoped và explicit-only. Chạy `/memory-polic
 
 ```text
 /profile list
+/profile setup
+/profile tech setup
 /profile fullstack
 /profile be-readonly-fe
 ```

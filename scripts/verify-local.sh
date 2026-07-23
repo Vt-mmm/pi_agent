@@ -58,7 +58,6 @@ required_files=(
   "$ROOT/packages/pi-company-core/capabilities/capability-core.js"
   "$ROOT/packages/pi-company-core/prompts/onboard-project.md"
   "$ROOT/packages/pi-company-core/prompts/company-commands.md"
-  "$ROOT/packages/pi-company-core/prompts/profiles.md"
   "$ROOT/packages/pi-company-core/prompts/model-options.md"
   "$ROOT/packages/pi-company-core/prompts/memory-policy.md"
   "$ROOT/packages/pi-company-core/prompts/platform-improve.md"
@@ -94,6 +93,8 @@ required_files=(
   "$ROOT/templates/project/.mcp.json"
   "$ROOT/templates/project/.pi/mcp.json"
   "$ROOT/templates/project/.pi/project-context.md"
+  "$ROOT/templates/project/.pi/tech-stack.json"
+  "$ROOT/templates/project/.pi/tech-context/README.md"
   "$ROOT/templates/project/.pi/.npmignore"
   "$ROOT/templates/project/.pi/memory/memory_summary.md"
   "$ROOT/templates/project/.pi/memory/MEMORY.md"
@@ -314,6 +315,8 @@ grep -R "waitTool" "$ROOT/scripts/configure-subagents.sh" "$ROOT/docs/subagents-
 grep -R "company_profile_options" "$ROOT/packages/pi-company-core" "$ROOT/docs" >/dev/null
 grep -R "company_profile_apply" "$ROOT/packages/pi-company-core" "$ROOT/docs" >/dev/null
 grep -R "/profile auto" "$ROOT/README.md" "$ROOT/docs" "$ROOT/packages/pi-company-core" >/dev/null
+grep -R "company_profile_tech_context_record" "$ROOT/packages/pi-company-core" "$ROOT/docs" "$ROOT/README.md" >/dev/null
+grep -R "/profile tech" "$ROOT/README.md" "$ROOT/docs" "$ROOT/packages/pi-company-core/prompts" >/dev/null
 grep -R "/commit" "$ROOT/README.md" "$ROOT/docs" "$ROOT/packages/pi-company-core/prompts" >/dev/null
 grep -R "/pr" "$ROOT/README.md" "$ROOT/docs" "$ROOT/packages/pi-company-core/prompts" >/dev/null
 grep -R "company_project_onboarding_record" "$ROOT/packages/pi-company-core" "$ROOT/docs" >/dev/null

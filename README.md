@@ -38,7 +38,7 @@ pi-company-auto --full-access -p "Run the trusted local benchmark suite."
 
 - Global Pi package with prompts, skills, guard extensions, and company subagents.
 - Runtime onboarding via `/onboard-project`.
-- Runtime profile selection via `/profile`; no shell profile switch is required for daily use.
+- Runtime profile selection via `/profile`, plus select-style tech stack setup via `/profile setup` and `/profile tech`.
 - Explicit project memory via `/memory-policy` and `company_memory_*` tools.
 - MCP setup helpers for Context7, Chrome DevTools, GitHub, Playwright, and Figma.
 - Subagent setup helpers for read-only scouting, planning, implementation, review, and risk challenge.
@@ -53,6 +53,7 @@ pi-company-auto --full-access -p "Run the trusted local benchmark suite."
   - `company_usage_snapshot`
   - `company_context_preflight`
   - `company_orchestration_policy`
+- Context7-ready tech stack manifest and concise `.pi/tech-context/*` snapshots for selected profile roles.
 - Accident-brake guardrails for protected paths, destructive shell commands, task contracts, context manifests, observed verification evidence, and trace records.
 - Quality benchmark recorder for comparing approved agent surfaces, models, and workflow presets on the same task scenarios.
 - Built-in profiles for frontend, backend, fullstack, BE-readonly/FE-write, data, DevOps, mobile, docs, Python, and Node TypeScript.
@@ -96,7 +97,18 @@ This shows the active mode, max subagents, review lenses, Field Guide path, and 
 
 ## Install
 
-Supported for this release: macOS and Linux with Bash. Native Windows and WSL have not been verified. Node.js `>=22.19.0` is required.
+Supported for this release:
+
+| Runtime surface | Team rollout status |
+|---|---|
+| macOS Apple Silicon (`darwin/arm64`) + Bash | Verified for this release. |
+| Linux x64 + Bash | Verified in CI for this release. |
+| macOS Intel (`darwin/x64`) + Bash | Supported target, but run `pi-company-doctor` and project smoke tests before wide rollout. |
+| Linux ARM64 + Bash | Supported target, but run `pi-company-doctor` and project smoke tests before wide rollout. |
+| Native Windows | Not a team-rollout target yet; terminal helpers and shell policy rely on Bash/POSIX semantics. |
+| WSL2 | Experimental and not release-gated yet. |
+
+Node.js `>=22.19.0` and Pi Coding Agent `0.81.1` are required. Pi Coding Agent is installed as a Node CLI; the project release matrix above defines which OS/CPU surfaces this platform has verified.
 
 ```bash
 node --version  # >= 22.19.0
@@ -174,6 +186,8 @@ First run inside a project:
 
 - `.pi/company-profile.json`
 - `.pi/company-profile.lock.json`
+- `.pi/tech-stack.json`
+- `.pi/tech-context/*`
 - `.pi/project-context.md`
 - `.pi/memory/*`
 
@@ -189,7 +203,14 @@ Switch profiles later:
 /profile auto            # apply detected recommendation
 /profile fe              # alias for web-frontend
 /profile be-fe           # alias for be-readonly-fe
+/profile setup           # select profile, then select role tech
+/profile setup fullstack # select FE, BE, and database tech
+/profile tech            # short tech stack status
+/profile tech setup fullstack
+/profile tech apply fullstack frontend=nextjs backend=nestjs database=prisma
 ```
+
+The setup flow prefers native select UI. If the Pi host does not expose a select control yet, it falls back to a compact options card and an exact `/profile tech apply ...` command instead of asking the model to explain every option.
 
 ## Capability packs
 

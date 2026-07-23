@@ -15,7 +15,18 @@ Phần còn lại — OAuth, package, context, harness, MCP, tool-call guard —
 
 ## Bước 1 — install runtime và package
 
-Support matrix của release hiện tại: macOS/Linux với Bash đã được verify. Native Windows và WSL chưa được verify. Node.js phải từ `22.19.0` trở lên.
+Support matrix của release hiện tại:
+
+| Runtime | Trạng thái |
+|---|---|
+| macOS Apple Silicon + Bash | Đã verify cho release này. |
+| Linux x64 + Bash | Đã verify trong CI. |
+| macOS Intel + Bash | Supported target; chạy `pi-company-doctor` và smoke test project trước khi rollout rộng. |
+| Linux ARM64 + Bash | Supported target; chạy `pi-company-doctor` và smoke test project trước khi rollout rộng. |
+| Native Windows | Chưa phải target rollout team; helper/shell policy cần Bash/POSIX semantics. |
+| WSL2 | Experimental, chưa release-gate. |
+
+Node.js phải từ `22.19.0` trở lên và Pi Coding Agent phải là `0.81.1`.
 
 ```bash
 node --version  # >= 22.19.0
@@ -178,12 +189,22 @@ Lệnh này yêu cầu model đọc qua project theo phạm vi có kiểm soát,
 
 ```text
 .pi/company-profile.json
+.pi/company-profile.lock.json
+.pi/tech-stack.json
+.pi/tech-context/*.json
 .pi/project-context.md
 .pi/memory/memory_summary.md
 .pi/memory/MEMORY.md
 ```
 
-Nếu chưa có profile, model sẽ show profile option, gợi ý lựa chọn, giải thích khác nhau giữa `fullstack`, `be-readonly-fe`, `web-frontend`, `backend-api`, rồi mới apply sau khi user approve.
+Nếu chưa có profile/tech stack, dùng select-style flow để tránh agent trả lời dài:
+
+```text
+/profile setup
+/profile tech setup fullstack
+```
+
+`web-frontend` chọn FE + database optional; `backend-api` chọn BE + database optional; `fullstack` chọn frontend, backend và database. Nếu Pi host chưa có native select, command sẽ trả card ngắn và lệnh deterministic `/profile tech apply ...`.
 
 File này là snapshot context cho task sau. Nếu file còn `Generated: not yet`, agent phải dừng trước khi implement và yêu cầu chạy `/onboard-project`.
 
@@ -204,6 +225,8 @@ bash /path/to/pi_agent/scripts/setup.sh /path/to/project \
 
 ```text
 /profile list
+/profile setup
+/profile tech setup
 /profile be-readonly-fe
 ```
 

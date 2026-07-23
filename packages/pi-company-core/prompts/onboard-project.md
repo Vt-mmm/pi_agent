@@ -26,18 +26,24 @@ Mandatory flow:
    - show the recommended profile and alternatives with explanations;
    - ask the user to choose a profile, unless the user explicitly provided a profile in the arguments.
 3. If the user explicitly provided a profile in the arguments or approved the recommendation, call `company_profile_apply`.
-4. Re-call `company_context` after applying a profile.
-5. Call `company_memory_status`. If memory files exist, read only compact memory summary and treat it as advisory.
-6. Read `.pi/company-profile.json` if present, `AGENTS.md`, `README.md`, and every existing required context file from the profile.
-7. Do a bounded repository scout. Do not ingest the whole repo. Prefer:
+4. Configure tech stack through the select-style profile tech flow:
+   - prefer `/profile tech setup <profile>` or `company_profile_tech_options` + selected `company_profile_tech_apply`;
+   - for `web-frontend`, select frontend tech and optional database;
+   - for `backend-api`, select backend tech and optional database;
+   - for `fullstack`, select frontend, backend, and database tech;
+   - record only concise Context7 evidence with `company_profile_tech_context_record` after reading relevant Context7 docs.
+5. Re-call `company_context` after applying a profile or tech stack.
+6. Call `company_memory_status`. If memory files exist, read only compact memory summary and treat it as advisory.
+7. Read `.pi/company-profile.json` if present, `AGENTS.md`, `README.md`, and every existing required context file from the profile.
+8. Do a bounded repository scout. Do not ingest the whole repo. Prefer:
    - root files and package/build config;
    - docs and architecture files;
    - source directory map;
    - test/verify command definitions;
    - API/schema/migration/config markers;
    - project-specific agent instructions.
-8. Build a context manifest: file/path + reason.
-9. Identify:
+9. Build a context manifest: file/path + reason.
+10. Identify:
    - project purpose;
    - stack/runtime/package manager;
    - source layout and ownership boundaries;
@@ -46,18 +52,20 @@ Mandatory flow:
    - protected paths/secrets;
    - verify commands and when to use them;
    - MCP/tool capabilities;
+   - selected tech stack and Context7 snapshot status;
    - memory policy and files;
    - conventions the agent must follow.
-10. Write a concise reusable snapshot to `.pi/project-context.md`.
-11. Record it with `company_project_onboarding_record` when the tool exists. If unavailable, write `.pi/project-context.md` directly and clearly say the runtime record was skipped.
+11. Write a concise reusable snapshot to `.pi/project-context.md`.
+12. Record it with `company_project_onboarding_record` when the tool exists. If unavailable, write `.pi/project-context.md` directly and clearly say the runtime record was skipped.
 
 Profile selection rule:
 
 - Do not force profile selection from shell.
 - In a new project, profile selection belongs here during `/onboard-project`.
+- Prefer select-style profile/tech setup over long chat explanations.
 - `fullstack` means FE and BE may both be edited if the task allows.
 - `be-readonly-fe` means backend is source-of-truth/read-only and frontend is the write target.
-- The user may later switch profile with `/profile <profile>`.
+- The user may later switch profile with `/profile <profile>` or rerun tech setup with `/profile tech setup`.
 
 Snapshot format:
 
@@ -79,6 +87,11 @@ Snapshot format:
 
 | Layer | Evidence | Notes |
 |---|---|---|
+
+## Selected tech stack
+
+| Role | Tech | Context7 status | Notes |
+|---|---|---|---|
 
 ## Repository map
 

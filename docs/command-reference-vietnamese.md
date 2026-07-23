@@ -10,7 +10,7 @@ Có 4 loại command khác nhau:
 
 | Loại | Gõ ở đâu | Ví dụ | Ý nghĩa |
 |---|---|---|---|
-| Terminal command | Terminal macOS/Linux với Bash | `pi-company-mcp --preset core` | Cài, kiểm tra, hoặc cấu hình máy/project từ bên ngoài Pi. Native Windows và WSL chưa được verify. |
+| Terminal command | Terminal đã có Bash | `pi-company-mcp --preset core` | Cài, kiểm tra, hoặc cấu hình máy/project từ bên ngoài Pi. macOS Apple Silicon và Linux x64 đã verify; macOS Intel/Linux ARM64 cần smoke trước rollout; native Windows chưa là target team; WSL2 experimental. |
 | Pi slash command | Bên trong Pi TUI | `/onboard-project` | Gọi workflow/prompt/package command trong Pi session hiện tại. |
 | Pi hotkey | Bên trong Pi TUI | `Ctrl+L` | Mở UI nhanh, thường dùng cho model/session. |
 | Tool syntax | Bên trong Pi, khi cần chính xác | `subagent({ action: "status" })` | Gọi đúng tool/action, dùng khi slash command hoặc natural prompt chưa đủ rõ. |
@@ -70,6 +70,16 @@ Nếu task còn mơ hồ:
 /plan <goal cần bóc tách>
 ```
 
+## Nguyên tắc command/UX
+
+Pi Company dùng ít namespace nhưng mỗi namespace có subcommand rõ:
+
+- `/profile` là namespace duy nhất cho profile và tech stack; không dùng `/profiles` hoặc `/profile-tech` riêng.
+- Status command như `/profile`, `/permission-status`, `/company-orchestration` phải ngắn và không gọi model follow-up.
+- Khi user cần chọn, ưu tiên select option. Khi UI select không khả dụng, trả về exact apply command để chạy ngay.
+- Long list chỉ hiện khi gõ `list`, `options`, hoặc `/company-commands <topic>`.
+- Hành động rủi ro như stage rộng, push, PR write, deploy, publish, thay đổi database hoặc external-provider write vẫn cần xác nhận người vận hành.
+
 ## Command của platform mình
 
 Các command này đến từ package `pi-company-core`.
@@ -83,11 +93,18 @@ Các command này đến từ package `pi-company-core`.
 | `/full-access` | Bật trusted full-access | Khi repo đã trusted và muốn agent có quyền workspace rộng hơn. | Tool/scope autonomy được nới trong session; protected paths/redaction/human gates vẫn bật. |
 | `/full-access <task>` | Bật full-access rồi chạy task | Khi muốn một lệnh vừa cấp quyền vừa giao việc. | Session chuyển sang `trusted-full-access`, phần `<task>` được gửi tiếp cho agent. |
 | `/onboard-project` | Đọc project lần đầu | Lần đầu gắn repo vào Pi, sau `/login` và `/model`. | Tạo/cập nhật `.pi/company-profile.json`, `.pi/project-context.md`, `.pi/memory/*`. |
-| `/profile` hoặc `/profiles` | Xem profile ngắn | Khi muốn biết mode hiện tại mà không burn token. | Hiện status ngắn, không gọi model follow-up. |
+| `/profile` | Xem profile ngắn | Khi muốn biết mode hiện tại mà không burn token. | Hiện status ngắn, không gọi model follow-up. |
 | `/profile list` | Xem profile có sẵn | Khi chưa nhớ tên profile. | Hiện list compact. |
 | `/profile <profile>` | Áp profile ngay | Khi đã biết profile muốn dùng. | Ghi `.pi/company-profile.json` và lock ngay, không hỏi vòng. |
 | `/profile auto` | Áp profile recommend | Khi muốn auto-detect và apply luôn. | Detect profile rồi ghi profile/lock ngay. |
+| `/profile setup` | Chọn profile + tech bằng option | Khi onboarding hoặc muốn đổi profile/stack mà không chat dài. | Mở select profile, rồi select tech theo role; fallback là card ngắn + lệnh apply chính xác nếu UI select chưa có. |
+| `/profile setup fullstack` | Chọn tech cho fullstack | Khi đã biết profile là fullstack. | Chọn frontend, backend, database rồi ghi `.pi/tech-stack.json` và `.pi/tech-context/*` placeholder. |
 | `/profile fe`, `/profile be`, `/profile full`, `/profile be-fe` | Alias ngắn | Khi muốn gõ nhanh. | Map sang `web-frontend`, `backend-api`, `fullstack`, `be-readonly-fe`. |
+| `/profile tech` | Xem tech stack hiện tại | Khi muốn biết profile đã gắn tech nào và Context7 đã record chưa. | Hiện manifest + pending Context7 ngắn, không gọi model follow-up. |
+| `/profile tech setup [profile]` | Wizard chọn tech | Khi muốn chọn tech theo role bằng UI select. | FE profile chọn FE + DB; BE profile chọn BE + DB; fullstack chọn FE + BE + DB. |
+| `/profile tech options [profile]` | Xem option tech | Khi UI select không có hoặc muốn lấy lệnh apply. | Hiện option theo role và lệnh mẫu `/profile tech apply ...`. |
+| `/profile tech apply fullstack frontend=nextjs backend=nestjs database=prisma` | Apply trực tiếp | Khi team muốn một lệnh deterministic, không chat dài. | Ghi profile, lock, tech manifest, Context7 placeholders. |
+| `/profile tech refresh` | Xem Context7 cần record | Sau khi chọn tech stack. | Hiện các query Context7 cần đọc và record bằng tool runtime. |
 | `/memory-policy` | Kiểm tra memory | Khi muốn biết Pi đang nhớ gì, hoặc muốn lưu memory explicit. | Hiện chính sách memory và file `.pi/memory/*`. |
 | `/company-orchestration` | Xem policy solo/subagent | Khi muốn biết task sẽ chạy solo-first, lens nào, Field Guide nào. | Hiện status compact, không gọi model follow-up. |
 | `/model-options` | Giải thích model | Khi chưa rõ chọn provider model nào, thinking nào. | Giải thích selector, scope, thinking, benchmark rule. |
@@ -142,6 +159,21 @@ Profile name nên biết:
 | `mobile` | React Native/Flutter. |
 | `docs` | Docs/manual/portal. |
 
+Tech stack option theo profile:
+
+| Profile | Role bắt buộc chọn | Ví dụ |
+|---|---|---|
+| `web-frontend` | Frontend + database optional | `frontend=nextjs database=none` |
+| `backend-api` | Backend + database optional | `backend=nestjs database=prisma` |
+| `fullstack` | Frontend + backend + database optional | `frontend=nextjs backend=nestjs database=prisma` |
+| `be-readonly-fe` | Frontend + backend + database optional | `frontend=react-vite backend=fastapi database=postgres` |
+| `mobile` | Mobile | `mobile=react-native` |
+| `devops` | DevOps | `devops=docker` |
+| `data` | Data + database optional | `data=dbt database=postgres` |
+| `docs` | Docs | `docs=mintlify` |
+
+Sau khi chọn tech, platform tạo `.pi/tech-stack.json` và các file `.pi/tech-context/<tech>.json`. File context chỉ nên chứa tóm tắt ngắn/citation từ Context7, không lưu nguyên văn docs dài, token, session, hoặc secret.
+
 ## Command native của Pi
 
 Các command này thuộc Pi core hoặc package Pi chính. Tên/availability có thể phụ thuộc version Pi.
@@ -180,7 +212,7 @@ Quan trọng: daily flow không bắt anh phải nhớ các lệnh này. Các wo
 | `/subagents-watchdog` | Giám sát run bị treo | Khi background agents có nguy cơ stuck/timeout. | Theo dõi/nhắc trạng thái tùy package. |
 | `/subagents-watchdog recommend-model` | Gợi ý model watchdog | Khi muốn watchdog dùng model mạnh bổ sung với model chính. | Trả gợi ý model/thinking hiện tại. |
 | `/subagents-watchdog on` | Bật watchdog | Khi muốn adversarial review ở cuối turn cho session/project. | Watchdog review repo edits ở `agent_end`; có thể tốn thêm token. |
-| `/subagents-profiles` | List profiles | Khi team có nhiều provider/quota profile. | Hiện profiles trong `~/.pi/agent/profiles/pi-subagents/`. |
+| `/subagents-profiles` | List profiles | Khi team có nhiều provider/quota profile. | Hiện profiles trong `~/.pi/agent/profile/pi-subagents/`. |
 | `/subagents-refresh-provider-models <provider>` | Refresh model catalog | Khi model registry/provider thay đổi. | Probe/cache catalog provider. |
 | `/subagents-generate-profiles <provider>` | Sinh quota/quality profiles | Khi muốn profile model theo quota/chất lượng. | Tạo profile cho provider. |
 | `/subagents-check-profile <name>` | Check profile | Khi profile/model có thể stale. | Re-check model availability/auth. |
