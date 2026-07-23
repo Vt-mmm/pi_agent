@@ -48,8 +48,8 @@ Profiles define:
 - `permissionProfile`
 - `rootMarkers`
 - `protectedPaths`
-- `shellProtectedPaths`
-- `readOnlyPaths`
+- `shellProtectedPaths` — shell-only deny list for bash/exec parsing.
+- `readOnlyPaths` — path tools may read, but write/edit and shell access are denied.
 - `requiredContext`
 - `verifyCommands`
 - `mcpCapabilities`
@@ -58,7 +58,9 @@ Profiles define:
 
 The same platform can operate as `web-frontend`, `backend-api`, `fullstack`, `be-readonly-fe`, `data`, `devops`, `docs`, `python`, `node-typescript`, or `mobile` by switching profile.
 
-`readOnlyPaths` is for contracts such as `be-readonly-fe`: path tools may inspect these files with `read`, `grep`, `find`, and `ls`, but write/edit is blocked and shell access is kept inside `shellProtectedPaths`.
+`protectedPaths` blocks read/write path-tool access and is also used for shell matching when `shellProtectedPaths` is omitted. `readOnlyPaths` is for contracts such as `be-readonly-fe`: path tools may inspect these files with `read`, `grep`, `find`, and `ls`, but write/edit and shell access are blocked automatically.
+
+`shellProtectedPaths` is intentionally shell-only. A path declared only there blocks `bash`/`exec` access, but does not block `read`, `write`, or `edit` path tools. `profile-doctor` and `team-doctor` warn on shell-only entries so older custom profiles can migrate write-sensitive paths to `protectedPaths` or `readOnlyPaths`.
 
 ## Permission profiles
 

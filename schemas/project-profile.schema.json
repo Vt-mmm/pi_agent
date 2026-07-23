@@ -57,7 +57,7 @@
     },
     "shellProtectedPaths": {
       "type": "array",
-      "description": "Optional bash-specific protected path globs. If omitted, project protectedPaths also apply to bash path extraction.",
+      "description": "Optional bash-specific protected path globs. These block shell access only, not path-tool read/write. If omitted, project protectedPaths also apply to bash path extraction. If provided for legacy profiles, keep write-sensitive paths in protectedPaths or readOnlyPaths as well.",
       "items": {
         "type": "string",
         "minLength": 1
@@ -65,7 +65,7 @@
     },
     "readOnlyPaths": {
       "type": "array",
-      "description": "Paths that may be inspected with read/grep/find/ls but must not be modified; shell access is also blocked by guard profiles that include these paths in shellProtectedPaths.",
+      "description": "Paths that may be inspected with read/grep/find/ls but must not be modified; shell access is blocked automatically for these paths.",
       "items": {
         "type": "string",
         "minLength": 1

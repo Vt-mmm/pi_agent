@@ -44,7 +44,7 @@ Runtime behavior:
 - phân tích shell command trước khi chạy lệnh rủi ro;
 - block destructive patterns;
 - đệ quy vào shell wrapper phổ biến như `sudo`, `env`, `bash -c`, subshell, command substitution, và backtick;
-- check `shellProtectedPaths` cho bash, mặc định bảo vệ `.git`, `auth.json`, `.env`, `.env.*`;
+- check `shellProtectedPaths` cho bash, mặc định bảo vệ `.git`, `auth.json`, `.env`, `.env.*`; path chỉ nằm trong `shellProtectedPaths` là shell-only và không chặn write/edit;
 - kiểm tra cả bare filename, partial glob (`*`, `?`, character class, brace), symbolic-link alias đã canonicalize, và redirect shell có hoặc không có khoảng trắng;
 - redact sensitive text trong text result và JSON-like result details trước khi output được trả về model; non-text media block được giữ nguyên;
 - cảnh báo broad command prefix như `bash`, `python`, `node`, `git`, `sudo`;

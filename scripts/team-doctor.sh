@@ -191,6 +191,27 @@ function readJsonIfPresent(file) {
   }
 }
 
+function profileOptionalArrayOrEmpty(profile, field, profileLabel) {
+  if (profile[field] === undefined) return [];
+  if (!Array.isArray(profile[field])) {
+    errors.push(`${profileLabel} ${field} must be array when provided`);
+    return [];
+  }
+  return profile[field];
+}
+
+function warnShellOnlyProtectedPaths(profile, profileLabel) {
+  const protectedPaths = Array.isArray(profile.protectedPaths) ? profile.protectedPaths : [];
+  const shellProtectedPaths = profileOptionalArrayOrEmpty(profile, "shellProtectedPaths", profileLabel);
+  const readOnlyPaths = profileOptionalArrayOrEmpty(profile, "readOnlyPaths", profileLabel);
+  const writeGuardedPaths = new Set([...protectedPaths, ...readOnlyPaths]);
+  for (const candidate of shellProtectedPaths) {
+    if (typeof candidate !== "string" || candidate.trim().length === 0) continue;
+    if (writeGuardedPaths.has(candidate)) continue;
+    warnings.push(`${profileLabel} shellProtectedPaths-only path ${candidate} blocks shell access only; add it to protectedPaths to block read/write, or readOnlyPaths to allow read but block write/shell`);
+  }
+}
+
 function mcpSummary(file) {
   const json = readJsonIfPresent(file);
   if (!json) return { file, exists: fs.existsSync(file), serverCount: 0, servers: [] };
@@ -261,6 +282,7 @@ if (fs.existsSync(projectProfilePath)) {
   for (const field of ["rootMarkers", "protectedPaths", "requiredContext", "mcpCapabilities"]) {
     if (!Array.isArray(profile[field])) errors.push(`project profile ${field} must be array`);
   }
+  warnShellOnlyProtectedPaths(profile, "project profile");
   if (Array.isArray(profile.requiredContext) && !profile.requiredContext.includes(".pi/project-context.md")) {
     warnings.push("project profile does not require .pi/project-context.md");
   }

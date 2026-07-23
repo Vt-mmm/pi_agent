@@ -387,6 +387,55 @@ describe("capability input boundaries", () => {
     assert.equal(report.errors.some((detail) => detail.includes("runtimePolicy must be an object")), true);
     assert.doesNotMatch(result.stderr, /TypeError|at file:/);
   });
+
+  it("warns when shellProtectedPaths-only profile paths do not block writes", () => {
+    const root = createPlatformFixture();
+    const project = path.join(root, "project");
+    fs.mkdirSync(path.join(project, ".pi"), { recursive: true });
+    fs.writeFileSync(path.join(project, "package.json"), "{}\n");
+    fs.writeFileSync(path.join(project, "README.md"), "# Fixture\n");
+    const profile = baseProfile();
+    profile.shellProtectedPaths = [".git/**", "legacy-backend/**", "review-only/**"];
+    profile.readOnlyPaths = ["review-only/**"];
+    writeJson(path.join(project, ".pi", "company-profile.json"), profile);
+
+    const result = spawnSync("bash", [path.join(repositoryRoot, "scripts", "profile-doctor.sh"), project], { encoding: "utf8" });
+    assert.equal(result.status, 0, result.stderr);
+    const report = JSON.parse(result.stdout);
+    assert.equal(report.errors.length, 0);
+    assert.equal(report.shellProtectedPathCount, 3);
+    assert.equal(report.readOnlyPathCount, 1);
+    assert.equal(
+      report.warnings.some((detail) => detail.includes("shellProtectedPaths-only path legacy-backend/**")),
+      true
+    );
+    assert.equal(
+      report.warnings.some((detail) => detail.includes("review-only/**")),
+      false
+    );
+  });
+
+  it("surfaces shellProtectedPaths-only warnings in team doctor", () => {
+    const root = createPlatformFixture();
+    const project = path.join(root, "project");
+    fs.mkdirSync(path.join(project, ".pi"), { recursive: true });
+    fs.writeFileSync(path.join(project, "package.json"), "{}\n");
+    fs.writeFileSync(path.join(project, "README.md"), "# Fixture\n");
+    const profile = baseProfile();
+    delete profile.capabilityPacks;
+    delete profile.capabilityPolicy;
+    profile.shellProtectedPaths = ["legacy-backend/**"];
+    writeJson(path.join(project, ".pi", "company-profile.json"), profile);
+
+    const result = spawnSync("bash", [path.join(repositoryRoot, "scripts", "team-doctor.sh"), project], { encoding: "utf8" });
+    assert.equal(result.status, 0, result.stderr);
+    const report = JSON.parse(result.stdout);
+    assert.equal(report.errors.length, 0);
+    assert.equal(
+      report.warnings.some((detail) => detail.includes("project profile shellProtectedPaths-only path legacy-backend/**")),
+      true
+    );
+  });
 });
 
 describe("recipe and action proposal validation", () => {

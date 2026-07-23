@@ -23,6 +23,7 @@ This file records release-facing changes for Pi Agent Platform. Copy the relevan
 
 - Hardened orchestration config normalization so malformed numeric settings fall back safely instead of producing invalid policy state.
 - Fixed tag CI verification by fetching the annotated release tag ref before checking tag object type and peeled commit identity.
+- Added profile-doctor and team-doctor warnings for legacy `shellProtectedPaths`-only entries, clarifying that those paths block shell access only and must move to `protectedPaths` or `readOnlyPaths` for write protection.
 
 ## v0.4.8 - 2026-07-22
 
