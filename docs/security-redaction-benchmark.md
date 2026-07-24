@@ -37,7 +37,7 @@ Unlabeled high-entropy values are not automatically treated as secrets. A generi
 
 ## Security boundary
 
-This benchmark measures pattern-based output containment. It does not authorize secret handling and does not turn the extension into an operating-system sandbox. Workloads that execute untrusted code or process untrusted prompts still require process, filesystem, network, and credential isolation.
+This benchmark measures pattern-based output containment. It does not authorize secret handling and does not turn the extension into an operating-system sandbox. It does not decode every transformed output form before matching; for example, base64-encoded or otherwise re-encoded secret material can evade the redaction backstop. Workloads that execute untrusted code or process untrusted prompts still require process, filesystem, network, and credential isolation.
 
 The current scope, assumptions, controls, and residual risks are documented in [security-threat-model.md](security-threat-model.md), and private intake/disclosure is documented in [SECURITY.md](../SECURITY.md). Before using redaction results as a stronger assurance claim, continue to complete and maintain:
 

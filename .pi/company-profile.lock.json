@@ -115,7 +115,7 @@
   ],
   "core": {
     "apiVersion": 1,
-    "packageDigest": "sha256:448e58a0cdd83690eca4cc4587d3bd38bc2f7070c97c8529fe539838ec8561f3",
+    "packageDigest": "sha256:42891b40a671a7f1fa831d094b5928c8f7b5848503425849593f63ff5a82ccc7",
     "packageSource": "../",
     "packageVersion": "0.4.8",
     "runtimeFiles": [
@@ -145,8 +145,8 @@
         "path": "packages/pi-company-core/security/sensitive-data.js"
       },
       {
-        "byteSize": 279262,
-        "digest": "sha256:7867c0d2feffc36e4e6390f08d4f38d78c7fc5d992f6bdf6e479ba2f959b9c7f",
+        "byteSize": 279409,
+        "digest": "sha256:9efc0a328dec517656c3341ec6646d037c628932eaea2461071b5d991d2a2219",
         "path": "packages/pi-company-core/extensions/company-guard.ts"
       },
       {

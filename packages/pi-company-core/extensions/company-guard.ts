@@ -3064,10 +3064,11 @@ const CONTEXT_INDEX_UNTRUSTED_INSTRUCTION_PATTERNS = [
   /\bexfiltrat(?:e|es|ed|ing|ion)\b[^\n]*/gi,
   /\b(?:send|upload|post|curl|wget)\b[^\n]{0,180}\b(?:\.env|auth\.json|secret|secrets|token|credential|credentials|api[-_ ]?key)\b[^\n]*/gi
 ];
+const CONTEXT_INDEX_IGNORED_FORMAT_CHARS = /[\u00AD\u200B-\u200D\u2060\uFEFF]/g;
 
 function sanitizeContextIndexText(input: unknown, maxChars: number): string | undefined {
   if (typeof input !== "string") return undefined;
-  let value = redactText(input)
+  let value = redactText(input.normalize("NFKC").replace(CONTEXT_INDEX_IGNORED_FORMAT_CHARS, ""))
     .replace(/[\u0000-\u001F\u007F-\u009F]/g, " ")
     .replace(/\s+/g, " ")
     .trim()
