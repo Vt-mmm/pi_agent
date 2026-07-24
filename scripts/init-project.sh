@@ -323,6 +323,10 @@ if [[ ! -f "$PROJECT_PATH/.pi/project-context.md" ]]; then
   cp "$PLATFORM_ROOT/templates/project/.pi/project-context.md" "$PROJECT_PATH/.pi/project-context.md"
 fi
 
+if [[ ! -f "$PROJECT_PATH/.pi/context-index.json" ]]; then
+  cp "$PLATFORM_ROOT/templates/project/.pi/context-index.json" "$PROJECT_PATH/.pi/context-index.json"
+fi
+
 if [[ ! -f "$PROJECT_PATH/.pi/tech-stack.json" ]]; then
   cp "$PLATFORM_ROOT/templates/project/.pi/tech-stack.json" "$PROJECT_PATH/.pi/tech-stack.json"
 fi
@@ -361,4 +365,5 @@ echo "  cd \"$PROJECT_PATH\""
 echo "  pi"
 echo "  /login              # first time only"
 echo "  /onboard-project    # first project-read after model selection"
+echo "  /context-index      # inspect compact project context index"
 echo "  /memory-policy      # inspect project memory policy when needed"

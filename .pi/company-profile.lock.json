@@ -17,8 +17,8 @@
       "path": "evals/scenarios/capability-resolution.json"
     },
     {
-      "byteSize": 5972,
-      "digest": "sha256:bfe8e1288d0048fe0f4e26cdeb53b40689b2340116a06d9981e7d3461e36aa2c",
+      "byteSize": 6086,
+      "digest": "sha256:c6bd82e50e29fe04f719e751f2624bb4af6072d80bdafe2e79b1efbfb8450906",
       "id": "base-policy",
       "kind": "policies",
       "pack": "engineering-base@0.1.1",
@@ -57,8 +57,8 @@
       "path": "packages/pi-company-core/prompts/review.md"
     },
     {
-      "byteSize": 4331,
-      "digest": "sha256:d2a972ea1badc4c61aa956e5ad7d14c2e8b00fa3abee74f403e18d497702dd8d",
+      "byteSize": 4837,
+      "digest": "sha256:faf71b77b917ef2e29585b3d6123d6f8a5406e063e6d516a362b5a34278361fe",
       "id": "task",
       "kind": "prompts",
       "pack": "engineering-base@0.1.1",
@@ -115,7 +115,7 @@
   ],
   "core": {
     "apiVersion": 1,
-    "packageDigest": "sha256:1e8bfd1fe9d4f8151341a61096a01fd6fb8ea2db33290ca979c1e374e654475e",
+    "packageDigest": "sha256:014b1a185d96dd04d2af1fd83cf4b53c218286fa92615a62679969f606018ea2",
     "packageSource": "../",
     "packageVersion": "0.4.8",
     "runtimeFiles": [
@@ -130,8 +130,8 @@
         "path": "packages/pi-company-core/package.json"
       },
       {
-        "byteSize": 5972,
-        "digest": "sha256:bfe8e1288d0048fe0f4e26cdeb53b40689b2340116a06d9981e7d3461e36aa2c",
+        "byteSize": 6086,
+        "digest": "sha256:c6bd82e50e29fe04f719e751f2624bb4af6072d80bdafe2e79b1efbfb8450906",
         "path": "packages/pi-company-core/policies/base-policy.json"
       },
       {
@@ -145,8 +145,8 @@
         "path": "packages/pi-company-core/security/sensitive-data.js"
       },
       {
-        "byteSize": 247685,
-        "digest": "sha256:3be3f7f5a399da44a0680b961f9785665355c9e595c7dcf4f64d7ef38ceea942",
+        "byteSize": 275642,
+        "digest": "sha256:2e592dc4c5d40271a0480674d9aab1756fca553472ef762b640e3c3b48f71315",
         "path": "packages/pi-company-core/extensions/company-guard.ts"
       },
       {

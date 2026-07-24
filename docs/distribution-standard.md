@@ -93,6 +93,7 @@ Sau setup, bước first-run trong Pi là:
 ```
 
 `/onboard-project` ghi `.pi/project-context.md`; đây là snapshot context dùng chung cho các task sau.
+Nó cũng ghi `.pi/context-index.json`; đây là compact advisory map có citation để agent tìm đúng điểm vào repo mà không scout rộng lại.
 
 ## Optional preseed setup
 
@@ -126,6 +127,7 @@ project/
    ├─ settings.json
    ├─ company-profile.json
    ├─ project-context.md
+   ├─ context-index.json
    ├─ memory/
    │  ├─ memory_summary.md
    │  └─ MEMORY.md
@@ -142,6 +144,7 @@ Files nên commit:
 - `.pi/settings.json`
 - `.pi/company-profile.json`
 - `.pi/project-context.md`
+- `.pi/context-index.json`
 - `.pi/mcp.json`
 - `.pi/.gitignore`
 

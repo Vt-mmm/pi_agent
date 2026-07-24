@@ -163,6 +163,7 @@ for (const rel of [
   "templates/project/.mcp.json",
   "templates/project/.pi/mcp.json",
   "templates/project/.pi/project-context.md",
+  "templates/project/.pi/context-index.json",
   "templates/project/.pi/memory/memory_summary.md",
   "templates/project/.pi/memory/MEMORY.md",
   "scripts/setup.sh",
@@ -274,8 +275,10 @@ if (fs.existsSync(projectSettingsPath)) {
 }
 
 const projectProfilePath = path.join(projectPath, ".pi", "company-profile.json");
+let projectProfile = null;
 if (fs.existsSync(projectProfilePath)) {
   const profile = readJson(projectProfilePath);
+  projectProfile = profile;
   for (const field of ["schemaVersion", "projectId", "displayName", "mode"]) {
     if (profile[field] === undefined || profile[field] === "") errors.push(`project profile missing ${field}`);
   }
@@ -316,6 +319,40 @@ if (fs.existsSync(projectContextPath)) {
   warnings.push("project has no .pi/project-context.md; run setup/init or /onboard-project");
 }
 
+const contextIndexConfig = projectProfile && typeof projectProfile.contextIndex === "object" && !Array.isArray(projectProfile.contextIndex)
+  ? projectProfile.contextIndex
+  : {};
+const contextIndexEnabled = contextIndexConfig.enabled !== false && contextIndexConfig.writePolicy !== "off";
+const contextIndexRelativePath = typeof contextIndexConfig.path === "string" && contextIndexConfig.path.trim()
+  ? contextIndexConfig.path.trim()
+  : ".pi/context-index.json";
+const contextIndexAbsolutePath = path.resolve(projectPath, contextIndexRelativePath);
+const contextIndexEscapes = path.relative(projectPath, contextIndexAbsolutePath).startsWith("..") || path.isAbsolute(path.relative(projectPath, contextIndexAbsolutePath));
+if (contextIndexEscapes) {
+  errors.push(`project contextIndex.path escapes project root: ${contextIndexRelativePath}`);
+} else if (!contextIndexEnabled) {
+  warnings.push("project context index is disabled by profile");
+} else if (fs.existsSync(contextIndexAbsolutePath)) {
+  const contextIndex = readJsonIfPresent(contextIndexAbsolutePath);
+  if (!contextIndex) {
+    warnings.push(`project context index exists but cannot be parsed: ${contextIndexRelativePath}`);
+  } else {
+    const nodes = Array.isArray(contextIndex.nodes) ? contextIndex.nodes : [];
+    const edges = Array.isArray(contextIndex.edges) ? contextIndex.edges : [];
+    const citations = Array.isArray(contextIndex.citations) ? contextIndex.citations : [];
+    if (contextIndex.schemaVersion !== 1) warnings.push("project context index schemaVersion should be 1");
+    if (contextIndex.summary === "Pending. Run /onboard-project after login/model selection to generate the compact project context index.") {
+      warnings.push("project context index is still pending; run /onboard-project after login/model selection");
+    }
+    if (nodes.length === 0) warnings.push("project context index has no nodes yet");
+    if (contextIndex?.policy?.requireCitations !== false && citations.length === 0) warnings.push("project context index has no citations yet");
+    if (nodes.length > (contextIndex?.policy?.maxNodes ?? 120)) warnings.push("project context index has more nodes than policy maxNodes");
+    if (edges.length > (contextIndex?.policy?.maxEdges ?? 240)) warnings.push("project context index has more edges than policy maxEdges");
+  }
+} else {
+  warnings.push(`project has no ${contextIndexRelativePath}; run setup/init or /onboard-project`);
+}
+
 const memorySummaryPath = path.join(projectPath, ".pi", "memory", "memory_summary.md");
 const memoryHandbookPath = path.join(projectPath, ".pi", "memory", "MEMORY.md");
 if (!fs.existsSync(memorySummaryPath) || !fs.existsSync(memoryHandbookPath)) {
@@ -330,8 +367,10 @@ if (strictShare) {
     "docs/project-onboarding.md",
     "docs/workflow-recipes.md",
     "docs/memory-policy.md",
+    "docs/context-window-policy.md",
     "docs/publishing-for-teams.md",
     "templates/project/.pi/settings.json",
+    "templates/project/.pi/context-index.json",
     "templates/global/settings.json",
     "packages/pi-company-core/skills/company-source-cache/SKILL.md"
   ];

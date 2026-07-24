@@ -35,6 +35,8 @@ Mandatory flow:
    - `/task-preflight` checks whether to proceed, compact, or fresh-session.
    - `/fresh-task`, `/fresh-scout`, and `/fresh-be-to-fe` open a new governed session and replay the compact workflow prompt.
    - `/scout` is the read-only audit/scout workflow.
+   - `/context-index` shows the compact advisory project context graph without a model follow-up.
+   - `/context-index search <keyword>` searches profile/project/tech/task pointers before broad re-scouting.
 10. Explain runtime permission commands when relevant:
    - `/permission-status` shows the current profile and boundaries.
    - `/read-only` switches the current session to read-only.

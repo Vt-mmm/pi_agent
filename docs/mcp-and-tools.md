@@ -281,6 +281,9 @@ Search/list channels cũng được kiểm:
 | `company_memory_search` | Keyword search `.pi/memory` markdown. |
 | `company_memory_note` | Append explicit durable memory note. |
 | `company_memory_citation_record` | Record memory evidence in task contract. |
+| `company_context_index_status` | Inspect the compact advisory project context index. |
+| `company_context_index_search` | Search context-index nodes before broad re-scouting. |
+| `company_context_index_record` | Record cited project/profile/tech/task context after onboarding or approved handoff. |
 | `company_profile_options` | Return reusable project profile choices. |
 | `company_profile_apply` | Apply a selected profile and deterministic capability lock. |
 | `company_profile_tech_options` | Return select-style tech options for a profile family. |

@@ -153,6 +153,45 @@ for (const [key, value] of Object.entries(runtimePolicy)) {
   }
 }
 
+const contextIndexDefaults = {
+  enabled: true,
+  path: ".pi/context-index.json",
+  writePolicy: "onboarding-record",
+  requireCitations: true,
+  maxNodes: 120,
+  maxEdges: 240,
+  includeTechStack: true,
+  includeMemoryPointers: true
+};
+let contextIndex = contextIndexDefaults;
+if (profile.contextIndex !== undefined) {
+  if (!profile.contextIndex || typeof profile.contextIndex !== "object" || Array.isArray(profile.contextIndex)) {
+    errors.push("contextIndex must be an object");
+  } else {
+    contextIndex = { ...contextIndexDefaults, ...profile.contextIndex };
+    if (typeof contextIndex.enabled !== "boolean") errors.push("contextIndex.enabled must be boolean");
+    if (typeof contextIndex.path !== "string" || contextIndex.path.trim().length === 0) errors.push("contextIndex.path must be a non-empty string");
+    if (!["onboarding-record", "approved-workflow", "off"].includes(contextIndex.writePolicy)) {
+      errors.push("contextIndex.writePolicy must be onboarding-record, approved-workflow, or off");
+    }
+    if (typeof contextIndex.requireCitations !== "boolean") errors.push("contextIndex.requireCitations must be boolean");
+    if (!Number.isInteger(contextIndex.maxNodes) || contextIndex.maxNodes < 1 || contextIndex.maxNodes > 500) errors.push("contextIndex.maxNodes must be an integer from 1 to 500");
+    if (!Number.isInteger(contextIndex.maxEdges) || contextIndex.maxEdges < 0 || contextIndex.maxEdges > 1000) errors.push("contextIndex.maxEdges must be an integer from 0 to 1000");
+    if (typeof contextIndex.includeTechStack !== "boolean") errors.push("contextIndex.includeTechStack must be boolean");
+    if (typeof contextIndex.includeMemoryPointers !== "boolean") errors.push("contextIndex.includeMemoryPointers must be boolean");
+  }
+}
+
+if (contextIndex.enabled && contextIndex.writePolicy !== "off") {
+  const indexPath = path.resolve(projectPath, contextIndex.path);
+  const relativeIndexPath = path.relative(projectPath, indexPath);
+  if (relativeIndexPath.startsWith("..") || path.isAbsolute(relativeIndexPath)) {
+    errors.push(`contextIndex.path escapes project root: ${contextIndex.path}`);
+  } else if (!fs.existsSync(indexPath)) {
+    warnings.push(`context index missing: ${contextIndex.path}; run /onboard-project or record company_context_index_record`);
+  }
+}
+
 const verifyEntries = Object.entries(profile.verifyCommands ?? {});
 if (verifyEntries.length === 0) {
   errors.push("verifyCommands has no entries");
@@ -188,6 +227,7 @@ const report = {
     : [],
   capabilityPolicy,
   runtimePolicy,
+  contextIndex,
   warnings,
   errors
 };

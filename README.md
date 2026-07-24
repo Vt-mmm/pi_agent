@@ -40,6 +40,7 @@ pi-company-auto --full-access -p "Run the trusted local benchmark suite."
 - Runtime onboarding via `/onboard-project`.
 - Runtime profile selection via `/profile`, plus select-style tech stack setup via `/profile setup` and `/profile tech`.
 - Explicit project memory via `/memory-policy` and `company_memory_*` tools.
+- Compact project context index via `/context-index` and `company_context_index_*` tools. This is an advisory navigation graph, not a security boundary or source of truth.
 - MCP setup helpers for Context7, Chrome DevTools, GitHub, Playwright, and Figma.
 - Subagent setup helpers for read-only scouting, planning, implementation, review, and risk challenge.
 - Chat image-path intake: paste a local screenshot path into the Pi chat box and the guard attaches it as `[image1]` before the model sees the prompt.

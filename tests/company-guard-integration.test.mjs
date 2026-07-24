@@ -242,9 +242,10 @@ describe("company guard integration", () => {
     companyGuard(harness.pi);
     await harness.handlers.get("session_start")({}, ctx);
 
-    assert.equal(harness.tools.size, 24);
-    assert.equal(harness.commands.size, 14);
+    assert.equal(harness.tools.size, 27);
+    assert.equal(harness.commands.size, 15);
     assert.equal(harness.commands.has("profile"), true);
+    assert.equal(harness.commands.has("context-index"), true);
     assert.equal(harness.commands.has("profiles"), false);
     assert.equal(harness.commands.has("profile-tech"), false);
     assert.deepEqual([...harness.handlers.keys()].sort(), ["input", "session_start", "tool_call", "tool_result"]);
@@ -515,6 +516,130 @@ describe("company guard integration", () => {
     assert.equal(nextjs.context7.digest, snapshot.digest);
   });
 
+  it("records a compact cited context index during project onboarding", async () => {
+    const { root, companyGuard } = await loadGuardFixture();
+    const cwd = createProject(root);
+    fs.mkdirSync(path.join(cwd, ".pi", "memory"), { recursive: true });
+    fs.writeFileSync(path.join(cwd, ".pi", "memory", "memory_summary.md"), "v1\n\n# Memory Summary\n");
+    const ctx = createContext(cwd, { confirm: true });
+    const harness = createPiHarness();
+    companyGuard(harness.pi);
+
+    await harness.tools.get("company_profile_tech_apply").execute(
+      "context-index-tech-apply-test",
+      { profile: "fullstack", frontend: "nextjs", backend: "nestjs", database: "prisma" },
+      undefined,
+      () => {},
+      ctx
+    );
+
+    const recorded = await harness.tools.get("company_project_onboarding_record").execute(
+      "context-index-onboarding-test",
+      {
+        markdown: [
+          "# Project Context",
+          "",
+          "## Status",
+          "",
+          "- Generated: 2026-07-23T00:00:00.000Z",
+          "- Profile: fullstack",
+          "",
+          "## Project purpose",
+          "",
+          "- Synthetic integration fixture used to verify context index generation.",
+          "",
+          "## Verification matrix",
+          "",
+          "| Change type | Command | Notes |",
+          "|---|---|---|",
+          "| source | npm test | fixture |"
+        ].join("\n"),
+        summary: "Synthetic onboarding snapshot for fullstack context index.",
+        sourceFiles: [
+          { path: "README.md", reason: "Project entrypoint with access_token=synthetic-token-123" },
+          { path: ".pi/company-profile.json", reason: "Active profile and verify command source" }
+        ],
+        model: "test/model"
+      },
+      undefined,
+      () => {},
+      ctx
+    );
+
+    assert.equal(recorded.isError, undefined);
+    assert.equal(recorded.details.contextIndex.path ?? recorded.details.contextIndex.policy.path, ".pi/context-index.json");
+    const index = JSON.parse(fs.readFileSync(path.join(cwd, ".pi", "context-index.json"), "utf8"));
+    assert.equal(index.schemaVersion, 1);
+    assert.equal(index.source, "onboarding-record");
+    assert.equal(index.profileMode, "fullstack");
+    assert.equal(index.nodes.some((node) => node.kind === "profile" && /fullstack/.test(node.label)), true);
+    assert.equal(index.nodes.some((node) => node.kind === "tech" && /frontend:nextjs/.test(node.label)), true);
+    assert.equal(index.nodes.some((node) => node.kind === "verify"), true);
+    assert.equal(index.nodes.some((node) => node.kind === "memory" && node.path === ".pi/memory/memory_summary.md"), true);
+    assert.equal(index.citations.some((citation) => citation.path === "README.md"), true);
+    assert.doesNotMatch(JSON.stringify(index), /synthetic-token/);
+
+    const status = await harness.tools.get("company_context_index_status").execute(
+      "context-index-status-test",
+      { detail: "full" },
+      undefined,
+      () => {},
+      ctx
+    );
+    assert.equal(status.details.exists, true);
+    assert.equal(status.details.nodes, index.nodes.length);
+
+    const search = await harness.tools.get("company_context_index_search").execute(
+      "context-index-search-test",
+      { query: "nextjs", limit: 5 },
+      undefined,
+      () => {},
+      ctx
+    );
+    assert.equal(search.details.matches.some((match) => match.id === "tech:nextjs"), true);
+
+    await harness.commands.get("context-index").handler("", ctx);
+    assert.equal(harness.entries.some((entry) => entry.payload?.customType === "company-context-index-status"), true);
+    assert.equal(harness.entries.some((entry) => entry.type === "user-message"), false);
+  });
+
+  it("records bounded approved workflow nodes into the context index", async () => {
+    const { root, companyGuard } = await loadGuardFixture();
+    const cwd = createProject(root);
+    const ctx = createContext(cwd);
+    const harness = createPiHarness();
+    companyGuard(harness.pi);
+
+    const recorded = await harness.tools.get("company_context_index_record").execute(
+      "context-index-record-test",
+      {
+        summary: `Approved task handoff summary. ${"x".repeat(2000)}`,
+        source: "approved-workflow",
+        sourceFiles: [{ path: "README.md", reason: "Task source" }],
+        nodes: [{
+          id: "task:handoff",
+          kind: "task",
+          label: "handoff",
+          summary: `Keep only compact verified handoff. ${"y".repeat(800)}`,
+          tags: Array.from({ length: 30 }, (_unused, index) => `tag-${index}`),
+          citations: [{ path: "README.md", reason: "Verified by reading README.md" }]
+        }],
+        edges: [{ from: "task:handoff", to: "doc:readme-md", kind: "derived_from", reason: "Handoff cites README" }]
+      },
+      undefined,
+      () => {},
+      ctx
+    );
+
+    assert.equal(recorded.isError, undefined);
+    assert.equal(recorded.details.summary.length, 1200);
+    const handoff = recorded.details.nodes.find((node) => node.id === "task:handoff");
+    assert.ok(handoff);
+    assert.equal(handoff.summary.length, 500);
+    assert.equal(handoff.tags.length, 16);
+    assert.equal(recorded.details.citations.some((citation) => citation.path === "README.md"), true);
+  });
+
   it("keeps status commands concise and local without model follow-up", async () => {
     const { root, companyGuard } = await loadGuardFixture();
     const cwd = createProject(root);
@@ -525,6 +650,7 @@ describe("company guard integration", () => {
     await harness.commands.get("profile").handler("", ctx);
     await harness.commands.get("company-status").handler("", ctx);
     await harness.commands.get("company-memory").handler("", ctx);
+    await harness.commands.get("context-index").handler("", ctx);
     await harness.commands.get("company-orchestration").handler("", ctx);
 
     assert.equal(harness.entries.some((entry) => entry.type === "user-message"), false);

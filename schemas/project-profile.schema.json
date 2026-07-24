@@ -249,6 +249,46 @@
       },
       "additionalProperties": false
     },
+    "contextIndex": {
+      "type": "object",
+      "description": "Compact advisory project context index. This is not a security boundary or source of truth; it helps agents navigate profile/project/tech/task context with citations.",
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "path": {
+          "type": "string",
+          "minLength": 1
+        },
+        "writePolicy": {
+          "enum": [
+            "onboarding-record",
+            "approved-workflow",
+            "off"
+          ]
+        },
+        "requireCitations": {
+          "type": "boolean"
+        },
+        "maxNodes": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 500
+        },
+        "maxEdges": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1000
+        },
+        "includeTechStack": {
+          "type": "boolean"
+        },
+        "includeMemoryPointers": {
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": false
+    },
     "orchestration": {
       "type": "object",
       "description": "Solo-first orchestration policy for subagent usage, review lenses, model-role guidance, and Field Guide memory.",

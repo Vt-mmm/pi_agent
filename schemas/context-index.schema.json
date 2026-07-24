@@ -1,0 +1,258 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Vt-mmm/pi_agent/schemas/context-index.schema.json",
+  "title": "Pi Company Context Index",
+  "description": "Compact advisory context graph for profile/project/tech/task navigation. It is not a security boundary or source of truth.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "source",
+    "summary",
+    "generatedAt",
+    "updatedAt",
+    "policy",
+    "nodes",
+    "edges",
+    "citations",
+    "warnings"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "const": 1
+    },
+    "projectId": {
+      "type": "string"
+    },
+    "profileMode": {
+      "type": "string"
+    },
+    "source": {
+      "enum": [
+        "onboarding-record",
+        "approved-workflow",
+        "manual"
+      ]
+    },
+    "summary": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 1200
+    },
+    "generatedAt": {
+      "type": "string",
+      "minLength": 1
+    },
+    "updatedAt": {
+      "type": "string",
+      "minLength": 1
+    },
+    "policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "enabled",
+        "path",
+        "writePolicy",
+        "requireCitations",
+        "maxNodes",
+        "maxEdges",
+        "includeTechStack",
+        "includeMemoryPointers"
+      ],
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "path": {
+          "type": "string",
+          "minLength": 1
+        },
+        "writePolicy": {
+          "enum": [
+            "onboarding-record",
+            "approved-workflow",
+            "off"
+          ]
+        },
+        "requireCitations": {
+          "type": "boolean"
+        },
+        "maxNodes": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 500
+        },
+        "maxEdges": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1000
+        },
+        "includeTechStack": {
+          "type": "boolean"
+        },
+        "includeMemoryPointers": {
+          "type": "boolean"
+        }
+      }
+    },
+    "nodes": {
+      "type": "array",
+      "maxItems": 500,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "kind",
+          "label"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 140
+          },
+          "kind": {
+            "enum": [
+              "profile",
+              "tech",
+              "module",
+              "command",
+              "doc",
+              "decision",
+              "risk",
+              "memory",
+              "task",
+              "verify",
+              "context"
+            ]
+          },
+          "label": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 160
+          },
+          "summary": {
+            "type": "string",
+            "maxLength": 500
+          },
+          "path": {
+            "type": "string",
+            "maxLength": 240
+          },
+          "tags": {
+            "type": "array",
+            "maxItems": 16,
+            "items": {
+              "type": "string",
+              "maxLength": 60
+            }
+          },
+          "citations": {
+            "type": "array",
+            "maxItems": 12,
+            "items": {
+              "$ref": "#/$defs/citation"
+            }
+          },
+          "updatedAt": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "edges": {
+      "type": "array",
+      "maxItems": 1000,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "from",
+          "to",
+          "kind"
+        ],
+        "properties": {
+          "from": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 140
+          },
+          "to": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 140
+          },
+          "kind": {
+            "enum": [
+              "uses_tech",
+              "depends_on",
+              "verified_by",
+              "protected_by",
+              "documented_by",
+              "derived_from",
+              "updates",
+              "relates_to"
+            ]
+          },
+          "reason": {
+            "type": "string",
+            "maxLength": 240
+          }
+        }
+      }
+    },
+    "citations": {
+      "type": "array",
+      "maxItems": 80,
+      "items": {
+        "$ref": "#/$defs/citation"
+      }
+    },
+    "warnings": {
+      "type": "array",
+      "maxItems": 40,
+      "items": {
+        "type": "string"
+      }
+    }
+  },
+  "$defs": {
+    "citation": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "path": {
+          "type": "string",
+          "maxLength": 240
+        },
+        "reason": {
+          "type": "string",
+          "maxLength": 300
+        },
+        "url": {
+          "type": "string",
+          "maxLength": 300
+        }
+      },
+      "anyOf": [
+        {
+          "required": [
+            "path"
+          ]
+        },
+        {
+          "required": [
+            "url"
+          ]
+        },
+        {
+          "required": [
+            "reason"
+          ]
+        }
+      ]
+    }
+  }
+}

@@ -56,6 +56,7 @@ type ProjectProfile = {
     allowedExternalActions?: string[];
   };
   memory?: MemorySettings;
+  contextIndex?: ContextIndexSettings;
   runtimePolicy?: RuntimePolicySettings;
   orchestration?: OrchestrationPolicySettings;
   techStack?: ProjectTechStackReference;
@@ -79,6 +80,60 @@ type RuntimePolicySettings = {
   contextBudget?: "off" | "advisory" | "enforce";
   toolRegistry?: "off" | "advisory" | "enforce";
   finalGate?: "off" | "advisory" | "enforce";
+};
+
+type ContextIndexSettings = {
+  enabled?: boolean;
+  path?: string;
+  writePolicy?: "onboarding-record" | "approved-workflow" | "off";
+  requireCitations?: boolean;
+  maxNodes?: number;
+  maxEdges?: number;
+  includeTechStack?: boolean;
+  includeMemoryPointers?: boolean;
+};
+
+type ContextIndexNodeKind = "profile" | "tech" | "module" | "command" | "doc" | "decision" | "risk" | "memory" | "task" | "verify" | "context";
+
+type ContextIndexEdgeKind = "uses_tech" | "depends_on" | "verified_by" | "protected_by" | "documented_by" | "derived_from" | "updates" | "relates_to";
+
+type ContextIndexCitation = {
+  path?: string;
+  reason?: string;
+  url?: string;
+};
+
+type ContextIndexNode = {
+  id: string;
+  kind: ContextIndexNodeKind;
+  label: string;
+  summary?: string;
+  path?: string;
+  tags?: string[];
+  citations?: ContextIndexCitation[];
+  updatedAt?: string;
+};
+
+type ContextIndexEdge = {
+  from: string;
+  to: string;
+  kind: ContextIndexEdgeKind;
+  reason?: string;
+};
+
+type ProjectContextIndex = {
+  schemaVersion: 1;
+  projectId?: string;
+  profileMode?: string;
+  source: "onboarding-record" | "approved-workflow" | "manual";
+  summary: string;
+  generatedAt: string;
+  updatedAt: string;
+  policy: Required<ContextIndexSettings>;
+  nodes: ContextIndexNode[];
+  edges: ContextIndexEdge[];
+  citations: ContextIndexCitation[];
+  warnings: string[];
 };
 
 type TechRole = "frontend" | "backend" | "database" | "mobile" | "devops" | "data" | "docs" | "runtime";
@@ -396,6 +451,9 @@ const IMAGE_EXTENSIONS = ["png", "jpg", "jpeg", "gif", "webp", "bmp"] as const;
 const ORCHESTRATION_MODES = ["solo-first", "bounded-subagents", "parallel-readonly"] as const;
 const REVIEW_LENSES = ["correctness", "tests", "scope", "security", "docs", "release", "package"] as const;
 const ORCHESTRATION_ROLES = ["parent", "company-scout", "company-planner", "company-worker", "company-reviewer", "company-oracle"] as const;
+const CONTEXT_INDEX_NODE_KINDS = ["profile", "tech", "module", "command", "doc", "decision", "risk", "memory", "task", "verify", "context"] as const;
+const CONTEXT_INDEX_EDGE_KINDS = ["uses_tech", "depends_on", "verified_by", "protected_by", "documented_by", "derived_from", "updates", "relates_to"] as const;
+const CONTEXT_INDEX_FILE = ".pi/context-index.json";
 const TECH_STACK_MANIFEST_FILE = ".pi/tech-stack.json";
 const TECH_CONTEXT_DIR = ".pi/tech-context";
 
@@ -467,6 +525,17 @@ const DEFAULT_MEMORY_SETTINGS: Required<MemorySettings> = {
   writePolicy: "explicit-only",
   maxInjectedChars: 4000,
   externalPackages: []
+};
+
+const DEFAULT_CONTEXT_INDEX_SETTINGS: Required<ContextIndexSettings> = {
+  enabled: true,
+  path: CONTEXT_INDEX_FILE,
+  writePolicy: "onboarding-record",
+  requireCitations: true,
+  maxNodes: 120,
+  maxEdges: 240,
+  includeTechStack: true,
+  includeMemoryPointers: true
 };
 
 const DEFAULT_RUNTIME_POLICY: Required<RuntimePolicySettings> = {
@@ -585,6 +654,9 @@ const DEFAULT_POLICY: BasePolicy = {
       "company_memory_note",
       "company_memory_search",
       "company_memory_citation_record",
+      "company_context_index_status",
+      "company_context_index_record",
+      "company_context_index_search",
       "company_profile_options",
       "company_profile_apply",
       "company_profile_tech_options",
@@ -2951,6 +3023,394 @@ function writeProjectOnboarding(cwd: string, snapshot: ProjectOnboardingSnapshot
   return safeSnapshot;
 }
 
+function resolveContextIndexSettings(profile: ProjectProfile): Required<ContextIndexSettings> {
+  const configured = profile.contextIndex ?? {};
+  const maxNodes = Number.isFinite(configured.maxNodes) ? Math.max(1, Math.min(500, Math.trunc(configured.maxNodes ?? DEFAULT_CONTEXT_INDEX_SETTINGS.maxNodes))) : DEFAULT_CONTEXT_INDEX_SETTINGS.maxNodes;
+  const maxEdges = Number.isFinite(configured.maxEdges) ? Math.max(0, Math.min(1000, Math.trunc(configured.maxEdges ?? DEFAULT_CONTEXT_INDEX_SETTINGS.maxEdges))) : DEFAULT_CONTEXT_INDEX_SETTINGS.maxEdges;
+  return {
+    ...DEFAULT_CONTEXT_INDEX_SETTINGS,
+    ...configured,
+    path: configured.path?.trim() || DEFAULT_CONTEXT_INDEX_SETTINGS.path,
+    maxNodes,
+    maxEdges
+  };
+}
+
+function contextIndexPath(cwd: string, settings: Required<ContextIndexSettings>): string {
+  return projectFilePath(cwd, settings.path);
+}
+
+function safeContextIndexId(value: unknown, fallback: string): string {
+  const raw = typeof value === "string" ? value.trim().toLowerCase() : "";
+  const normalized = raw
+    .replace(/[^a-z0-9:_./-]+/g, "-")
+    .replace(/\/{2,}/g, "/")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 140);
+  return normalized || fallback;
+}
+
+function contextNodeId(kind: ContextIndexNodeKind, value: string | undefined): string {
+  return `${kind}:${safeTaskId(value || kind)}`;
+}
+
+function sanitizeContextIndexCitation(citation: ContextIndexCitation | undefined): ContextIndexCitation | undefined {
+  if (!citation || typeof citation !== "object") return undefined;
+  const pathValue = typeof citation.path === "string" ? redactBoundedText(citation.path, 240) : undefined;
+  const reasonValue = typeof citation.reason === "string" ? redactBoundedText(citation.reason, 300) : undefined;
+  const urlValue = typeof citation.url === "string" ? redactBoundedText(citation.url, 300) : undefined;
+  if (!pathValue && !reasonValue && !urlValue) return undefined;
+  return {
+    ...(pathValue ? { path: pathValue } : {}),
+    ...(reasonValue ? { reason: reasonValue } : {}),
+    ...(urlValue ? { url: urlValue } : {})
+  };
+}
+
+function sanitizeContextIndexCitations(input: unknown, maxItems = 20): ContextIndexCitation[] {
+  return (Array.isArray(input) ? input : [])
+    .slice(0, maxItems)
+    .map((item) => sanitizeContextIndexCitation(item as ContextIndexCitation))
+    .filter((item): item is ContextIndexCitation => Boolean(item));
+}
+
+function sanitizeContextIndexNode(input: ContextIndexNode, index: number): ContextIndexNode {
+  const kind = CONTEXT_INDEX_NODE_KINDS.includes(input.kind as ContextIndexNodeKind) ? input.kind : "context";
+  const label = redactBoundedText(input.label, 160)?.trim() || `${kind}-${index + 1}`;
+  const id = safeContextIndexId(input.id, contextNodeId(kind, label));
+  const pathValue = typeof input.path === "string" ? redactBoundedText(input.path, 240) : undefined;
+  return {
+    id,
+    kind,
+    label,
+    ...(input.summary ? { summary: redactBoundedText(input.summary, 500) } : {}),
+    ...(pathValue ? { path: pathValue } : {}),
+    ...(Array.isArray(input.tags) ? { tags: redactBoundedTextArray(input.tags, 16, 60) } : {}),
+    ...(input.citations ? { citations: sanitizeContextIndexCitations(input.citations, 12) } : {}),
+    updatedAt: nowIso()
+  };
+}
+
+function sanitizeContextIndexEdge(input: ContextIndexEdge): ContextIndexEdge | undefined {
+  const from = safeContextIndexId(input.from, "");
+  const to = safeContextIndexId(input.to, "");
+  if (!from || !to) return undefined;
+  const kind = CONTEXT_INDEX_EDGE_KINDS.includes(input.kind as ContextIndexEdgeKind) ? input.kind : "relates_to";
+  return {
+    from,
+    to,
+    kind,
+    ...(input.reason ? { reason: redactBoundedText(input.reason, 240) } : {})
+  };
+}
+
+function uniqueContextIndexNodes(nodes: ContextIndexNode[], maxNodes: number): ContextIndexNode[] {
+  const seen = new Map<string, ContextIndexNode>();
+  for (const node of nodes) {
+    if (!seen.has(node.id)) {
+      seen.set(node.id, node);
+      continue;
+    }
+    const existing = seen.get(node.id)!;
+    seen.set(node.id, {
+      ...existing,
+      ...node,
+      citations: [...(existing.citations ?? []), ...(node.citations ?? [])].slice(0, 12),
+      tags: Array.from(new Set([...(existing.tags ?? []), ...(node.tags ?? [])])).slice(0, 16)
+    });
+  }
+  return Array.from(seen.values()).slice(0, maxNodes);
+}
+
+function uniqueContextIndexEdges(edges: ContextIndexEdge[], maxEdges: number): ContextIndexEdge[] {
+  const seen = new Map<string, ContextIndexEdge>();
+  for (const edge of edges) {
+    const key = `${edge.from}\u0000${edge.kind}\u0000${edge.to}`;
+    if (!seen.has(key)) seen.set(key, edge);
+  }
+  return Array.from(seen.values()).slice(0, maxEdges);
+}
+
+function baseContextIndexGraph(
+  cwd: string,
+  profile: ProjectProfile,
+  settings: Required<ContextIndexSettings>,
+  sourceFiles: ContextIndexCitation[] = []
+): { nodes: ContextIndexNode[]; edges: ContextIndexEdge[]; citations: ContextIndexCitation[]; warnings: string[] } {
+  const now = nowIso();
+  const profileId = contextNodeId("profile", profile.mode ?? profile.projectId ?? "unprofiled");
+  const contextId = contextNodeId("context", ".pi/project-context.md");
+  const nodes: ContextIndexNode[] = [
+    {
+      id: profileId,
+      kind: "profile",
+      label: profile.mode ?? profile.projectId ?? "unprofiled",
+      summary: "Active Pi Company profile; advisory context only, enforcement remains in guard policy.",
+      path: ".pi/company-profile.json",
+      tags: ["profile"],
+      citations: [{ path: ".pi/company-profile.json", reason: "Active project profile" }],
+      updatedAt: now
+    },
+    {
+      id: contextId,
+      kind: "context",
+      label: ".pi/project-context.md",
+      summary: "Concise project snapshot generated during onboarding.",
+      path: ".pi/project-context.md",
+      tags: ["snapshot", "advisory"],
+      citations: [{ path: ".pi/project-context.md", reason: "Project onboarding snapshot" }],
+      updatedAt: now
+    }
+  ];
+  const edges: ContextIndexEdge[] = [
+    { from: profileId, to: contextId, kind: "documented_by", reason: "Profile starts from the project context snapshot." }
+  ];
+  const citations = [...sourceFiles];
+  const warnings: string[] = [];
+
+  if (settings.includeTechStack) {
+    const manifest = readJsonFile<TechStackManifest>(techStackPath(cwd));
+    if (manifest?.selected?.length) {
+      const manifestId = contextNodeId("context", TECH_STACK_MANIFEST_FILE);
+      nodes.push({
+        id: manifestId,
+        kind: "context",
+        label: TECH_STACK_MANIFEST_FILE,
+        summary: "Selected profile tech manifest with Context7-ready placeholders.",
+        path: TECH_STACK_MANIFEST_FILE,
+        tags: ["tech-stack", "context7"],
+        citations: [{ path: TECH_STACK_MANIFEST_FILE, reason: "Selected tech stack manifest" }],
+        updatedAt: manifest.updatedAt || now
+      });
+      edges.push({ from: profileId, to: manifestId, kind: "documented_by", reason: "Profile records selected role tech." });
+      for (const entry of manifest.selected) {
+        const techId = contextNodeId("tech", entry.id);
+        const nodeCitations: ContextIndexCitation[] = [{ path: entry.context7.contextFile, reason: entry.context7.status === "recorded" ? "Concise Context7 snapshot" : "Pending Context7 snapshot placeholder" }];
+        nodes.push({
+          id: techId,
+          kind: "tech",
+          label: `${entry.role}:${entry.id}`,
+          summary: entry.description,
+          path: entry.context7.contextFile,
+          tags: [entry.role, ...entry.topics].slice(0, 16),
+          citations: nodeCitations,
+          updatedAt: entry.context7.retrievedAt ?? manifest.updatedAt ?? now
+        });
+        edges.push({ from: profileId, to: techId, kind: "uses_tech", reason: `${entry.role} role selection` });
+        edges.push({ from: techId, to: manifestId, kind: "derived_from", reason: "Selected from tech-stack manifest." });
+        if (entry.context7.status !== "recorded") warnings.push(`tech context pending: ${entry.id}`);
+      }
+    }
+  }
+
+  for (const [name, commands] of Object.entries(profile.verifyCommands ?? {})) {
+    const verifyId = contextNodeId("verify", name);
+    nodes.push({
+      id: verifyId,
+      kind: "verify",
+      label: name,
+      summary: commands.join(" && ").slice(0, 500),
+      tags: ["verify"],
+      citations: [{ path: ".pi/company-profile.json", reason: `verifyCommands.${name}` }],
+      updatedAt: now
+    });
+    edges.push({ from: profileId, to: verifyId, kind: "verified_by", reason: `Profile verify group ${name}` });
+  }
+
+  if ((profile.protectedPaths ?? []).length || (profile.readOnlyPaths ?? []).length) {
+    const riskId = contextNodeId("risk", "protected-paths");
+    nodes.push({
+      id: riskId,
+      kind: "risk",
+      label: "protected/read-only paths",
+      summary: "Protected and read-only path boundaries are enforced by the guard; index entry is informational.",
+      tags: ["security", "paths"],
+      citations: [{ path: ".pi/company-profile.json", reason: "protectedPaths/readOnlyPaths" }],
+      updatedAt: now
+    });
+    edges.push({ from: profileId, to: riskId, kind: "protected_by", reason: "Profile declares protected/read-only paths." });
+  }
+
+  if (settings.includeMemoryPointers) {
+    const memory = resolveMemorySettings(profile);
+    for (const rel of [memory.summaryFile, memory.handbookFile]) {
+      let exists = false;
+      try {
+        exists = fs.existsSync(projectFilePath(cwd, rel));
+      } catch {
+        exists = false;
+      }
+      if (!exists) continue;
+      const memoryId = contextNodeId("memory", rel);
+      nodes.push({
+        id: memoryId,
+        kind: "memory",
+        label: rel,
+        summary: "Project memory pointer. Treat as advisory; verify against current repository files.",
+        path: rel,
+        tags: ["memory", "advisory"],
+        citations: [{ path: rel, reason: "Configured project memory pointer" }],
+        updatedAt: now
+      });
+      edges.push({ from: contextId, to: memoryId, kind: "relates_to", reason: "Memory can reduce repeated scout but is not authoritative." });
+    }
+  }
+
+  for (const citation of sourceFiles.slice(0, 40)) {
+    if (!citation.path) continue;
+    const sourceId = contextNodeId("doc", citation.path);
+    nodes.push({
+      id: sourceId,
+      kind: "doc",
+      label: citation.path,
+      summary: citation.reason ?? "Onboarding source file",
+      path: citation.path,
+      tags: ["source"],
+      citations: [citation],
+      updatedAt: now
+    });
+    edges.push({ from: contextId, to: sourceId, kind: "derived_from", reason: citation.reason ?? "Onboarding source file" });
+  }
+
+  return { nodes, edges, citations, warnings };
+}
+
+function writeContextIndex(cwd: string, profile: ProjectProfile, input: {
+  source: ProjectContextIndex["source"];
+  summary: string;
+  sourceFiles?: ContextIndexCitation[];
+  nodes?: ContextIndexNode[];
+  edges?: ContextIndexEdge[];
+  citations?: ContextIndexCitation[];
+}): ProjectContextIndex {
+  const settings = resolveContextIndexSettings(profile);
+  if (!settings.enabled || settings.writePolicy === "off") {
+    throw new Error("Project context index is disabled by profile.");
+  }
+  const target = contextIndexPath(cwd, settings);
+  const sourceFiles = sanitizeContextIndexCitations(input.sourceFiles, 80);
+  const graph = baseContextIndexGraph(cwd, profile, settings, sourceFiles);
+  const customNodes = (Array.isArray(input.nodes) ? input.nodes : []).map((node, index) => sanitizeContextIndexNode(node, index));
+  const customEdges = (Array.isArray(input.edges) ? input.edges : [])
+    .map((edge) => sanitizeContextIndexEdge(edge))
+    .filter((edge): edge is ContextIndexEdge => Boolean(edge));
+  const citations = [
+    ...graph.citations,
+    ...sanitizeContextIndexCitations(input.citations, 80)
+  ];
+  const warnings = [...graph.warnings];
+  if (settings.requireCitations && citations.length === 0) {
+    warnings.push("no citations recorded; context index should cite project files or docs");
+  }
+  const now = nowIso();
+  const existing = readJsonFile<ProjectContextIndex>(target);
+  const existingGeneratedAt = existing?.generatedAt && Date.parse(existing.generatedAt) > 0
+    ? existing.generatedAt
+    : now;
+  const index: ProjectContextIndex = {
+    schemaVersion: 1,
+    projectId: profile.projectId,
+    profileMode: profile.mode,
+    source: input.source,
+    summary: redactBoundedText(input.summary, 1200)?.trim() || "Project context index",
+    generatedAt: existingGeneratedAt,
+    updatedAt: now,
+    policy: settings,
+    nodes: uniqueContextIndexNodes([...graph.nodes, ...customNodes], settings.maxNodes),
+    edges: uniqueContextIndexEdges([...graph.edges, ...customEdges], settings.maxEdges),
+    citations: citations.slice(0, 80),
+    warnings: Array.from(new Set(warnings)).slice(0, 40)
+  };
+  fs.mkdirSync(path.dirname(target), { recursive: true });
+  fs.writeFileSync(target, `${JSON.stringify(redactForStorage(index), null, 2)}\n`);
+  return index;
+}
+
+function buildContextIndexStatus(cwd: string, profile: ProjectProfile): {
+  enabled: boolean;
+  path: string;
+  exists: boolean;
+  writePolicy: Required<ContextIndexSettings>["writePolicy"];
+  nodes: number;
+  edges: number;
+  citations: number;
+  updatedAt?: string;
+  warnings: string[];
+} {
+  const settings = resolveContextIndexSettings(profile);
+  const warnings: string[] = [];
+  let index: ProjectContextIndex | undefined;
+  let exists = false;
+  try {
+    const target = contextIndexPath(cwd, settings);
+    exists = fs.existsSync(target);
+    index = readJsonFile<ProjectContextIndex>(target);
+  } catch (error) {
+    warnings.push(error instanceof Error ? error.message : String(error));
+  }
+  if (!settings.enabled || settings.writePolicy === "off") {
+    warnings.push("context index disabled by profile");
+  } else if (!exists) {
+    warnings.push("context index missing; run /onboard-project or record company_context_index_record");
+  }
+  if (exists && !index) warnings.push("context index exists but cannot be parsed");
+  if (index && settings.requireCitations && index.citations.length === 0) warnings.push("context index has no citations");
+
+  const manifest = readJsonFile<TechStackManifest>(techStackPath(cwd));
+  if (manifest?.selected?.length && index) {
+    const indexedTechIds = new Set(index.nodes.filter((node) => node.kind === "tech").map((node) => node.id));
+    for (const entry of manifest.selected) {
+      if (!indexedTechIds.has(contextNodeId("tech", entry.id))) warnings.push(`selected tech missing from context index: ${entry.id}`);
+      if (entry.context7.status !== "recorded") warnings.push(`tech context pending: ${entry.id}`);
+    }
+    if (index.updatedAt && manifest.updatedAt && Date.parse(index.updatedAt) < Date.parse(manifest.updatedAt)) {
+      warnings.push("context index is older than tech-stack manifest");
+    }
+  }
+
+  const onboarding = readJsonFile<ProjectOnboardingSnapshot>(onboardingStateFilePath(cwd));
+  if (index?.updatedAt && onboarding?.recordedAt && Date.parse(index.updatedAt) < Date.parse(onboarding.recordedAt)) {
+    warnings.push("context index is older than project onboarding snapshot");
+  }
+
+  return {
+    enabled: settings.enabled,
+    path: settings.path,
+    exists,
+    writePolicy: settings.writePolicy,
+    nodes: index?.nodes.length ?? 0,
+    edges: index?.edges.length ?? 0,
+    citations: index?.citations.length ?? 0,
+    updatedAt: index?.updatedAt,
+    warnings: Array.from(new Set([...(index?.warnings ?? []), ...warnings])).slice(0, 40)
+  };
+}
+
+function searchContextIndex(cwd: string, profile: ProjectProfile, query: string, limit: number): Array<{ id: string; kind: string; label: string; match: string }> {
+  const settings = resolveContextIndexSettings(profile);
+  if (!settings.enabled) return [];
+  const index = readJsonFile<ProjectContextIndex>(contextIndexPath(cwd, settings));
+  if (!index) return [];
+  const needle = query.trim().toLowerCase();
+  if (!needle) return [];
+  const results: Array<{ id: string; kind: string; label: string; match: string }> = [];
+  for (const node of index.nodes) {
+    const haystack = [
+      node.id,
+      node.kind,
+      node.label,
+      node.summary,
+      node.path,
+      ...(node.tags ?? []),
+      ...(node.citations ?? []).flatMap((citation) => [citation.path, citation.reason, citation.url])
+    ].filter(Boolean).join(" ");
+    if (!haystack.toLowerCase().includes(needle)) continue;
+    results.push({ id: node.id, kind: node.kind, label: node.label, match: (node.summary ?? node.path ?? node.label).slice(0, 240) });
+    if (results.length >= limit) return results;
+  }
+  return results;
+}
+
 function adapterProfilePath(extensionDir: string, profileName: string): string | undefined {
   const platformRoot = findPlatformRoot(extensionDir);
   const safeName = profileName.trim();
@@ -4334,6 +4794,7 @@ export default function companyGuard(pi: ExtensionAPI) {
       const permissionProfile = resolvePermissionProfile(profile, policy, permissionOverrideFromContext(ctx));
       const pathPolicy = effectiveProtectedPaths(policy, profile);
       const orchestrationPolicy = resolveOrchestrationPolicy(profile, policy);
+      const contextIndex = buildContextIndexStatus(ctx.cwd, profile);
       const requiredContext = [
         ...policy.defaultRequiredContext,
         ...(profile.requiredContext ?? [])
@@ -4356,6 +4817,7 @@ export default function companyGuard(pi: ExtensionAPI) {
           path: ".pi/project-context.md",
           exists: fs.existsSync(projectContextFilePath(ctx.cwd))
         },
+        contextIndex,
         protectedPaths: profile.protectedPaths ?? [],
         shellProtectedPaths: profile.shellProtectedPaths ?? profile.protectedPaths ?? [],
         readOnlyPaths: profile.readOnlyPaths ?? [],
@@ -4390,6 +4852,7 @@ export default function companyGuard(pi: ExtensionAPI) {
         `mode: ${payload.mode ?? "unknown"}`,
         `profile: ${payload.profile.path} (${payload.profile.exists ? "exists" : "missing"})`,
         `projectContext: ${payload.projectContext.path} (${payload.projectContext.exists ? "exists" : "missing"})`,
+        `contextIndex: ${payload.contextIndex.path} (${payload.contextIndex.exists ? `${payload.contextIndex.nodes} nodes` : "missing"})`,
         `requiredContext: ${payload.requiredContext.join(", ") || "none"}`,
         `verifyCommands: ${Object.keys(payload.verifyCommands).join(", ") || "none"}`,
         `mcpCapabilities: ${payload.mcpCapabilities.join(", ") || "none"}`,
@@ -4741,6 +5204,133 @@ export default function companyGuard(pi: ExtensionAPI) {
   });
 
   pi.registerTool({
+    name: "company_context_index_status",
+    label: "Company Context Index Status",
+    description: "Return the project context index status, node counts, citations, and stale/pending warnings.",
+    promptSnippet: "Use this during project/profile init to check whether the compact context graph is present and fresh.",
+    promptGuidelines: [
+      "Treat the context index as advisory; verify with current repository files before editing.",
+      "Do not use it as a security boundary or as the only source of truth.",
+      "If warnings mention pending tech context, refresh via Context7 and record concise snapshots."
+    ],
+    parameters: Type.Object({
+      detail: Type.Optional(StringEnum(["concise", "full"] as const))
+    }),
+    async execute(_toolCallId, params, _signal, _onUpdate, ctx) {
+      const profile = loadProfileFromContext(ctx);
+      const status = buildContextIndexStatus(ctx.cwd, profile);
+      const text = params.detail === "full"
+        ? JSON.stringify(status, null, 2)
+        : [
+            `contextIndex: ${status.enabled ? "enabled" : "off"}`,
+            `path: ${status.path} (${status.exists ? "exists" : "missing"})`,
+            `nodes: ${status.nodes}`,
+            `edges: ${status.edges}`,
+            `citations: ${status.citations}`,
+            `updatedAt: ${status.updatedAt ?? "never"}`,
+            `warnings: ${status.warnings.join("; ") || "none"}`
+          ].join("\n");
+      return { content: [{ type: "text", text }], details: status };
+    }
+  });
+
+  pi.registerTool({
+    name: "company_context_index_search",
+    label: "Company Context Index Search",
+    description: "Keyword-search the compact project context index.",
+    promptSnippet: "Search the project context index before re-scouting broad repository structure.",
+    promptGuidelines: [
+      "Use hits as navigation hints only.",
+      "Open and verify cited files before changing code."
+    ],
+    parameters: Type.Object({
+      query: Type.String({ minLength: 1 }),
+      limit: Type.Optional(Type.Number())
+    }),
+    async execute(_toolCallId, params, _signal, _onUpdate, ctx) {
+      const profile = loadProfileFromContext(ctx);
+      const limit = Math.max(1, Math.min(20, Math.trunc(params.limit ?? 10)));
+      try {
+        const matches = searchContextIndex(ctx.cwd, profile, params.query, limit);
+        const text = matches.length
+          ? matches.map((match) => `${match.id} [${match.kind}] ${match.label}: ${match.match}`).join("\n")
+          : "No context index matches.";
+        return { content: [{ type: "text", text }], details: { query: params.query, matches } };
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        return { content: [{ type: "text", text: `Context index search failed: ${message}` }], isError: true };
+      }
+    }
+  });
+
+  pi.registerTool({
+    name: "company_context_index_record",
+    label: "Company Context Index Record",
+    description: "Persist a compact project context index with cited nodes and edges.",
+    promptSnippet: "Record concise profile/project/tech/task context after onboarding or an approved handoff summary.",
+    promptGuidelines: [
+      "Only record stable, verified, non-secret project facts.",
+      "Keep nodes small and cite project files/docs; do not save raw transcripts or large source excerpts.",
+      "Memory and context index entries are advisory and must be re-verified before editing."
+    ],
+    parameters: Type.Object({
+      summary: Type.String({ minLength: 10 }),
+      source: Type.Optional(StringEnum(["onboarding-record", "approved-workflow", "manual"] as const)),
+      sourceFiles: Type.Optional(Type.Array(Type.Object({
+        path: Type.Optional(Type.String()),
+        reason: Type.Optional(Type.String()),
+        url: Type.Optional(Type.String())
+      }))),
+      nodes: Type.Optional(Type.Array(Type.Object({
+        id: Type.String({ minLength: 1 }),
+        kind: StringEnum(CONTEXT_INDEX_NODE_KINDS),
+        label: Type.String({ minLength: 1 }),
+        summary: Type.Optional(Type.String()),
+        path: Type.Optional(Type.String()),
+        tags: Type.Optional(Type.Array(Type.String())),
+        citations: Type.Optional(Type.Array(Type.Object({
+          path: Type.Optional(Type.String()),
+          reason: Type.Optional(Type.String()),
+          url: Type.Optional(Type.String())
+        })))
+      }))),
+      edges: Type.Optional(Type.Array(Type.Object({
+        from: Type.String({ minLength: 1 }),
+        to: Type.String({ minLength: 1 }),
+        kind: StringEnum(CONTEXT_INDEX_EDGE_KINDS),
+        reason: Type.Optional(Type.String())
+      }))),
+      citations: Type.Optional(Type.Array(Type.Object({
+        path: Type.Optional(Type.String()),
+        reason: Type.Optional(Type.String()),
+        url: Type.Optional(Type.String())
+      })))
+    }),
+    async execute(_toolCallId, params, _signal, _onUpdate, ctx) {
+      const profile = loadProfileFromContext(ctx);
+      try {
+        const index = writeContextIndex(ctx.cwd, profile, {
+          source: params.source ?? "approved-workflow",
+          summary: params.summary,
+          sourceFiles: params.sourceFiles,
+          nodes: params.nodes,
+          edges: params.edges,
+          citations: params.citations
+        });
+        appendTrace(ctx.cwd, { event: "context_index_record", path: index.policy.path, nodes: index.nodes.length, edges: index.edges.length, warnings: index.warnings });
+        appendSessionTrace(pi, { event: "context_index_record", path: index.policy.path, nodes: index.nodes.length, edges: index.edges.length, warnings: index.warnings });
+        return {
+          content: [{ type: "text", text: `Context index recorded: ${index.policy.path} (${index.nodes.length} nodes, ${index.edges.length} edges, ${index.citations.length} citations)` }],
+          details: index
+        };
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        return { content: [{ type: "text", text: `Context index record failed: ${message}` }], isError: true };
+      }
+    }
+  });
+
+  pi.registerTool({
     name: "company_profile_options",
     label: "Company Profile Options",
     description: "List available company project profiles and recommend one for the current repository.",
@@ -4986,12 +5576,24 @@ export default function companyGuard(pi: ExtensionAPI) {
         recordedAt: nowIso()
       };
       writeProjectOnboarding(ctx.cwd, snapshot, params.markdown);
-      appendTrace(ctx.cwd, { event: "project_onboarding_record", contextFile: snapshot.contextFile, sourceFiles: params.sourceFiles });
-      appendSessionTrace(pi, { event: "project_onboarding_record", contextFile: snapshot.contextFile, sourceFiles: params.sourceFiles });
+      let contextIndex: ProjectContextIndex | undefined;
+      let contextIndexError: string | undefined;
+      try {
+        contextIndex = writeContextIndex(ctx.cwd, profile, {
+          source: "onboarding-record",
+          summary: snapshot.summary,
+          sourceFiles: snapshot.sourceFiles,
+          citations: snapshot.sourceFiles
+        });
+      } catch (error) {
+        contextIndexError = error instanceof Error ? error.message : String(error);
+      }
+      appendTrace(ctx.cwd, { event: "project_onboarding_record", contextFile: snapshot.contextFile, sourceFiles: params.sourceFiles, contextIndex: contextIndex?.policy.path, contextIndexError });
+      appendSessionTrace(pi, { event: "project_onboarding_record", contextFile: snapshot.contextFile, sourceFiles: params.sourceFiles, contextIndex: contextIndex?.policy.path, contextIndexError });
 
       return {
-        content: [{ type: "text", text: "Project onboarding snapshot recorded: .pi/project-context.md" }],
-        details: snapshot
+        content: [{ type: "text", text: `Project onboarding snapshot recorded: .pi/project-context.md${contextIndex ? ` and ${contextIndex.policy.path}` : contextIndexError ? ` (context index skipped: ${contextIndexError})` : ""}` }],
+        details: { ...snapshot, contextIndex, contextIndexError }
       };
     }
   });
@@ -5764,6 +6366,57 @@ export default function companyGuard(pi: ExtensionAPI) {
           ].join("\n"),
           display: true,
           details: settings
+        },
+        { triggerTurn: false }
+      );
+    }
+  });
+
+  pi.registerCommand("context-index", {
+    description: "Show or search the compact project context index without a model follow-up",
+    handler: async (args, ctx) => {
+      const raw = String(args ?? "").trim();
+      const profile = loadProfileFromContext(ctx);
+      if (/^search\s+/i.test(raw)) {
+        const query = raw.replace(/^search\s+/i, "").trim();
+        let matches: Array<{ id: string; kind: string; label: string; match: string }> = [];
+        let error: string | undefined;
+        try {
+          matches = query ? searchContextIndex(ctx.cwd, profile, query, 8) : [];
+        } catch (caught) {
+          error = caught instanceof Error ? caught.message : String(caught);
+        }
+        pi.sendMessage(
+          {
+            customType: "company-context-index-search",
+            content: error
+              ? `Context index search failed: ${error}`
+              : matches.length
+              ? matches.map((match) => `${match.id} [${match.kind}] ${match.label}: ${match.match}`).join("\n")
+              : "No context index matches.",
+            display: true,
+            details: { query, matches, error }
+          },
+          { triggerTurn: false }
+        );
+        return;
+      }
+      const status = buildContextIndexStatus(ctx.cwd, profile);
+      ctx.ui.notify(`Context index: ${status.exists ? `${status.nodes} nodes` : "missing"}`, status.warnings.length ? "warning" : "info");
+      pi.sendMessage(
+        {
+          customType: "company-context-index-status",
+          content: [
+            `contextIndex: ${status.enabled ? "enabled" : "off"}`,
+            `path: ${status.path} (${status.exists ? "exists" : "missing"})`,
+            `nodes: ${status.nodes}`,
+            `edges: ${status.edges}`,
+            `citations: ${status.citations}`,
+            `updatedAt: ${status.updatedAt ?? "never"}`,
+            `warnings: ${status.warnings.join("; ") || "none"}`
+          ].join("\n"),
+          display: true,
+          details: status
         },
         { triggerTurn: false }
       );

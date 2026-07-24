@@ -53,6 +53,9 @@ Inside Pi, slash commands can switch the current session without writing the pro
 - `company_memory_note`
 - `company_memory_search`
 - `company_memory_citation_record`
+- `company_context_index_status`
+- `company_context_index_record`
+- `company_context_index_search`
 - `company_profile_options`
 - `company_profile_apply`
 - `company_profile_tech_options`
@@ -70,6 +73,7 @@ Inside Pi, slash commands can switch the current session without writing the pro
 - `/company-commands`: explain terminal, Pi, MCP, model, memory, and subagent commands in Vietnamese.
 - `/permission-status`, `/read-only`, `/workspace-write`, `/full-access`: inspect or switch the current session permission profile.
 - `/onboard-project`: first-run project context snapshot after login/model selection.
+- `/context-index`: inspect or search the compact project context index without a model follow-up.
 - `/profile`: show a short profile status, list options, apply a profile directly, or run select-style profile/tech setup without a model follow-up. Short aliases include `fe`, `be`, `full`, and `be-fe`.
 - `/profile tech`: show/select/apply the project tech stack for the active profile; fullstack setup selects frontend, backend, and database tech.
 - `/memory-policy`: inspect project memory policy and explicit remember workflow.

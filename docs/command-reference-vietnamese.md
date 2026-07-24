@@ -33,6 +33,7 @@ Trong Pi:
 /model
 /company-commands
 /onboard-project
+/context-index
 /memory-policy
 ```
 
@@ -75,7 +76,7 @@ Nếu task còn mơ hồ:
 Pi Company dùng ít namespace nhưng mỗi namespace có subcommand rõ:
 
 - `/profile` là namespace duy nhất cho profile và tech stack; không dùng `/profiles` hoặc `/profile-tech` riêng.
-- Status command như `/profile`, `/permission-status`, `/company-orchestration` phải ngắn và không gọi model follow-up.
+- Status command như `/profile`, `/permission-status`, `/context-index`, `/company-orchestration` phải ngắn và không gọi model follow-up.
 - Khi user cần chọn, ưu tiên select option. Khi UI select không khả dụng, trả về exact apply command để chạy ngay.
 - Long list chỉ hiện khi gõ `list`, `options`, hoặc `/company-commands <topic>`.
 - Hành động rủi ro như stage rộng, push, PR write, deploy, publish, thay đổi database hoặc external-provider write vẫn cần xác nhận người vận hành.
@@ -92,7 +93,9 @@ Các command này đến từ package `pi-company-core`.
 | `/workspace-write` | Chuyển session sang write chuẩn | Khi quay về mode implement bình thường. | Guard trở về profile implementation mặc định. |
 | `/full-access` | Bật trusted full-access | Khi repo đã trusted và muốn agent có quyền workspace rộng hơn. | Tool/scope autonomy được nới trong session; protected paths/redaction/human gates vẫn bật. |
 | `/full-access <task>` | Bật full-access rồi chạy task | Khi muốn một lệnh vừa cấp quyền vừa giao việc. | Session chuyển sang `trusted-full-access`, phần `<task>` được gửi tiếp cho agent. |
-| `/onboard-project` | Đọc project lần đầu | Lần đầu gắn repo vào Pi, sau `/login` và `/model`. | Tạo/cập nhật `.pi/company-profile.json`, `.pi/project-context.md`, `.pi/memory/*`. |
+| `/onboard-project` | Đọc project lần đầu | Lần đầu gắn repo vào Pi, sau `/login` và `/model`. | Tạo/cập nhật `.pi/company-profile.json`, `.pi/project-context.md`, `.pi/context-index.json`, `.pi/memory/*`. |
+| `/context-index` | Xem bản đồ context | Khi muốn biết context index đã generate chưa mà không burn token. | Hiện node/edge/citation/warning ngắn, không gọi model follow-up. |
+| `/context-index search <keyword>` | Tìm trong bản đồ context | Khi cần điểm vào module/tech/risk trước khi scout rộng. | Trả các node khớp keyword; vẫn phải đọc file được cite trước khi sửa. |
 | `/profile` | Xem profile ngắn | Khi muốn biết mode hiện tại mà không burn token. | Hiện status ngắn, không gọi model follow-up. |
 | `/profile list` | Xem profile có sẵn | Khi chưa nhớ tên profile. | Hiện list compact. |
 | `/profile <profile>` | Áp profile ngay | Khi đã biết profile muốn dùng. | Ghi `.pi/company-profile.json` và lock ngay, không hỏi vòng. |
@@ -172,7 +175,7 @@ Tech stack option theo profile:
 | `data` | Data + database optional | `data=dbt database=postgres` |
 | `docs` | Docs | `docs=mintlify` |
 
-Sau khi chọn tech, platform tạo `.pi/tech-stack.json` và các file `.pi/tech-context/<tech>.json`. File context chỉ nên chứa tóm tắt ngắn/citation từ Context7, không lưu nguyên văn docs dài, token, session, hoặc secret.
+Sau khi chọn tech, platform tạo `.pi/tech-stack.json` và các file `.pi/tech-context/<tech>.json`. `/onboard-project` sẽ đưa các pointer này vào `.pi/context-index.json`. File context chỉ nên chứa tóm tắt ngắn/citation từ Context7, không lưu nguyên văn docs dài, token, session, hoặc secret.
 
 ## Command native của Pi
 

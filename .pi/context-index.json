@@ -1,0 +1,219 @@
+{
+  "schemaVersion": 1,
+  "projectId": "pi-company-platform",
+  "profileMode": "platform-development",
+  "source": "manual",
+  "summary": "Compact advisory context index for the Pi Company Platform repository. Use it to navigate profile, runtime package, docs, scripts, verification, and release surfaces; verify cited files before editing.",
+  "generatedAt": "2026-07-23T16:38:30Z",
+  "updatedAt": "2026-07-23T16:38:30Z",
+  "policy": {
+    "enabled": true,
+    "path": ".pi/context-index.json",
+    "writePolicy": "onboarding-record",
+    "requireCitations": true,
+    "maxNodes": 120,
+    "maxEdges": 240,
+    "includeTechStack": true,
+    "includeMemoryPointers": true
+  },
+  "nodes": [
+    {
+      "id": "profile:platform-development",
+      "kind": "profile",
+      "label": "platform-development",
+      "summary": "Repository-local profile for Pi Company Platform development and release verification.",
+      "path": ".pi/company-profile.json",
+      "tags": [
+        "profile",
+        "platform"
+      ],
+      "citations": [
+        {
+          "path": ".pi/company-profile.json",
+          "reason": "Active project profile"
+        }
+      ],
+      "updatedAt": "2026-07-23T16:38:30Z"
+    },
+    {
+      "id": "context:project-context",
+      "kind": "context",
+      "label": ".pi/project-context.md",
+      "summary": "Reusable project snapshot for future tasks in this repository.",
+      "path": ".pi/project-context.md",
+      "tags": [
+        "snapshot",
+        "advisory"
+      ],
+      "citations": [
+        {
+          "path": ".pi/project-context.md",
+          "reason": "Project context snapshot"
+        }
+      ],
+      "updatedAt": "2026-07-23T16:38:30Z"
+    },
+    {
+      "id": "module:runtime-package",
+      "kind": "module",
+      "label": "packages/pi-company-core",
+      "summary": "Reusable Pi package content: guard extension, prompts, skills, subagents, policies, and capability logic.",
+      "path": "packages/pi-company-core",
+      "tags": [
+        "runtime",
+        "package",
+        "guard"
+      ],
+      "citations": [
+        {
+          "path": "packages/pi-company-core/README.md",
+          "reason": "Package tool/prompt overview"
+        }
+      ],
+      "updatedAt": "2026-07-23T16:38:30Z"
+    },
+    {
+      "id": "module:adapters",
+      "kind": "module",
+      "label": "adapters",
+      "summary": "Reusable project profile families for frontend, backend, fullstack, data, DevOps, mobile, docs, Python, and Node TypeScript projects.",
+      "path": "adapters",
+      "tags": [
+        "profile",
+        "adapter"
+      ],
+      "citations": [
+        {
+          "path": "docs/project-adapters.md",
+          "reason": "Adapter schema and runtime selection docs"
+        }
+      ],
+      "updatedAt": "2026-07-23T16:38:30Z"
+    },
+    {
+      "id": "module:scripts",
+      "kind": "module",
+      "label": "scripts",
+      "summary": "Setup, init, doctor, verification, release identity, Vercel preflight, benchmark, and helper commands.",
+      "path": "scripts",
+      "tags": [
+        "setup",
+        "doctor",
+        "verify"
+      ],
+      "citations": [
+        {
+          "path": "docs/distribution-standard.md",
+          "reason": "Distribution and rollout flow"
+        }
+      ],
+      "updatedAt": "2026-07-23T16:38:30Z"
+    },
+    {
+      "id": "verify:source",
+      "kind": "verify",
+      "label": "source",
+      "summary": "Primary release gate: bash scripts/verify-local.sh",
+      "tags": [
+        "verify"
+      ],
+      "citations": [
+        {
+          "path": ".pi/company-profile.json",
+          "reason": "verifyCommands.source"
+        }
+      ],
+      "updatedAt": "2026-07-23T16:38:30Z"
+    },
+    {
+      "id": "risk:protected-paths",
+      "kind": "risk",
+      "label": "protected paths",
+      "summary": "Secrets, git metadata, auth files, and environment files are protected by runtime guard policy.",
+      "tags": [
+        "security",
+        "protected-path"
+      ],
+      "citations": [
+        {
+          "path": ".pi/company-profile.json",
+          "reason": "protectedPaths"
+        },
+        {
+          "path": "docs/security-threat-model.md",
+          "reason": "Security model and residual boundaries"
+        }
+      ],
+      "updatedAt": "2026-07-23T16:38:30Z"
+    }
+  ],
+  "edges": [
+    {
+      "from": "profile:platform-development",
+      "to": "context:project-context",
+      "kind": "documented_by",
+      "reason": "Profile work starts from the project context snapshot."
+    },
+    {
+      "from": "profile:platform-development",
+      "to": "module:runtime-package",
+      "kind": "relates_to",
+      "reason": "Profile owns platform runtime/package changes."
+    },
+    {
+      "from": "profile:platform-development",
+      "to": "module:adapters",
+      "kind": "relates_to",
+      "reason": "Profiles/adapters define reusable project operating modes."
+    },
+    {
+      "from": "profile:platform-development",
+      "to": "verify:source",
+      "kind": "verified_by",
+      "reason": "Profile source changes use the verify-local release gate."
+    },
+    {
+      "from": "module:scripts",
+      "to": "verify:source",
+      "kind": "verified_by",
+      "reason": "Scripts participate in release verification."
+    },
+    {
+      "from": "profile:platform-development",
+      "to": "risk:protected-paths",
+      "kind": "protected_by",
+      "reason": "Profile declares protected path boundaries."
+    }
+  ],
+  "citations": [
+    {
+      "path": ".pi/company-profile.json",
+      "reason": "Active profile and verify policy"
+    },
+    {
+      "path": ".pi/project-context.md",
+      "reason": "Project context snapshot"
+    },
+    {
+      "path": "README.md",
+      "reason": "Team-facing platform summary"
+    },
+    {
+      "path": "docs/architecture.md",
+      "reason": "Architecture source of truth"
+    },
+    {
+      "path": "docs/project-adapters.md",
+      "reason": "Profile/adapter contract"
+    },
+    {
+      "path": "docs/mcp-and-tools.md",
+      "reason": "Tool and MCP catalog"
+    },
+    {
+      "path": "docs/distribution-standard.md",
+      "reason": "Release/distribution flow"
+    }
+  ],
+  "warnings": []
+}

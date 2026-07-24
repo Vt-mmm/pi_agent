@@ -43,6 +43,16 @@ Adapter mô tả project cho Pi core. Core không biết domain/project cụ th�
       "database": ["prisma"]
     }
   },
+  "contextIndex": {
+    "enabled": true,
+    "path": ".pi/context-index.json",
+    "writePolicy": "onboarding-record",
+    "requireCitations": true,
+    "maxNodes": 120,
+    "maxEdges": 240,
+    "includeTechStack": true,
+    "includeMemoryPointers": true
+  },
   "runtimePolicy": {
     "execPolicy": "enforce",
     "contextBudget": "enforce",
@@ -103,6 +113,8 @@ Kết quả ghi:
 - `.pi/tech-context/<tech>.json` placeholder.
 
 Sau khi agent đọc Context7 cho tech tương ứng, chỉ record snapshot ngắn bằng `company_profile_tech_context_record`; không lưu nguyên văn docs dài.
+
+`/onboard-project` cũng tạo `.pi/context-index.json`. Đây là advisory node/edge/citation map cho profile, tech, verify command, docs, risk và memory pointer; không dùng thay thế source hiện tại hoặc guard policy.
 
 Đổi profile sau này:
 

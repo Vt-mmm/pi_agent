@@ -129,6 +129,7 @@ Pi task prompt phải bắt buộc:
 ```text
 Use company_context first.
 Use company_orchestration_policy; default to solo-first, create a compact task tree, and choose review lenses before spawning subagents.
+Use company_context_index_status/search as advisory navigation when available; verify cited files before editing.
 Use company_memory_status and search memory when relevant; memory is advisory only.
 Read .pi/project-context.md; if it is pending, stop and request /onboard-project.
 Create a Task Implementation Contract with company_task_start.
@@ -157,6 +158,9 @@ Hiện platform đang ở mức “P3-baseline runtime policy”:
 - `company_task_start`
 - `company_exec_policy_check`
 - `company_context_budget`
+- `company_context_index_status`
+- `company_context_index_search`
+- `company_context_index_record`
 - `company_tool_policy_check`
 - `company_context_record`
 - `company_verify_record`

@@ -42,6 +42,7 @@ Memory note:
 - Nếu task tạo decision/lesson bền vững, user có thể yêu cầu `Remember: ...`.
 - Agent dùng `company_memory_note` để ghi note explicit.
 - Không tự ghi toàn bộ transcript vào memory.
+- Nếu task tạo context điều hướng bền vững cho repo, dùng `company_context_index_record` để ghi node/edge/citation ngắn sau khi đã verify.
 
 ## Recipe 2 — Backend spec to frontend
 
@@ -105,3 +106,20 @@ Rule:
 2. Chỉ ghi explicit note khi user yêu cầu rõ.
 3. Không lưu secret/raw private data/source excerpt dài.
 4. Trước source edit, search memory nếu task liên quan rồi verify bằng repo file hiện tại.
+
+## Recipe 4 — Context index
+
+Dùng khi muốn giảm scout lại giữa các session mà không bật auto memory.
+
+```text
+/onboard-project
+/context-index
+/context-index search auth
+```
+
+Rule:
+
+1. Context index là advisory map, không phải source of truth.
+2. Node/edge phải ngắn và có citation tới file/doc/task đã verify.
+3. Không lưu raw transcript, secret, token, session, hoặc source excerpt dài.
+4. Nếu index stale so với profile/tech/onboarding snapshot, chạy lại `/onboard-project` hoặc record lại bằng `company_context_index_record`.

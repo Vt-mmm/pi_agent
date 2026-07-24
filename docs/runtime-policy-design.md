@@ -18,6 +18,7 @@ Runtime policy là lớp kiểm soát cách agent đọc context, gọi tool, s�
 | Module | Tool/hook | Purpose |
 |---|---|---|
 | Project context | `company_context` | Load profile, settings, policy, and local state summary. |
+| Context index | `company_context_index_status/search/record` | Maintain a compact advisory node/edge/citation map for profile/project/tech/task navigation. |
 | Permission profile | `company_permission_status` | Show active `read-only`, `workspace-write`, or `trusted-full-access` boundary. |
 | Exec policy | `company_exec_policy_check` | Evaluate shell command risk before execution. |
 | Context budget | `company_context_budget` | Enforce size/count limits for context files. |

@@ -66,6 +66,16 @@
     "maxInjectedChars": 4000,
     "externalPackages": []
   },
+  "contextIndex": {
+    "enabled": true,
+    "path": ".pi/context-index.json",
+    "writePolicy": "onboarding-record",
+    "requireCitations": true,
+    "maxNodes": 120,
+    "maxEdges": 240,
+    "includeTechStack": true,
+    "includeMemoryPointers": true
+  },
   "orchestration": {
     "defaultMode": "solo-first",
     "maxConcurrentSubagents": 2,

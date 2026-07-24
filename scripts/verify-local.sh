@@ -93,6 +93,7 @@ required_files=(
   "$ROOT/templates/project/.mcp.json"
   "$ROOT/templates/project/.pi/mcp.json"
   "$ROOT/templates/project/.pi/project-context.md"
+  "$ROOT/templates/project/.pi/context-index.json"
   "$ROOT/templates/project/.pi/tech-stack.json"
   "$ROOT/templates/project/.pi/tech-context/README.md"
   "$ROOT/templates/project/.pi/.npmignore"
@@ -324,6 +325,10 @@ grep -R "company_memory_status" "$ROOT/packages/pi-company-core" "$ROOT/docs" "$
 grep -R "company_memory_note" "$ROOT/packages/pi-company-core" "$ROOT/docs" >/dev/null
 grep -R "company_memory_search" "$ROOT/packages/pi-company-core" "$ROOT/docs" >/dev/null
 grep -R "company_memory_citation_record" "$ROOT/packages/pi-company-core" "$ROOT/docs" >/dev/null
+grep -R "company_context_index_status" "$ROOT/packages/pi-company-core" "$ROOT/docs" >/dev/null
+grep -R "company_context_index_record" "$ROOT/packages/pi-company-core" "$ROOT/docs" >/dev/null
+grep -R "company_context_index_search" "$ROOT/packages/pi-company-core" "$ROOT/docs" >/dev/null
+grep -R "/context-index" "$ROOT/README.md" "$ROOT/docs" "$ROOT/packages/pi-company-core/prompts" >/dev/null
 grep -R "/onboard-project" "$ROOT/README.md" "$ROOT/docs" "$ROOT/templates/project/AGENTS.md" >/dev/null
 grep -R "/memory-policy" "$ROOT/README.md" "$ROOT/docs" "$ROOT/packages/pi-company-core/prompts" >/dev/null
 grep -R "/model-options" "$ROOT/README.md" "$ROOT/docs" "$ROOT/packages/pi-company-core/prompts" >/dev/null

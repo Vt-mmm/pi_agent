@@ -15,7 +15,9 @@ Mandatory flow:
 1. Call `company_context` and read the project profile/runtime policy.
 2. Call `company_orchestration_policy` and keep the task solo-first unless the policy and task shape make bounded subagents clearly useful.
 3. Call `company_memory_status`. If memory or the Field Guide is enabled and relevant to the task, search/read it as advisory context, record citations with `company_memory_citation_record`, then verify against current repo files.
-4. Read `.pi/project-context.md`. If it is missing or still says `Generated: not yet`, stop and ask the user to run `/onboard-project` after login/model selection before implementation.
+4. Call `company_context_index_status` when available, then read `.pi/project-context.md`. If `.pi/project-context.md` is missing or still says `Generated: not yet`, stop and ask the user to run `/onboard-project` after login/model selection before implementation.
+   - Use `company_context_index_search` for navigation hints when the task touches an unfamiliar module/tech/risk area.
+   - Treat context-index hits as advisory; open and verify cited files before editing.
 5. Build a Task Implementation Contract with `company_task_start` before editing:
    - task id or short slug
    - risk lane
@@ -46,7 +48,7 @@ Mandatory flow:
 12. Do not touch protected paths.
 13. Use MCP/tools only when the profile capability allows it.
 14. Before final answer, run the exact verify command from `task.verifyCommands` through Pi bash, then record the observed result with `company_verify_record`. Do not use `true`, `echo ok`, or `|| true` as passing evidence unless that exact command is part of the task verify plan.
-15. Record handoff with `company_trace_record`.
+15. Record handoff with `company_trace_record`. If the task produces durable, non-secret project knowledge and the workflow is approved, record a compact cited node with `company_context_index_record`; do not save raw transcript.
 16. Call `company_task_gate_check`. If gate fails, final outcome is blocked/partial, not done.
 17. If the user asks about token/context/cost usage, call `company_usage_snapshot`; for exact token/cost totals, tell the user to run `/session` or `pi-company-usage <project-path>`.
 18. If verify cannot run, stop and report the exact blocker. Do not call it done.
@@ -61,6 +63,7 @@ Output format:
 - Subagents used/not used and why.
 - Review lenses applied.
 - Memory cited, if any.
+- Context index used/updated, if any.
 - Task gate result.
 - Residual risks.
 - Next step if human action is needed.

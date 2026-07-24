@@ -26,8 +26,8 @@
           "path": "evals/scenarios/capability-resolution.json"
         },
         {
-          "byteSize": 5972,
-          "digest": "sha256:bfe8e1288d0048fe0f4e26cdeb53b40689b2340116a06d9981e7d3461e36aa2c",
+          "byteSize": 6086,
+          "digest": "sha256:c6bd82e50e29fe04f719e751f2624bb4af6072d80bdafe2e79b1efbfb8450906",
           "id": "base-policy",
           "kind": "policies",
           "path": "packages/pi-company-core/policies/base-policy.json"
@@ -61,8 +61,8 @@
           "path": "packages/pi-company-core/prompts/review.md"
         },
         {
-          "byteSize": 4331,
-          "digest": "sha256:d2a972ea1badc4c61aa956e5ad7d14c2e8b00fa3abee74f403e18d497702dd8d",
+          "byteSize": 4837,
+          "digest": "sha256:faf71b77b917ef2e29585b3d6123d6f8a5406e063e6d516a362b5a34278361fe",
           "id": "task",
           "kind": "prompts",
           "path": "packages/pi-company-core/prompts/task.md"

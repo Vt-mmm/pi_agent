@@ -22,6 +22,7 @@ Sau khi `/onboard-project` chạy xong, project có file:
 .pi/tech-stack.json
 .pi/tech-context/*.json
 .pi/project-context.md
+.pi/context-index.json
 .pi/memory/memory_summary.md
 .pi/memory/MEMORY.md
 ```
@@ -36,6 +37,8 @@ Sau khi `/onboard-project` chạy xong, project có file:
 Nếu Pi host chưa có native select, command trả card compact và lệnh deterministic, ví dụ `/profile tech apply fullstack frontend=nextjs backend=nestjs database=prisma`. Không dùng model để giải thích dài từng lựa chọn trong daily UX.
 
 `.pi/project-context.md` là context snapshot để task sau không phải scout lại toàn bộ repo từ đầu.
+
+`.pi/context-index.json` là compact advisory index dạng node/edge/citation cho profile, tech stack, verify command, docs, risk, memory pointer và task handoff đã được duyệt. Nó giúp agent tìm đúng điểm vào repo nhanh hơn, nhưng không phải source of truth hoặc security boundary.
 
 Memory markdown là local/private mặc định và bị ignore bởi `.pi/.gitignore`. Chỉ commit memory nếu team quyết định opt-in sau khi review/redact.
 
@@ -74,13 +77,14 @@ Không đọc toàn bộ source. Đọc theo lớp:
 1. `.pi/company-profile.json`
 2. `AGENTS.md`
 3. `.pi/project-context.md` hiện tại
-4. `.pi/memory/memory_summary.md` nếu đã có và liên quan
-5. `README.md`
-6. package/build/runtime config
-7. docs/architecture/spec nếu có
-8. source directory map
-9. test/verify command definitions
-10. API/schema/migration markers nếu có
+4. `.pi/context-index.json` nếu đã được generate
+5. `.pi/memory/memory_summary.md` nếu đã có và liên quan
+6. `README.md`
+7. package/build/runtime config
+8. docs/architecture/spec nếu có
+9. source directory map
+10. test/verify command definitions
+11. API/schema/migration markers nếu có
 
 Mục tiêu là hiểu cấu trúc và policy, không nhồi full repo vào context.
 
@@ -98,6 +102,13 @@ Mục tiêu là hiểu cấu trúc và policy, không nhồi full repo vào cont
 - MCP/tool policy;
 - memory policy;
 - update triggers.
+
+`company_project_onboarding_record` sẽ tự ghi thêm `.pi/context-index.json` khi tool có sẵn. Nếu cần kiểm tra nhanh, dùng:
+
+```text
+/context-index
+/context-index search <keyword>
+```
 
 ## Khi nào regenerate
 
@@ -119,4 +130,4 @@ khi có thay đổi lớn:
 
 `/task` sẽ yêu cầu đọc `.pi/project-context.md`. Nếu file còn trạng thái `Generated: not yet`, agent phải dừng và yêu cầu chạy `/onboard-project` trước.
 
-Đây là điểm khác với CLI thuần: context bootstrap trở thành một bước có artifact có thể review và tái dùng. `.pi/project-context.md` có thể commit cho team; memory markdown thì private-by-default.
+Đây là điểm khác với CLI thuần: context bootstrap trở thành một bước có artifact có thể review và tái dùng. `.pi/project-context.md` và `.pi/context-index.json` có thể commit cho team sau khi review; memory markdown thì private-by-default.

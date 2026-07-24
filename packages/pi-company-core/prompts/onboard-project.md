@@ -15,7 +15,7 @@ Preconditions:
 
 1. The user has already run `/login`.
 2. The user has selected the intended provider/model for project understanding.
-3. This is read-only except writing `.pi/project-context.md`, `.pi/memory/` placeholders, and `.pi/company-state/project-onboarding.json`.
+3. This is read-only except writing `.pi/project-context.md`, `.pi/context-index.json`, `.pi/memory/` placeholders, and `.pi/company-state/project-onboarding.json`.
 
 Mandatory flow:
 
@@ -56,7 +56,8 @@ Mandatory flow:
    - memory policy and files;
    - conventions the agent must follow.
 11. Write a concise reusable snapshot to `.pi/project-context.md`.
-12. Record it with `company_project_onboarding_record` when the tool exists. If unavailable, write `.pi/project-context.md` directly and clearly say the runtime record was skipped.
+12. Record it with `company_project_onboarding_record` when the tool exists. The tool also writes `.pi/context-index.json` as an advisory node/edge/citation map. If unavailable, write `.pi/project-context.md` directly and clearly say the runtime record/context-index step was skipped.
+13. Call `company_context_index_status` if available and report pending Context7 or missing citation warnings.
 
 Profile selection rule:
 
@@ -137,6 +138,7 @@ Regenerate this file when:
 Final output:
 
 - Context snapshot path.
+- Context index path/status.
 - Files read.
 - Detected stack/profile.
 - Verification commands discovered.

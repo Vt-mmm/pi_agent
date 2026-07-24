@@ -142,6 +142,7 @@ Sau khi login và chọn model intended cho project understanding:
 /mcp            # kiểm tra MCP adapter/server
 /subagents-doctor  # health check subagent setup
 /onboard-project
+/context-index
 /memory-policy
 ```
 
@@ -193,6 +194,7 @@ Lệnh này yêu cầu model đọc qua project theo phạm vi có kiểm soát,
 .pi/tech-stack.json
 .pi/tech-context/*.json
 .pi/project-context.md
+.pi/context-index.json
 .pi/memory/memory_summary.md
 .pi/memory/MEMORY.md
 ```
@@ -206,7 +208,7 @@ Nếu chưa có profile/tech stack, dùng select-style flow để tránh agent t
 
 `web-frontend` chọn FE + database optional; `backend-api` chọn BE + database optional; `fullstack` chọn frontend, backend và database. Nếu Pi host chưa có native select, command sẽ trả card ngắn và lệnh deterministic `/profile tech apply ...`.
 
-File này là snapshot context cho task sau. Nếu file còn `Generated: not yet`, agent phải dừng trước khi implement và yêu cầu chạy `/onboard-project`.
+`.pi/project-context.md` là snapshot context cho task sau. `.pi/context-index.json` là bản đồ node/edge/citation compact để tìm đúng điểm vào repo; vẫn phải đọc source hiện tại trước khi sửa. Nếu snapshot còn `Generated: not yet` hoặc `/context-index` báo pending/stale, agent phải dừng trước task lớn và yêu cầu chạy `/onboard-project`.
 
 `/memory-policy` kiểm tra chính sách memory của project. Mặc định memory là explicit-only: chỉ ghi khi user yêu cầu rõ “remember this”, không tự học transcript nền.
 
@@ -297,6 +299,7 @@ Prompt mẫu cho 2 recipe hay gặp:
 /company-commands subagents
 /platform-improve Improve model selection, MCP setup, and onboarding docs for a public team package.
 /be-to-fe Implement FE from BE spec <endpoint/spec>. Backend read-only.
+/context-index search auth
 /memory-policy Show project memory policy and safe remember workflow.
 /run company-scout "Map target area read-only before planning."
 /run company-reviewer "Review current diff before final handoff."
@@ -330,7 +333,7 @@ bash "$PI_COMPANY_PLATFORM_HOME/packages/pi-company-core/skills/company-source-c
 
 - Login OAuth lần đầu trong browser.
 - Chọn provider/model intended cho project.
-- Chạy `/onboard-project` lần đầu để tạo `.pi/project-context.md`.
+- Chạy `/onboard-project` lần đầu để tạo `.pi/project-context.md` và `.pi/context-index.json`.
 - Chạy `/memory-policy` nếu muốn kiểm tra hoặc dùng project memory.
 - Approve project trust nếu Pi hỏi. Sau khi hiểu rõ repo, có thể dùng `pi-company-auto` hoặc Pi native `--approve` cho từng lần chạy.
 - Approve khi extension guard hỏi destructive/high-risk action.

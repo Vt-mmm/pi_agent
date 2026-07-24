@@ -120,6 +120,7 @@ Rồi chạy:
 Output chính:
 
 - `.pi/project-context.md`
+- `.pi/context-index.json`
 - `.pi/company-profile.json`
 - `.pi/company-profile.lock.json`
 - `.pi/tech-stack.json`
@@ -193,6 +194,7 @@ Project init tạo:
 
 - `.pi/settings.json`
 - `.pi/company-profile.json`
+- `.pi/context-index.json`
 - `.mcp.json`
 - `.pi/mcp.json`
 - `.pi/memory/memory_summary.md`

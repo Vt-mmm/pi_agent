@@ -40,6 +40,7 @@ describe("package distribution", () => {
     assert.equal(files.has("scripts/pi-company-cli.mjs"), true);
     assert.equal(files.has("scripts/verify-vercel-link.mjs"), true);
     assert.equal(files.has("templates/project/.pi/gitignore.template"), true);
+    assert.equal(files.has("templates/project/.pi/context-index.json"), true);
     assert.equal(files.has("templates/project/.pi/tech-stack.json"), true);
     assert.equal(files.has("templates/project/.pi/tech-context/README.md"), true);
     assert.equal(files.has("templates/project/.pi/npmignore.template"), false);
@@ -110,6 +111,7 @@ describe("package distribution", () => {
     ], { cwd: repositoryRoot, encoding: "utf8" });
     assert.equal(initialized.status, 0, initialized.stderr || initialized.stdout);
     assert.equal(fs.existsSync(path.join(root, ".pi", ".npmignore")), false);
+    assert.equal(fs.existsSync(path.join(root, ".pi", "context-index.json")), true);
     assert.equal(fs.existsSync(path.join(root, ".pi", "tech-stack.json")), true);
     assert.equal(fs.existsSync(path.join(root, ".pi", "tech-context", "README.md")), true);
 
