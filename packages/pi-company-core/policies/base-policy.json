@@ -11,7 +11,8 @@
     ".pi/company-state/**",
     ".pi/settings.json",
     ".pi/company-profile.json",
-    ".pi/company-profile.lock.json"
+    ".pi/company-profile.lock.json",
+    ".pi/context-index.json"
   ],
   "shellProtectedPaths": [
     ".git/**",
@@ -21,7 +22,8 @@
     ".pi/company-state/**",
     ".pi/settings.json",
     ".pi/company-profile.json",
-    ".pi/company-profile.lock.json"
+    ".pi/company-profile.lock.json",
+    ".pi/context-index.json"
   ],
   "blockedCommandPatterns": [
     "rm -rf /",

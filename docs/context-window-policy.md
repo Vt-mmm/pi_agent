@@ -72,6 +72,7 @@ Pi settings template dùng:
 - Không paste full mandatory-flow boilerplate vào task hằng ngày; platform prompts/tools đã chứa flow đó.
 - Nếu context vượt budget, tạo summary theo module thay vì nhồi full files.
 - Dùng `/context-index` hoặc `company_context_index_search` để tìm điểm vào repo, nhưng không dùng index thay thế việc đọc source thật.
+- Không raw-read hoặc raw-edit `.pi/context-index.json` trong task thường ngày. Runtime coi index là advisory state, sanitize khi đọc qua tool/command, và ghi qua `/onboard-project` hoặc `company_context_index_record`.
 - File context vượt hard cap phải được summarize hoặc đọc targeted slices, không inject full.
 - Nếu input quá dài thật, lưu intake vào file project/local gitignored rồi reference file; không dán toàn bộ spec vào một turn.
 - Nếu input chứa local screenshot/image path, để input guard attach thành `[image1]` thay vì đọc ảnh như text context. Ảnh lớn hơn giới hạn chat nên dùng Pi `read` để resize.

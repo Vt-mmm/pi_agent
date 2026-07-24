@@ -40,6 +40,8 @@ Nếu Pi host chưa có native select, command trả card compact và lệnh det
 
 `.pi/context-index.json` là compact advisory index dạng node/edge/citation cho profile, tech stack, verify command, docs, risk, memory pointer và task handoff đã được duyệt. Nó giúp agent tìm đúng điểm vào repo nhanh hơn, nhưng không phải source of truth hoặc security boundary.
 
+Context index là Pi runtime state. Không đọc/ghi raw file này trong workflow thường ngày; dùng `/context-index`, `company_context_index_status`, `company_context_index_search`, `/onboard-project` hoặc `company_context_index_record` để runtime có thể kiểm soát path và sanitize dữ liệu advisory trước khi đưa vào model.
+
 Memory markdown là local/private mặc định và bị ignore bởi `.pi/.gitignore`. Chỉ commit memory nếu team quyết định opt-in sau khi review/redact.
 
 `.pi/memory/` là durable memory thủ công để giữ preference/decision/lesson ổn định giữa các session. Nó không thay thế snapshot hoặc source hiện tại.

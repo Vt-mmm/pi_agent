@@ -17,8 +17,8 @@
       "path": "evals/scenarios/capability-resolution.json"
     },
     {
-      "byteSize": 6086,
-      "digest": "sha256:c6bd82e50e29fe04f719e751f2624bb4af6072d80bdafe2e79b1efbfb8450906",
+      "byteSize": 6146,
+      "digest": "sha256:75ee5d8063ba161cc1505b3c99e7c03a347f996436fe23247165f2ed64d2ceab",
       "id": "base-policy",
       "kind": "policies",
       "pack": "engineering-base@0.1.1",
@@ -115,7 +115,7 @@
   ],
   "core": {
     "apiVersion": 1,
-    "packageDigest": "sha256:014b1a185d96dd04d2af1fd83cf4b53c218286fa92615a62679969f606018ea2",
+    "packageDigest": "sha256:448e58a0cdd83690eca4cc4587d3bd38bc2f7070c97c8529fe539838ec8561f3",
     "packageSource": "../",
     "packageVersion": "0.4.8",
     "runtimeFiles": [
@@ -130,8 +130,8 @@
         "path": "packages/pi-company-core/package.json"
       },
       {
-        "byteSize": 6086,
-        "digest": "sha256:c6bd82e50e29fe04f719e751f2624bb4af6072d80bdafe2e79b1efbfb8450906",
+        "byteSize": 6146,
+        "digest": "sha256:75ee5d8063ba161cc1505b3c99e7c03a347f996436fe23247165f2ed64d2ceab",
         "path": "packages/pi-company-core/policies/base-policy.json"
       },
       {
@@ -145,8 +145,8 @@
         "path": "packages/pi-company-core/security/sensitive-data.js"
       },
       {
-        "byteSize": 275642,
-        "digest": "sha256:2e592dc4c5d40271a0480674d9aab1756fca553472ef762b640e3c3b48f71315",
+        "byteSize": 279262,
+        "digest": "sha256:7867c0d2feffc36e4e6390f08d4f38d78c7fc5d992f6bdf6e479ba2f959b9c7f",
         "path": "packages/pi-company-core/extensions/company-guard.ts"
       },
       {
@@ -200,6 +200,7 @@
       ".pi/company-profile.json",
       ".pi/company-profile.lock.json",
       ".pi/company-state/**",
+      ".pi/context-index.json",
       ".pi/settings.json"
     ],
     "readOnlyPaths": [],
@@ -211,6 +212,7 @@
       ".pi/company-profile.json",
       ".pi/company-profile.lock.json",
       ".pi/company-state/**",
+      ".pi/context-index.json",
       ".pi/settings.json"
     ]
   },

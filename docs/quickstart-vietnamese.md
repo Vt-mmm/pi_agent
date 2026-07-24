@@ -208,7 +208,7 @@ Nếu chưa có profile/tech stack, dùng select-style flow để tránh agent t
 
 `web-frontend` chọn FE + database optional; `backend-api` chọn BE + database optional; `fullstack` chọn frontend, backend và database. Nếu Pi host chưa có native select, command sẽ trả card ngắn và lệnh deterministic `/profile tech apply ...`.
 
-`.pi/project-context.md` là snapshot context cho task sau. `.pi/context-index.json` là bản đồ node/edge/citation compact để tìm đúng điểm vào repo; vẫn phải đọc source hiện tại trước khi sửa. Nếu snapshot còn `Generated: not yet` hoặc `/context-index` báo pending/stale, agent phải dừng trước task lớn và yêu cầu chạy `/onboard-project`.
+`.pi/project-context.md` là snapshot context cho task sau. `.pi/context-index.json` là bản đồ node/edge/citation compact để tìm đúng điểm vào repo; vẫn phải đọc source hiện tại trước khi sửa. Không đọc/ghi raw file index trong task thường ngày; dùng `/context-index`, `/onboard-project` hoặc `company_context_index_record` để runtime sanitize dữ liệu advisory. Nếu snapshot còn `Generated: not yet` hoặc `/context-index` báo pending/stale, agent phải dừng trước task lớn và yêu cầu chạy `/onboard-project`.
 
 `/memory-policy` kiểm tra chính sách memory của project. Mặc định memory là explicit-only: chỉ ghi khi user yêu cầu rõ “remember this”, không tự học transcript nền.
 

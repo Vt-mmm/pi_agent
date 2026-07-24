@@ -596,8 +596,8 @@ const MAX_MCP_PROXY_ARGS_CHARS = 131_072;
 const SESSION_PERMISSION_OVERRIDES = new Map<string, PermissionProfileMode>();
 
 const DEFAULT_POLICY: BasePolicy = {
-  protectedPaths: [".git/**", "**/auth.json", "**/.env", "**/.env.*", ".pi/settings.json", ".pi/company-profile.json", ".pi/company-profile.lock.json"],
-  shellProtectedPaths: [".git/**", "**/auth.json", "**/.env", "**/.env.*", ".pi/settings.json", ".pi/company-profile.json", ".pi/company-profile.lock.json"],
+  protectedPaths: [".git/**", "**/auth.json", "**/.env", "**/.env.*", ".pi/settings.json", ".pi/company-profile.json", ".pi/company-profile.lock.json", CONTEXT_INDEX_FILE],
+  shellProtectedPaths: [".git/**", "**/auth.json", "**/.env", "**/.env.*", ".pi/settings.json", ".pi/company-profile.json", ".pi/company-profile.lock.json", CONTEXT_INDEX_FILE],
   blockedCommandPatterns: ["rm -rf /", "rm -rf ~", "rm -rf $HOME", "git reset --hard", "git clean -fd"],
   requireConfirmationPatterns: ["deploy", "release", "publish", "migration", "gh pr merge", "git push"],
   defaultRequiredContext: ["AGENTS.md", "README.md"],
@@ -2068,20 +2068,24 @@ function effectiveProtectedPaths(policy: BasePolicy, profile: ProjectProfile): E
   const profileProtectedPaths = profile.protectedPaths ?? [];
   const profileShellProtectedPaths = profile.shellProtectedPaths ?? profile.protectedPaths ?? [];
   const readOnlyPaths = profile.readOnlyPaths ?? [];
+  const contextIndexStatePath = resolveContextIndexSettings(profile).path;
   return {
     readProtectedPaths: uniqueStrings([
       ...baseReadProtectedPaths,
-      ...profileProtectedPaths
+      ...profileProtectedPaths,
+      contextIndexStatePath
     ]),
     writeProtectedPaths: uniqueStrings([
       ...policy.protectedPaths,
       ...profileProtectedPaths,
-      ...readOnlyPaths
+      ...readOnlyPaths,
+      contextIndexStatePath
     ]),
     shellProtectedPaths: uniqueStrings([
       ...baseReadProtectedPaths,
       ...profileShellProtectedPaths,
-      ...readOnlyPaths
+      ...readOnlyPaths,
+      contextIndexStatePath
     ]),
     readOnlyPaths: uniqueStrings(readOnlyPaths)
   };
@@ -3054,11 +3058,47 @@ function contextNodeId(kind: ContextIndexNodeKind, value: string | undefined): s
   return `${kind}:${safeTaskId(value || kind)}`;
 }
 
-function sanitizeContextIndexCitation(citation: ContextIndexCitation | undefined): ContextIndexCitation | undefined {
+const CONTEXT_INDEX_UNTRUSTED_INSTRUCTION_PATTERNS = [
+  /\b(?:ignore|disregard|forget|override)\s+(?:all\s+)?(?:prior|previous|above|earlier|system|developer)\s+(?:rules|instructions|messages|prompts?)\b/gi,
+  /\b(?:system|developer)\s+(?:prompt|message|instruction)s?\b/gi,
+  /\bexfiltrat(?:e|es|ed|ing|ion)\b[^\n]*/gi,
+  /\b(?:send|upload|post|curl|wget)\b[^\n]{0,180}\b(?:\.env|auth\.json|secret|secrets|token|credential|credentials|api[-_ ]?key)\b[^\n]*/gi
+];
+
+function sanitizeContextIndexText(input: unknown, maxChars: number): string | undefined {
+  if (typeof input !== "string") return undefined;
+  let value = redactText(input)
+    .replace(/[\u0000-\u001F\u007F-\u009F]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, maxChars);
+  for (const pattern of CONTEXT_INDEX_UNTRUSTED_INSTRUCTION_PATTERNS) {
+    value = value.replace(pattern, "[REDACTED_UNTRUSTED_INSTRUCTION]");
+  }
+  return value.trim() || undefined;
+}
+
+function sanitizeContextIndexTextArray(input: unknown, maxItems: number, maxChars: number): string[] {
+  return (Array.isArray(input) ? input : [])
+    .slice(0, maxItems)
+    .map((item) => sanitizeContextIndexText(item, maxChars))
+    .filter((item): item is string => Boolean(item));
+}
+
+function sanitizeContextIndexWarnings(warnings: string[]): string[] {
+  return Array.from(new Set(
+    warnings
+      .map((warning) => sanitizeContextIndexText(warning, 320))
+      .filter((warning): warning is string => Boolean(warning))
+  )).slice(0, 40);
+}
+
+function sanitizeContextIndexCitation(citation: unknown): ContextIndexCitation | undefined {
   if (!citation || typeof citation !== "object") return undefined;
-  const pathValue = typeof citation.path === "string" ? redactBoundedText(citation.path, 240) : undefined;
-  const reasonValue = typeof citation.reason === "string" ? redactBoundedText(citation.reason, 300) : undefined;
-  const urlValue = typeof citation.url === "string" ? redactBoundedText(citation.url, 300) : undefined;
+  const record = citation as Partial<ContextIndexCitation>;
+  const pathValue = sanitizeContextIndexText(record.path, 240);
+  const reasonValue = sanitizeContextIndexText(record.reason, 300);
+  const urlValue = sanitizeContextIndexText(record.url, 300);
   if (!pathValue && !reasonValue && !urlValue) return undefined;
   return {
     ...(pathValue ? { path: pathValue } : {}),
@@ -3070,37 +3110,78 @@ function sanitizeContextIndexCitation(citation: ContextIndexCitation | undefined
 function sanitizeContextIndexCitations(input: unknown, maxItems = 20): ContextIndexCitation[] {
   return (Array.isArray(input) ? input : [])
     .slice(0, maxItems)
-    .map((item) => sanitizeContextIndexCitation(item as ContextIndexCitation))
+    .map((item) => sanitizeContextIndexCitation(item))
     .filter((item): item is ContextIndexCitation => Boolean(item));
 }
 
-function sanitizeContextIndexNode(input: ContextIndexNode, index: number): ContextIndexNode {
-  const kind = CONTEXT_INDEX_NODE_KINDS.includes(input.kind as ContextIndexNodeKind) ? input.kind : "context";
-  const label = redactBoundedText(input.label, 160)?.trim() || `${kind}-${index + 1}`;
-  const id = safeContextIndexId(input.id, contextNodeId(kind, label));
-  const pathValue = typeof input.path === "string" ? redactBoundedText(input.path, 240) : undefined;
+function sanitizeContextIndexNode(input: unknown, index: number): ContextIndexNode {
+  const record = input && typeof input === "object" ? input as Partial<ContextIndexNode> : {};
+  const kind = CONTEXT_INDEX_NODE_KINDS.includes(record.kind as ContextIndexNodeKind) ? record.kind as ContextIndexNodeKind : "context";
+  const label = sanitizeContextIndexText(record.label, 160) || `${kind}-${index + 1}`;
+  const id = safeContextIndexId(record.id, contextNodeId(kind, label));
+  const pathValue = sanitizeContextIndexText(record.path, 240);
+  const summaryValue = sanitizeContextIndexText(record.summary, 500);
+  const updatedAtValue = sanitizeContextIndexText(record.updatedAt, 80);
   return {
     id,
     kind,
     label,
-    ...(input.summary ? { summary: redactBoundedText(input.summary, 500) } : {}),
+    ...(summaryValue ? { summary: summaryValue } : {}),
     ...(pathValue ? { path: pathValue } : {}),
-    ...(Array.isArray(input.tags) ? { tags: redactBoundedTextArray(input.tags, 16, 60) } : {}),
-    ...(input.citations ? { citations: sanitizeContextIndexCitations(input.citations, 12) } : {}),
-    updatedAt: nowIso()
+    ...(Array.isArray(record.tags) ? { tags: sanitizeContextIndexTextArray(record.tags, 16, 60) } : {}),
+    ...(record.citations ? { citations: sanitizeContextIndexCitations(record.citations, 12) } : {}),
+    updatedAt: updatedAtValue || nowIso()
   };
 }
 
-function sanitizeContextIndexEdge(input: ContextIndexEdge): ContextIndexEdge | undefined {
-  const from = safeContextIndexId(input.from, "");
-  const to = safeContextIndexId(input.to, "");
+function sanitizeContextIndexEdge(input: unknown): ContextIndexEdge | undefined {
+  const record = input && typeof input === "object" ? input as Partial<ContextIndexEdge> : {};
+  const from = safeContextIndexId(record.from, "");
+  const to = safeContextIndexId(record.to, "");
   if (!from || !to) return undefined;
-  const kind = CONTEXT_INDEX_EDGE_KINDS.includes(input.kind as ContextIndexEdgeKind) ? input.kind : "relates_to";
+  const kind = CONTEXT_INDEX_EDGE_KINDS.includes(record.kind as ContextIndexEdgeKind) ? record.kind as ContextIndexEdgeKind : "relates_to";
+  const reasonValue = sanitizeContextIndexText(record.reason, 240);
   return {
     from,
     to,
     kind,
-    ...(input.reason ? { reason: redactBoundedText(input.reason, 240) } : {})
+    ...(reasonValue ? { reason: reasonValue } : {})
+  };
+}
+
+function sanitizeContextIndexForRead(input: ProjectContextIndex | undefined, settings: Required<ContextIndexSettings>): ProjectContextIndex | undefined {
+  if (!input || typeof input !== "object") return undefined;
+  const record = input as Partial<ProjectContextIndex>;
+  const nodes = uniqueContextIndexNodes(
+    (Array.isArray(record.nodes) ? record.nodes : []).map((node, index) => sanitizeContextIndexNode(node, index)),
+    settings.maxNodes
+  );
+  const nodeIds = new Set(nodes.map((node) => node.id));
+  const edges = uniqueContextIndexEdges(
+    (Array.isArray(record.edges) ? record.edges : [])
+      .map((edge) => sanitizeContextIndexEdge(edge))
+      .filter((edge): edge is ContextIndexEdge => Boolean(edge))
+      .filter((edge) => nodeIds.has(edge.from) && nodeIds.has(edge.to)),
+    settings.maxEdges
+  );
+  const source = record.source === "onboarding-record" || record.source === "approved-workflow" || record.source === "manual"
+    ? record.source
+    : "manual";
+  const projectId = sanitizeContextIndexText(record.projectId, 160);
+  const profileMode = sanitizeContextIndexText(record.profileMode, 160);
+  return {
+    schemaVersion: 1,
+    ...(projectId ? { projectId } : {}),
+    ...(profileMode ? { profileMode } : {}),
+    source,
+    summary: sanitizeContextIndexText(record.summary, 1200) || "Project context index",
+    generatedAt: sanitizeContextIndexText(record.generatedAt, 80) || "",
+    updatedAt: sanitizeContextIndexText(record.updatedAt, 80) || "",
+    policy: settings,
+    nodes,
+    edges,
+    citations: sanitizeContextIndexCitations(record.citations, 80),
+    warnings: []
   };
 }
 
@@ -3344,7 +3425,7 @@ function buildContextIndexStatus(cwd: string, profile: ProjectProfile): {
   try {
     const target = contextIndexPath(cwd, settings);
     exists = fs.existsSync(target);
-    index = readJsonFile<ProjectContextIndex>(target);
+    index = sanitizeContextIndexForRead(readJsonFile<ProjectContextIndex>(target), settings);
   } catch (error) {
     warnings.push(error instanceof Error ? error.message : String(error));
   }
@@ -3382,14 +3463,14 @@ function buildContextIndexStatus(cwd: string, profile: ProjectProfile): {
     edges: index?.edges.length ?? 0,
     citations: index?.citations.length ?? 0,
     updatedAt: index?.updatedAt,
-    warnings: Array.from(new Set([...(index?.warnings ?? []), ...warnings])).slice(0, 40)
+    warnings: sanitizeContextIndexWarnings(warnings)
   };
 }
 
 function searchContextIndex(cwd: string, profile: ProjectProfile, query: string, limit: number): Array<{ id: string; kind: string; label: string; match: string }> {
   const settings = resolveContextIndexSettings(profile);
   if (!settings.enabled) return [];
-  const index = readJsonFile<ProjectContextIndex>(contextIndexPath(cwd, settings));
+  const index = sanitizeContextIndexForRead(readJsonFile<ProjectContextIndex>(contextIndexPath(cwd, settings)), settings);
   if (!index) return [];
   const needle = query.trim().toLowerCase();
   if (!needle) return [];

@@ -156,7 +156,9 @@ describe("capability catalog and profile lock", () => {
     assert.deepEqual(lock.packs.map((pack) => pack.name), ["engineering-base", "web-delivery"]);
     assert.equal(verifyCapabilityLock(repositoryRoot, profile, lock).ok, true);
     assert.equal(lock.permissions.protectedPaths.includes(".pi/company-profile.lock.json"), true);
+    assert.equal(lock.permissions.protectedPaths.includes(".pi/context-index.json"), true);
     assert.equal(lock.permissions.shellProtectedPaths.includes(".pi/company-state/**"), true);
+    assert.equal(lock.permissions.shellProtectedPaths.includes(".pi/context-index.json"), true);
   });
 
   it("binds a lock to its declared package source", () => {
